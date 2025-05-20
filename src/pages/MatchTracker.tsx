@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import PlayerPanel from '../components/PlayerPanel';
 import ShotSelector from '../components/ShotSelector';
 import ScoreBoard from '../components/ScoreBoard';
+import PointHistory from '../components/PointHistory';
 import { Match, Set, Point } from '../types/database.types';
 
 type SetScore = {
@@ -323,6 +324,18 @@ const MatchTracker = () => {
             ))}
           </div>
           
+          {/* Point History for the final set */}
+          {matchState.points.length > 0 && (
+            <div className="match-point-history">
+              <h3>Point Flow (Last Set)</h3>
+              <PointHistory 
+                points={matchState.points}
+                currentSet={matchState.currentSet}
+                opponentName={match?.opponent_name}
+              />
+            </div>
+          )}
+          
           <div className="match-actions">
             <button 
               className="btn primary-btn"
@@ -352,6 +365,15 @@ const MatchTracker = () => {
           opponentName={match?.opponent_name || 'Opponent'}
           currentServer={getCurrentServer()}
         />
+        
+        {/* Point History Visualization */}
+        {matchState.points.length > 0 && (
+          <PointHistory 
+            points={matchState.points}
+            currentSet={matchState.currentSet}
+            opponentName={match?.opponent_name}
+          />
+        )}
         
         {selectedWinner === null ? (
           // Step 1: Select who won the point

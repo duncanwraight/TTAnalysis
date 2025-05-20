@@ -590,6 +590,75 @@ body {
   gap: 1rem;
 }
 
+/* Point History */
+.point-history-container {
+  background-color: var(--card-background);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.point-history-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--secondary-color);
+  text-align: center;
+}
+
+.point-sequence {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  min-height: 50px;
+  padding: 0.5rem;
+  overflow-x: auto;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 0.25rem;
+}
+
+.point-marker {
+  border-radius: 4px;
+  min-height: 16px;
+  min-width: 8px;
+  transition: all 0.2s ease;
+}
+
+.player-point {
+  background-color: var(--primary-color);
+}
+
+.opponent-point {
+  background-color: var(--secondary-color);
+}
+
+.point-history-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.legend-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.no-points-message {
+  text-align: center;
+  color: var(--light-text-color);
+  font-style: italic;
+  padding: 1rem 0;
+}
+
 /* Match Complete */
 .match-complete-container {
   background-color: var(--card-background);
@@ -627,10 +696,14 @@ body {
   margin-bottom: 2rem;
 }
 
-.set-scores h3 {
+.set-scores h3, .match-point-history h3 {
   font-size: 1.25rem;
   margin-bottom: 0.5rem;
   color: var(--secondary-color);
+}
+
+.match-point-history {
+  margin: 1.5rem 0;
 }
 
 .set-score-item {
