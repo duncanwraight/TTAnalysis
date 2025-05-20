@@ -67,7 +67,7 @@ npm run preview
 - `/src/lib`: Utilities and external clients (Supabase)
 - `/src/types`: TypeScript definitions for database entities
 - `/src/styles`: Global CSS and stylesheets
-- `/docs`: Project documentation and UI mockups
+- `/docs`: Project documentation
 
 ## Key Features
 
