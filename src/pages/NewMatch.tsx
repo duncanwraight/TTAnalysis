@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { matchApi } from '../lib/api';
 
 const NewMatch = () => {
   const navigate = useNavigate();
@@ -8,9 +9,11 @@ const NewMatch = () => {
     opponent_name: '',
     date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
     best_of: 5, // Default to best of 5 sets
-    initial_server: 'player', // Default to player serving first
+    initial_server: 'player' as 'player' | 'opponent', // Default to player serving first
     notes: ''
   });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -20,39 +23,40 @@ const NewMatch = () => {
     }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // In stage 3, this will save to Supabase
-    // For now, we'll just use localStorage
-    console.log('Match created:', formData);
+    // Prevent multiple submissions
+    if (isSubmitting) return;
     
-    // Generate a mock match ID
-    const mockId = `match-${Date.now()}`;
-    
-    // Create a new match object
-    const newMatch = {
-      id: mockId,
-      user_id: 'user123',
-      opponent_name: formData.opponent_name,
-      date: formData.date,
-      match_score: '0-0',
-      notes: formData.notes,
-      initial_server: formData.initial_server, // Make sure this is 'player' or 'opponent'
-      created_at: new Date().toISOString()
-    };
-    
-    console.log('Creating match with initial server:', formData.initial_server);
-    
-    // Store the match in localStorage
     try {
-      localStorage.setItem(`match_${mockId}`, JSON.stringify(newMatch));
+      setIsSubmitting(true);
+      
+      console.log('Creating match with data:', formData);
+      console.log('Initial server:', formData.initial_server);
+      
+      // Use the API client to create a match in the database
+      const newMatch = await matchApi.createMatch({
+        user_id: '00000000-0000-0000-0000-000000000001', // Use our test user ID for now
+        opponent_name: formData.opponent_name,
+        date: formData.date,
+        match_score: '0-0',
+        notes: formData.notes,
+        initial_server: formData.initial_server
+      });
+      
+      console.log('Match created successfully:', newMatch);
+      
+      // Navigate to the match tracker with the new match ID
+      navigate(`/matches/${newMatch.id}`);
     } catch (error) {
-      console.error('Error saving match to localStorage:', error);
+      console.error('Error creating match:', error);
+      
+      // In a real application, show an error message to the user
+      alert('Failed to create match. Please try again.');
+      
+      setIsSubmitting(false);
     }
-    
-    // Navigate to the match tracker with the mock ID
-    navigate(`/matches/${mockId}`);
   };
   
   return (
@@ -71,6 +75,7 @@ const NewMatch = () => {
               onChange={handleChange}
               required
               placeholder="Enter opponent's name"
+              disabled={isSubmitting}
             />
           </div>
           
@@ -83,6 +88,7 @@ const NewMatch = () => {
               value={formData.date}
               onChange={handleChange}
               required
+              disabled={isSubmitting}
             />
           </div>
           
@@ -94,6 +100,7 @@ const NewMatch = () => {
               value={formData.best_of}
               onChange={handleChange}
               required
+              disabled={isSubmitting}
             >
               <option value={1}>1 Set</option>
               <option value={3}>3 Sets</option>
@@ -113,6 +120,7 @@ const NewMatch = () => {
                   value="player"
                   checked={formData.initial_server === 'player'}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                 />
                 <label htmlFor="player_serves">You</label>
               </div>
@@ -124,6 +132,7 @@ const NewMatch = () => {
                   value="opponent"
                   checked={formData.initial_server === 'opponent'}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                 />
                 <label htmlFor="opponent_serves">Opponent</label>
               </div>
@@ -139,15 +148,25 @@ const NewMatch = () => {
               onChange={handleChange}
               placeholder="Any notes about the match..."
               rows={3}
+              disabled={isSubmitting}
             />
           </div>
           
           <div className="form-buttons">
-            <button type="button" className="btn secondary-btn" onClick={() => navigate('/matches')}>
+            <button 
+              type="button" 
+              className="btn secondary-btn" 
+              onClick={() => navigate('/matches')}
+              disabled={isSubmitting}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn primary-btn">
-              Start Match
+            <button 
+              type="submit" 
+              className="btn primary-btn"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Start Match'}
             </button>
           </div>
         </form>

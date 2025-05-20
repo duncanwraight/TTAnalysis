@@ -3,6 +3,8 @@ export type User = {
   email: string;
   name?: string;
   preferences?: any;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Match = {
@@ -14,6 +16,7 @@ export type Match = {
   notes?: string;
   initial_server?: 'player' | 'opponent';
   created_at: string;
+  updated_at: string;
 };
 
 export type Set = {
@@ -21,6 +24,10 @@ export type Set = {
   match_id: string;
   set_number: number;
   score: string;
+  player_score: number;
+  opponent_score: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Point = {
@@ -31,4 +38,5 @@ export type Point = {
   winning_shot: string; // e.g., 'forehand', 'backhand'
   other_shot: string; // e.g., 'serve', 'loop'
   notes?: string;
+  created_at: string;
 };

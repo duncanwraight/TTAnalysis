@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import MatchList from './pages/MatchList';
@@ -7,6 +8,12 @@ import MatchAnalysis from './pages/MatchAnalysis';
 import './index.css';
 
 function App() {
+  // Log environment variables on startup
+  useEffect(() => {
+    console.log('Environment variables:');
+    console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
