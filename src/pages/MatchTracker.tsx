@@ -41,18 +41,33 @@ const MatchTracker = () => {
   
   // Mock data - will be replaced with Supabase in Stage 3
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockMatch: Match = {
+    // Get match details from localStorage if available
+    const getMatchDetails = () => {
+      try {
+        // Check if we have match details stored in localStorage
+        const storedMatch = localStorage.getItem(`match_${id}`);
+        if (storedMatch) {
+          return JSON.parse(storedMatch);
+        }
+      } catch (error) {
+        console.error('Error getting match from localStorage:', error);
+      }
+      
+      // Default fallback if no stored match is found
+      return {
         id: id || 'new-match',
         user_id: 'user123',
-        opponent_name: 'John Doe',
+        opponent_name: 'Opponent',
         date: new Date().toISOString().split('T')[0],
         match_score: '0-0',
         notes: '',
         created_at: new Date().toISOString()
       };
-      
+    };
+    
+    // Simulate API call
+    setTimeout(() => {
+      const mockMatch: Match = getMatchDetails();
       setMatch(mockMatch);
       setLoading(false);
     }, 500);
@@ -310,6 +325,7 @@ const MatchTracker = () => {
           <button 
             className="btn outline-btn"
             onClick={() => {
+              // Step back in the point recording flow
               if (otherShot !== null) {
                 setOtherShot(null);
               } else if (winningShot !== null) {
@@ -318,6 +334,7 @@ const MatchTracker = () => {
                 setSelectedWinner(null);
               }
             }}
+            disabled={selectedWinner === null}
           >
             Back
           </button>

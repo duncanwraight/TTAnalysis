@@ -31,9 +31,9 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
         <div className="score-divider">-</div>
         
         <div className={`opponent-score ${currentServer === 'opponent' ? 'serving' : ''}`}>
+          {currentServer === 'opponent' && <span className="server-indicator opponent-indicator">•</span>}
           <span className="score-value">{opponentScore}</span>
           <span className="score-label">{opponentName}</span>
-          {currentServer === 'opponent' && <span className="server-indicator">•</span>}
         </div>
       </div>
     </div>

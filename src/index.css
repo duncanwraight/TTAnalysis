@@ -315,14 +315,15 @@ body {
   color: var(--primary-color);
   font-size: 1.5rem;
   position: absolute;
-  top: -0.75rem;
 }
 
 .player-score .server-indicator {
   right: 0.5rem;
+  top: -0.75rem;
 }
 
-.opponent-score .server-indicator {
+.opponent-score .server-indicator.opponent-indicator {
+  top: 0.75rem;
   left: 0.5rem;
 }
 

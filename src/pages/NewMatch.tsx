@@ -23,11 +23,29 @@ const NewMatch = () => {
     e.preventDefault();
     
     // In stage 3, this will save to Supabase
-    // For now, we'll just navigate to a mock match page
+    // For now, we'll just use localStorage
     console.log('Match created:', formData);
     
     // Generate a mock match ID
     const mockId = `match-${Date.now()}`;
+    
+    // Create a new match object
+    const newMatch = {
+      id: mockId,
+      user_id: 'user123',
+      opponent_name: formData.opponent_name,
+      date: formData.date,
+      match_score: '0-0',
+      notes: formData.notes,
+      created_at: new Date().toISOString()
+    };
+    
+    // Store the match in localStorage
+    try {
+      localStorage.setItem(`match_${mockId}`, JSON.stringify(newMatch));
+    } catch (error) {
+      console.error('Error saving match to localStorage:', error);
+    }
     
     // Navigate to the match tracker with the mock ID
     navigate(`/matches/${mockId}`);
