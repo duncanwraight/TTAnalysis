@@ -4,7 +4,7 @@ import MatchList from './pages/MatchList';
 import NewMatch from './pages/NewMatch';
 import MatchTracker from './pages/MatchTracker';
 import MatchAnalysis from './pages/MatchAnalysis';
-import './styles/index.css';
+import './index.css';
 
 function App() {
   return (
