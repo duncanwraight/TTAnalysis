@@ -1,4 +1,5 @@
 import React from 'react';
+import '../styles/components/PlayerPanel.css';
 
 type PlayerPanelProps = {
   type: 'player' | 'opponent';
@@ -19,18 +20,10 @@ const PlayerPanel: React.FC<PlayerPanelProps> = ({ type, name, onClick }) => {
   // Only capitalize opponent names
   const displayName = type === 'opponent' ? toProperCase(name) : name;
   
-  // Direct inline styling instead of relying on CSS classes
-  const panelStyle: React.CSSProperties = {
-    backgroundColor: type === 'opponent' ? '#f1f5f9' : '#e0e7ff',
-    border: `2px solid ${type === 'opponent' ? '#64748b' : '#2563eb'}`,
-    borderLeftWidth: '6px'
-  };
-  
   return (
     <div 
       className={`player-panel ${type}-panel`} 
       onClick={onClick}
-      style={panelStyle}
     >
       <div className="player-avatar">
         {/* Placeholder for avatar */}

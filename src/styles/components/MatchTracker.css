@@ -1,0 +1,261 @@
+/* Match Tracker specific styles */
+.match-tracker-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Point selection instruction */
+.point-selection-instruction {
+  margin-bottom: 1rem;
+  text-align: center;
+  color: var(--light-text-color);
+}
+
+/* Match columns layout */
+.match-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.match-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.player-panel-container {
+  height: 200px;
+}
+
+/* Set scores panel */
+.set-scores-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100px;
+}
+
+.set-scores-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--secondary-color);
+  text-align: center;
+}
+
+.set-scores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.set-score-card {
+  background-color: var(--background-color);
+  border-radius: 0.5rem;
+  border: 2px solid var(--border-color);
+  padding: 0.5rem;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.set-score-card.win {
+  background-color: #d1fae5;
+  border-color: #10b981;
+}
+
+.set-score-card.loss {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+}
+
+.set-number {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--secondary-color);
+}
+
+.set-score-values {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.player-set-score {
+  color: var(--primary-color);
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.score-separator {
+  color: var(--light-text-color);
+  font-weight: 400;
+}
+
+.opponent-set-score {
+  color: var(--text-color);
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+/* Point history panel */
+.point-history-panel {
+  min-height: 100px;
+}
+
+/* Shot selection container */
+.shot-selection-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.shot-selection {
+  margin-bottom: 1.5rem;
+}
+
+.shot-selection h3 {
+  margin-bottom: 1rem;
+  font-size: 1.125rem;
+  color: var(--secondary-color);
+}
+
+.submit-shots {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* End match confirmation dialog */
+.confirmation-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.confirmation-content {
+  background-color: var(--card-background);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+}
+
+.confirmation-content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.confirmation-content p {
+  margin-bottom: 1.5rem;
+  color: var(--light-text-color);
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+/* Match controls */
+.match-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Match complete container */
+.match-complete-container {
+  background-color: var(--card-background);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.match-complete-container h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--primary-color);
+}
+
+.match-result {
+  margin-bottom: 2rem;
+}
+
+.match-result h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--secondary-color);
+}
+
+.final-score {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.set-scores {
+  margin-bottom: 2rem;
+}
+
+.set-scores h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--secondary-color);
+}
+
+.set-score-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.set-score-item:last-child {
+  border-bottom: none;
+}
+
+.match-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .match-columns {
+    grid-template-columns: 1fr;
+  }
+  
+  .set-scores-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  }
+  
+  .match-controls {
+    justify-content: center;
+  }
+  
+  .match-controls .btn {
+    min-width: 120px;
+  }
+}

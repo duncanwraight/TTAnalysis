@@ -1,0 +1,61 @@
+/* PlayerPanel styles */
+.player-panel {
+  background-color: var(--card-background);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 1rem; 
+  min-height: 200px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.player-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.1), 0 3px 6px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Panel type variants */
+.player-panel.player-panel {
+  background-color: #e0e7ff;
+  border: 2px solid #2563eb;
+  border-left-width: 6px;
+}
+
+.player-panel.opponent-panel {
+  background-color: #f1f5f9;
+  border: 2px solid #64748b;
+  border-left-width: 6px;
+}
+
+.player-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--secondary-color);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.player-panel.player-panel .avatar-placeholder {
+  background-color: var(--primary-color);
+}
+
+.player-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
