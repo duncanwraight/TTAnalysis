@@ -380,30 +380,59 @@ const MatchTracker = () => {
         {selectedWinner === null ? (
           <>
             {/* Step 1: Select who won the point */}
-            <div className="player-panels">
-              <PlayerPanel 
-                type="player"
-                name="You"
-                onClick={() => handlePlayerSelect('player')}
-              />
-              <PlayerPanel 
-                type="opponent"
-                name={match?.opponent_name || 'Opponent'}
-                onClick={() => handlePlayerSelect('opponent')}
-              />
-              <div className="point-instruction">
-                <p>Tap on who won the point</p>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1rem',
+              width: '100%'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <PlayerPanel 
+                  type="player"
+                  name="You"
+                  onClick={() => handlePlayerSelect('player')}
+                />
+              
+                {/* Point History Visualization */}
+                {matchState.points.length > 0 && (
+                  <div style={{
+                    backgroundColor: 'white',
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: '100px'
+                  }}>
+                    <PointHistory 
+                      points={matchState.points}
+                      currentSet={matchState.currentSet}
+                      opponentName={match?.opponent_name}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <PlayerPanel 
+                  type="opponent"
+                  name={match?.opponent_name || 'Opponent'}
+                  onClick={() => handlePlayerSelect('opponent')}
+                />
               </div>
             </div>
             
-            {/* Point History Visualization */}
-            {matchState.points.length > 0 && (
-              <PointHistory 
-                points={matchState.points}
-                currentSet={matchState.currentSet}
-                opponentName={match?.opponent_name}
-              />
-            )}
+            <div style={{
+              marginTop: '1rem',
+              textAlign: 'center',
+              color: 'var(--light-text-color)'
+            }}>
+              <p>Tap on who won the point</p>
+            </div>
           </>
         ) : (
           // Step 2: Select both winning and other shots at the same time

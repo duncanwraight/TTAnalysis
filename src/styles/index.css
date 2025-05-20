@@ -356,6 +356,22 @@ body {
   font-weight: 600;
 }
 
+.match-content-columns {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  position: relative;
+  width: 100%;
+}
+
+.player-column, .opponent-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 50%;
+}
+
+/* Keep this for backward compatibility */
 .player-panels {
   display: flex;
   justify-content: space-between;
@@ -673,6 +689,7 @@ button[disabled],
     padding: 1rem;
   }
   
+  .match-content-columns,
   .player-panels {
     flex-direction: column;
   }

@@ -22,7 +22,7 @@ const PointHistory: React.FC<PointHistoryProps> = ({
   // If there are no points in the current set, show a message
   if (currentSetPoints.length === 0) {
     return (
-      <div className="point-history-container">
+      <div>
         <div className="point-history-title">Point History</div>
         <div className="no-points-message">No points recorded yet</div>
       </div>
@@ -49,7 +49,7 @@ const PointHistory: React.FC<PointHistoryProps> = ({
   });
 
   return (
-    <div className="point-history-container">
+    <div>
       <div className="point-history-title">Point History</div>
       <div className="point-sequence">
         {pointsWithStreaks.map((point, index) => (

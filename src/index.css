@@ -434,10 +434,8 @@ body {
 }
 
 .point-instruction {
-  position: absolute;
-  bottom: -2rem;
-  left: 0;
-  right: 0;
+  position: relative;
+  margin-top: 1rem;
   text-align: center;
   color: var(--light-text-color);
 }
@@ -763,11 +761,15 @@ body {
 
 /* Point History */
 .point-history-container {
-  background-color: var(--card-background);
+  background-color: #e0e7ff;
   border-radius: 0.5rem;
   box-shadow: var(--shadow);
   padding: 1rem;
-  margin: 1rem 0;
+  border: 2px solid var(--primary-color);
+  border-left-width: 6px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100px;
 }
 
 .point-history-title {
@@ -1006,8 +1008,15 @@ body {
     padding: 1rem;
   }
   
+  .match-content-columns,
   .player-panels {
     flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .player-column, 
+  .opponent-column {
+    width: 100%;
   }
   
   .point-instruction {
