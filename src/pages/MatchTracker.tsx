@@ -407,6 +407,7 @@ const MatchTracker = () => {
         ) : (
           // Step 2: Select both winning and other shots at the same time
           <div className="shot-selection-container">
+            
             <div className="shot-selection winning-shot">
               <h3>{selectedWinner === 'player' ? 'Your' : 'Opponent\'s'} Winning Shot:</h3>
               <ShotSelector 
@@ -426,7 +427,7 @@ const MatchTracker = () => {
                 onUndo={handleUndoOtherShot}
               />
             </div>
-            {winningShot && otherShot && (
+            {winningShot && otherShot && winningShot !== 'no_data' && (
               <div className="submit-shots">
                 <button 
                   className="btn primary-btn record-point-btn"
@@ -473,21 +474,36 @@ const MatchTracker = () => {
           
           {/* Only show the Back button when we're in the shot selection flow */}
           {selectedWinner !== null && (
-            <button 
-              className="btn outline-btn"
-              onClick={() => {
-                // Step back in the point recording flow
-                if (otherShot !== null) {
-                  setOtherShot(null);
-                } else if (winningShot !== null) {
-                  setWinningShot(null);
-                } else if (selectedWinner !== null) {
-                  setSelectedWinner(null);
-                }
-              }}
-            >
-              Back
-            </button>
+            <>
+              <button 
+                className="btn outline-btn"
+                onClick={() => {
+                  // Step back in the point recording flow
+                  if (otherShot !== null) {
+                    setOtherShot(null);
+                  } else if (winningShot !== null) {
+                    setWinningShot(null);
+                  } else if (selectedWinner !== null) {
+                    setSelectedWinner(null);
+                  }
+                }}
+              >
+                Back
+              </button>
+              
+              {/* No Data button */}
+              <button
+                className="btn outline-btn no-data-btn"
+                onClick={() => {
+                  setWinningShot('no_data');
+                  setOtherShot('no_data');
+                  recordPoint(selectedWinner!, 'no_data', 'no_data');
+                }}
+                title="Record point without shot data"
+              >
+                No Data
+              </button>
+            </>
           )}
           
           {/* Undo button for removing the last point */}

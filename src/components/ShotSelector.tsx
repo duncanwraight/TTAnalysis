@@ -95,6 +95,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
 
   const currentCategory = shotCategories.find(c => c.id === activeCategory) || shotCategories[0];
 
+
   return (
     <div className={`shot-selector ${disabled ? 'disabled' : ''} ${selected ? 'selection-made' : ''}`}>
       {selected && onUndo && (
@@ -122,6 +123,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
       </div>
       
       <div className="shot-list">
+
         {currentCategory.shots.map((shot) => (
           <div key={shot.id} className="shot-item">
             <button
