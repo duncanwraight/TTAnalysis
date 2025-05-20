@@ -410,44 +410,6 @@ const MatchTracker = () => {
                   />
                 </div>
               
-                {/* Point History Visualization */}
-                <div style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.5rem',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  minHeight: '100px'
-                }}>
-                  {matchState.points.length > 0 ? (
-                    <PointHistory 
-                      points={matchState.points}
-                      currentSet={matchState.currentSet}
-                      opponentName={match?.opponent_name}
-                    />
-                  ) : (
-                    <div className="point-history-title">Point History</div>
-                  )}
-                </div>
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem'
-              }}>
-                {/* Opponent Panel with fixed height */}
-                <div style={{
-                  height: '200px'
-                }}>
-                  <PlayerPanel 
-                    type="opponent"
-                    name={match?.opponent_name || 'Opponent'}
-                    onClick={() => handlePlayerSelect('opponent')}
-                  />
-                </div>
-                
                 {/* Set Scores Panel */}
                 <div style={{
                   backgroundColor: 'white',
@@ -537,6 +499,44 @@ const MatchTracker = () => {
                         return null;
                       })}
                     </div>
+                  )}
+                </div>
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                {/* Opponent Panel with fixed height */}
+                <div style={{
+                  height: '200px'
+                }}>
+                  <PlayerPanel 
+                    type="opponent"
+                    name={match?.opponent_name || 'Opponent'}
+                    onClick={() => handlePlayerSelect('opponent')}
+                  />
+                </div>
+                
+                {/* Point History Visualization */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '100px'
+                }}>
+                  {matchState.points.length > 0 ? (
+                    <PointHistory 
+                      points={matchState.points}
+                      currentSet={matchState.currentSet}
+                      opponentName={match?.opponent_name}
+                    />
+                  ) : (
+                    <div className="point-history-title">Point History</div>
                   )}
                 </div>
               </div>
