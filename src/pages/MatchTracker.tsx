@@ -78,8 +78,11 @@ const MatchTracker = () => {
   // Handler for when the other shot is selected
   const handleOtherShotSelect = (shot: string) => {
     setOtherShot(shot);
-    // With all info collected, record the point
-    recordPoint(selectedWinner!, winningShot!, shot);
+    
+    // Only record the point if both shots are selected
+    if (winningShot) {
+      recordPoint(selectedWinner!, winningShot, shot);
+    }
   };
   
   // Record a point with all the data collected
@@ -263,23 +266,36 @@ const MatchTracker = () => {
               <p>Tap on who won the point</p>
             </div>
           </div>
-        ) : winningShot === null ? (
-          // Step 2: Select the winning shot
-          <div className="shot-selection">
-            <h3>{selectedWinner === 'player' ? 'Your' : 'Opponent\'s'} Winning Shot:</h3>
-            <ShotSelector 
-              onSelect={handleWinningShotSelect}
-              shotType="winning"
-            />
-          </div>
         ) : (
-          // Step 3: Select the other shot
-          <div className="shot-selection">
-            <h3>{selectedWinner === 'opponent' ? 'Your' : 'Opponent\'s'} Other Shot:</h3>
-            <ShotSelector 
-              onSelect={handleOtherShotSelect}
-              shotType="other"
-            />
+          // Step 2: Select both winning and other shots at the same time
+          <div className="shot-selection-container">
+            <div className="shot-selection winning-shot">
+              <h3>{selectedWinner === 'player' ? 'Your' : 'Opponent\'s'} Winning Shot:</h3>
+              <ShotSelector 
+                onSelect={handleWinningShotSelect}
+                shotType="winning"
+                selected={winningShot}
+              />
+            </div>
+            <div className="shot-selection other-shot">
+              <h3>{selectedWinner === 'opponent' ? 'Your' : 'Opponent\'s'} Other Shot:</h3>
+              <ShotSelector 
+                onSelect={handleOtherShotSelect}
+                shotType="other"
+                selected={otherShot}
+                disabled={winningShot === null}
+              />
+            </div>
+            {winningShot && otherShot && (
+              <div className="submit-shots">
+                <button 
+                  className="btn primary-btn record-point-btn"
+                  onClick={() => recordPoint(selectedWinner!, winningShot, otherShot)}
+                >
+                  Record Point
+                </button>
+              </div>
+            )}
           </div>
         )}
         

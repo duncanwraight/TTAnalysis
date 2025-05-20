@@ -3,9 +3,16 @@ import React from 'react';
 type ShotSelectorProps = {
   onSelect: (shot: string) => void;
   shotType: 'winning' | 'other';
+  selected?: string | null;
+  disabled?: boolean;
 };
 
-const ShotSelector: React.FC<ShotSelectorProps> = ({ onSelect, shotType }) => {
+const ShotSelector: React.FC<ShotSelectorProps> = ({ 
+  onSelect, 
+  shotType, 
+  selected = null, 
+  disabled = false 
+}) => {
   // These could be customizable in settings later
   const commonShots = [
     { id: 'serve', label: 'Serve' },
@@ -24,20 +31,15 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({ onSelect, shotType }) => {
     { id: 'chop', label: 'Chop' },
   ];
 
-  // For demonstration, we'll display winning and other shots differently,
-  // but they could be the same or filtered based on the context
-  const shotsToShow = shotType === 'winning' 
-    ? commonShots 
-    : commonShots;
-
   return (
-    <div className="shot-selector">
+    <div className={`shot-selector ${disabled ? 'disabled' : ''}`}>
       <div className="shot-grid">
-        {shotsToShow.map((shot) => (
+        {commonShots.map((shot) => (
           <button
             key={shot.id}
-            className="shot-button"
-            onClick={() => onSelect(shot.id)}
+            className={`shot-button ${shotType}-shot ${selected === shot.id ? 'selected' : ''}`}
+            onClick={() => !disabled && onSelect(shot.id)}
+            disabled={disabled}
           >
             {shot.label}
           </button>
