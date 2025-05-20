@@ -127,6 +127,16 @@ const MatchTracker = () => {
     }
   };
   
+  // Handler for undoing a winning shot selection
+  const handleUndoWinningShot = () => {
+    setWinningShot(null);
+  };
+  
+  // Handler for undoing an other shot selection
+  const handleUndoOtherShot = () => {
+    setOtherShot(null);
+  };
+  
   // Record a point with all the data collected
   const recordPoint = (winner: 'player' | 'opponent', winningShot: string, otherShot: string) => {
     // Create a new point
@@ -403,6 +413,7 @@ const MatchTracker = () => {
                 onSelect={handleWinningShotSelect}
                 shotType="winning"
                 selected={winningShot}
+                onUndo={handleUndoWinningShot}
               />
             </div>
             <div className="shot-selection other-shot">
@@ -412,6 +423,7 @@ const MatchTracker = () => {
                 shotType="other"
                 selected={otherShot}
                 disabled={winningShot === null}
+                onUndo={handleUndoOtherShot}
               />
             </div>
             {winningShot && otherShot && (
