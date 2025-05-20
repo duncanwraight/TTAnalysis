@@ -326,6 +326,36 @@ body {
   left: 0.5rem;
 }
 
+.set-scores-summary {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.set-score-badge {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.set-score-badge.current-set {
+  border-color: var(--primary-color);
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.set-score-badge-values {
+  font-weight: 600;
+}
+
 .player-panels {
   display: flex;
   justify-content: space-between;
@@ -421,6 +451,23 @@ body {
 .shot-button:hover {
   background-color: rgba(37, 99, 235, 0.1);
   border-color: var(--primary-color);
+}
+
+.shot-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.shot-item-disabled {
+  opacity: 0.5 !important;
+  color: var(--light-text-color) !important;
+}
+
+.disabled-note {
+  font-style: italic;
+  font-size: 0.8em;
+  color: var(--light-text-color);
 }
 
 .match-controls {

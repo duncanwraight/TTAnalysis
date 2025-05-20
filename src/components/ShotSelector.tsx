@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 type ShotSelectorProps = {
   onSelect: (shot: string) => void;
@@ -6,6 +6,8 @@ type ShotSelectorProps = {
   selected?: string | null;
   disabled?: boolean;
   onUndo?: () => void;
+  currentServer?: 'player' | 'opponent';
+  isWinningPlayer?: boolean;
 };
 
 type ShotType = {
@@ -19,14 +21,19 @@ type ShotCategory = {
   shots: ShotType[];
 };
 
+// Static variable outside of component to persist between renders
+let lastSelectedCategory = 'serve';
+
 const ShotSelector: React.FC<ShotSelectorProps> = ({ 
   onSelect, 
   shotType, 
   selected = null, 
   disabled = false,
-  onUndo
+  onUndo,
+  currentServer = 'player',
+  isWinningPlayer = true
 }) => {
-  const [activeCategory, setActiveCategory] = useState<string>('serve');
+  const [activeCategory, setActiveCategory] = useState<string>(lastSelectedCategory);
 
   // Shot categories based on the provided table
   const shotCategories: ShotCategory[] = [
@@ -84,6 +91,8 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   // When a category is clicked
   const handleCategoryClick = (categoryId: string) => {
     setActiveCategory(categoryId);
+    // Update the static variable to persist the selection
+    lastSelectedCategory = categoryId;
   };
 
   // When a shot is selected with hand specification
@@ -95,6 +104,39 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
 
   const currentCategory = shotCategories.find(c => c.id === activeCategory) || shotCategories[0];
 
+
+  // Determine if the serve shots should be disabled based on who's serving and who's winning
+  const isServeDisabled = (shotId: string) => {
+    // If the shot is not serve related, it's never disabled by server status
+    if (shotId !== 'serve' && shotId !== 'serve_receive') {
+      return false;
+    }
+
+    // Simplify the logic to make it more readable and to fix our issue
+    
+    // First determine which player this shot selector represents
+    let isForPlayer: boolean;
+    if (shotType === 'winning') {
+      // This is for the winner of the point
+      isForPlayer = isWinningPlayer;
+    } else {
+      // This is for the loser of the point
+      isForPlayer = !isWinningPlayer; 
+    }
+
+    // Now apply server/receiver logic
+    if (shotId === 'serve') {
+      // Can only use 'serve' shot if this player is the server
+      const playerIsServer = (isForPlayer && currentServer === 'player') || 
+                            (!isForPlayer && currentServer === 'opponent');
+      return !playerIsServer; // Disable if the player is not the server
+    } else { // serve_receive
+      // Can only use 'serve_receive' shot if this player is NOT the server
+      const playerIsServer = (isForPlayer && currentServer === 'player') || 
+                            (!isForPlayer && currentServer === 'opponent');
+      return playerIsServer; // Disable if the player is the server
+    }
+  };
 
   return (
     <div className={`shot-selector ${disabled ? 'disabled' : ''} ${selected ? 'selection-made' : ''}`}>
@@ -125,11 +167,11 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
       <div className="shot-list">
 
         {currentCategory.shots.map((shot) => (
-          <div key={shot.id} className="shot-item">
+          <div key={shot.id} className={`shot-item ${isServeDisabled(shot.id) ? 'shot-item-disabled' : ''}`}>
             <button
               className={`shot-hand fh-button ${selected === getHandId(shot.id, 'fh') ? 'selected' : ''}`}
               onClick={() => handleShotSelect(shot.id, 'fh')}
-              disabled={disabled}
+              disabled={disabled || isServeDisabled(shot.id)}
               title="Forehand"
             >
               FH
@@ -142,7 +184,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
             <button
               className={`shot-hand bh-button ${selected === getHandId(shot.id, 'bh') ? 'selected' : ''}`}
               onClick={() => handleShotSelect(shot.id, 'bh')}
-              disabled={disabled}
+              disabled={disabled || isServeDisabled(shot.id)}
               title="Backhand"
             >
               BH

@@ -374,6 +374,7 @@ const MatchTracker = () => {
           opponentScore={matchState.sets[matchState.currentSet - 1].opponentScore}
           opponentName={match?.opponent_name || 'Opponent'}
           currentServer={getCurrentServer()}
+          sets={matchState.sets}
         />
         
         {selectedWinner === null ? (
@@ -415,6 +416,8 @@ const MatchTracker = () => {
                 shotType="winning"
                 selected={winningShot}
                 onUndo={handleUndoWinningShot}
+                currentServer={getCurrentServer()}
+                isWinningPlayer={selectedWinner === 'player'}
               />
             </div>
             <div className="shot-selection other-shot">
@@ -425,6 +428,8 @@ const MatchTracker = () => {
                 selected={otherShot}
                 disabled={winningShot === null}
                 onUndo={handleUndoOtherShot}
+                currentServer={getCurrentServer()}
+                isWinningPlayer={selectedWinner === 'player'}
               />
             </div>
             {winningShot && otherShot && winningShot !== 'no_data' && (
