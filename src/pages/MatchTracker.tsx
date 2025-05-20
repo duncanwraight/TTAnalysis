@@ -40,6 +40,7 @@ const MatchTracker = () => {
   const [otherShot, setOtherShot] = useState<string | null>(null);
   
   // We need to track the initial server separately from the current server
+  // Default to 'player' but this will be overridden by the match data if available
   const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
 
   // Mock data - will be replaced with Supabase in Stage 3
@@ -75,8 +76,17 @@ const MatchTracker = () => {
       setMatch(mockMatch);
       
       // Set the initial server based on the match settings
+      // Always log the raw match data to debug
+      console.log('Match data loaded:', mockMatch);
+      
       if (mockMatch.initial_server) {
-        setInitialServer(mockMatch.initial_server as 'player' | 'opponent');
+        console.log('Setting initial server to:', mockMatch.initial_server);
+        // Make sure we only use valid values
+        const server = mockMatch.initial_server === 'opponent' ? 'opponent' : 'player';
+        setInitialServer(server);
+      } else {
+        console.log('No initial server found, defaulting to player');
+        setInitialServer('player');
       }
       
       setLoading(false);
@@ -205,7 +215,13 @@ const MatchTracker = () => {
     const serverChangeCount = Math.floor(totalPoints / 2);
     
     // First server is determined by the match settings (initial server)
-    return serverChangeCount % 2 === 0 ? initialServer : (initialServer === 'player' ? 'opponent' : 'player');
+    // Return the opposite of initial server if server has changed
+    const currentServer = serverChangeCount % 2 === 0 ? 
+      initialServer : 
+      (initialServer === 'player' ? 'opponent' : 'player');
+      
+    console.log('Total points:', totalPoints, 'Server change count:', serverChangeCount, 'Initial server:', initialServer, 'Current server:', currentServer);
+    return currentServer;
   };
   
   if (loading) {

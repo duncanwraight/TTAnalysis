@@ -15,6 +15,8 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
   opponentName,
   currentServer
 }) => {
+  // Log the current server for debugging
+  console.log('ScoreBoard rendering with currentServer:', currentServer);
   return (
     <div className="score-board">
       <div className="set-indicator">

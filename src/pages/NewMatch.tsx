@@ -38,8 +38,11 @@ const NewMatch = () => {
       date: formData.date,
       match_score: '0-0',
       notes: formData.notes,
+      initial_server: formData.initial_server, // Make sure this is 'player' or 'opponent'
       created_at: new Date().toISOString()
     };
+    
+    console.log('Creating match with initial server:', formData.initial_server);
     
     // Store the match in localStorage
     try {
