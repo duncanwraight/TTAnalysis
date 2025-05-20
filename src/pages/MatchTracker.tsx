@@ -381,6 +381,14 @@ const MatchTracker = () => {
           <>
             {/* Step 1: Select who won the point */}
             <div style={{
+              marginBottom: '1rem',
+              textAlign: 'center',
+              color: 'var(--light-text-color)'
+            }}>
+              <p>Tap on who won the point</p>
+            </div>
+            
+            <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: '1rem',
@@ -391,11 +399,16 @@ const MatchTracker = () => {
                 flexDirection: 'column',
                 gap: '1rem'
               }}>
-                <PlayerPanel 
-                  type="player"
-                  name="You"
-                  onClick={() => handlePlayerSelect('player')}
-                />
+                {/* Player Panel with fixed height */}
+                <div style={{
+                  height: '200px'
+                }}>
+                  <PlayerPanel 
+                    type="player"
+                    name="You"
+                    onClick={() => handlePlayerSelect('player')}
+                  />
+                </div>
               
                 {/* Point History Visualization */}
                 <div style={{
@@ -424,11 +437,16 @@ const MatchTracker = () => {
                 flexDirection: 'column',
                 gap: '1rem'
               }}>
-                <PlayerPanel 
-                  type="opponent"
-                  name={match?.opponent_name || 'Opponent'}
-                  onClick={() => handlePlayerSelect('opponent')}
-                />
+                {/* Opponent Panel with fixed height */}
+                <div style={{
+                  height: '200px'
+                }}>
+                  <PlayerPanel 
+                    type="opponent"
+                    name={match?.opponent_name || 'Opponent'}
+                    onClick={() => handlePlayerSelect('opponent')}
+                  />
+                </div>
                 
                 {/* Set Scores Panel */}
                 <div style={{
@@ -522,14 +540,6 @@ const MatchTracker = () => {
                   )}
                 </div>
               </div>
-            </div>
-            
-            <div style={{
-              marginTop: '1rem',
-              textAlign: 'center',
-              color: 'var(--light-text-color)'
-            }}>
-              <p>Tap on who won the point</p>
             </div>
           </>
         ) : (
