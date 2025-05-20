@@ -341,7 +341,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;  /* Increased padding from 2rem to 3rem */
+  min-height: 200px;   /* Added minimum height */
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
