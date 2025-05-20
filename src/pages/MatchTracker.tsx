@@ -322,22 +322,24 @@ const MatchTracker = () => {
             End Match
           </button>
           
-          <button 
-            className="btn outline-btn"
-            onClick={() => {
-              // Step back in the point recording flow
-              if (otherShot !== null) {
-                setOtherShot(null);
-              } else if (winningShot !== null) {
-                setWinningShot(null);
-              } else if (selectedWinner !== null) {
-                setSelectedWinner(null);
-              }
-            }}
-            disabled={selectedWinner === null}
-          >
-            Back
-          </button>
+          {/* Only show the Back button when we're in the shot selection flow */}
+          {selectedWinner !== null && (
+            <button 
+              className="btn outline-btn"
+              onClick={() => {
+                // Step back in the point recording flow
+                if (otherShot !== null) {
+                  setOtherShot(null);
+                } else if (winningShot !== null) {
+                  setWinningShot(null);
+                } else if (selectedWinner !== null) {
+                  setSelectedWinner(null);
+                }
+              }}
+            >
+              Back
+            </button>
+          )}
           
           <button 
             className="btn outline-btn"
