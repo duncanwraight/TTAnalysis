@@ -39,7 +39,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
             </span>
           )}
           <span className="score-value">{opponentScore}</span>
-          <span className="score-label">{opponentName}</span>
+          <span className="score-label">Opponent</span>
         </div>
       </div>
     </div>

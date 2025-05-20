@@ -381,7 +381,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;
+  min-height: 200px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -413,6 +414,18 @@ body {
 
 .player-panel.player-panel .avatar-placeholder {
   background-color: var(--primary-color);
+}
+
+.player-panel.opponent-panel {
+  background-color: #f1f5f9;
+  border: 2px solid var(--secondary-color);
+  border-left: 6px solid var(--secondary-color);
+}
+
+.player-panel.player-panel {
+  background-color: #e0e7ff;
+  border: 2px solid var(--primary-color);
+  border-left: 6px solid var(--primary-color);
 }
 
 .player-name {
