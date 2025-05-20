@@ -42,6 +42,9 @@ const MatchTracker = () => {
   // State for tracking if we can undo the last point
   const [canUndo, setCanUndo] = useState<boolean>(false);
   
+  // State for end match confirmation
+  const [showEndMatchConfirm, setShowEndMatchConfirm] = useState<boolean>(false);
+  
   // We need to track the initial server separately from the current server
   // Default to 'player' but this will be overridden by the match data if available
   const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
@@ -400,10 +403,34 @@ const MatchTracker = () => {
           </div>
         )}
         
+        {/* End Match Confirmation */}
+        {showEndMatchConfirm && (
+          <div className="confirmation-dialog">
+            <div className="confirmation-content">
+              <h3>End Match?</h3>
+              <p>Are you sure you want to end this match? All progress will be saved.</p>
+              <div className="confirmation-actions">
+                <button 
+                  className="btn primary-btn"
+                  onClick={() => navigate('/matches')}
+                >
+                  Yes, End Match
+                </button>
+                <button 
+                  className="btn outline-btn"
+                  onClick={() => setShowEndMatchConfirm(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="match-controls">
           <button 
             className="btn secondary-btn"
-            onClick={() => navigate('/matches')}
+            onClick={() => setShowEndMatchConfirm(true)}
           >
             End Match
           </button>
