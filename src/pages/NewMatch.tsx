@@ -26,8 +26,11 @@ const NewMatch = () => {
     // For now, we'll just navigate to a mock match page
     console.log('Match created:', formData);
     
-    // Navigate to a new match (mock ID for now)
-    navigate('/matches/new-match-id');
+    // Generate a mock match ID
+    const mockId = `match-${Date.now()}`;
+    
+    // Navigate to the match tracker with the mock ID
+    navigate(`/matches/${mockId}`);
   };
   
   return (
