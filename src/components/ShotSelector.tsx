@@ -169,23 +169,28 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
         {currentCategory.shots.map((shot) => (
           <div key={shot.id} className={`shot-item ${isServeDisabled(shot.id) ? 'shot-item-disabled' : ''}`}>
             <button
-              className={`shot-hand fh-button ${selected === getHandId(shot.id, 'fh') ? 'selected' : ''}`}
+              className={`shot-hand fh-button ${selected === getHandId(shot.id, 'fh') ? 'selected' : ''} ${isServeDisabled(shot.id) ? 'disabled-button' : ''}`}
               onClick={() => handleShotSelect(shot.id, 'fh')}
               disabled={disabled || isServeDisabled(shot.id)}
               title="Forehand"
+              style={isServeDisabled(shot.id) ? {opacity: 0.5, backgroundColor: '#e2e8f0', cursor: 'not-allowed', color: '#94a3b8', borderColor: '#cbd5e1'} : {}}
             >
               FH
             </button>
             
-            <span className="shot-label">
+            <span 
+              className="shot-label"
+              style={isServeDisabled(shot.id) ? {opacity: 0.5, color: '#94a3b8'} : {}}
+            >
               {shot.label}
             </span>
             
             <button
-              className={`shot-hand bh-button ${selected === getHandId(shot.id, 'bh') ? 'selected' : ''}`}
+              className={`shot-hand bh-button ${selected === getHandId(shot.id, 'bh') ? 'selected' : ''} ${isServeDisabled(shot.id) ? 'disabled-button' : ''}`}
               onClick={() => handleShotSelect(shot.id, 'bh')}
               disabled={disabled || isServeDisabled(shot.id)}
               title="Backhand"
+              style={isServeDisabled(shot.id) ? {opacity: 0.5, backgroundColor: '#e2e8f0', cursor: 'not-allowed', color: '#94a3b8', borderColor: '#cbd5e1'} : {}}
             >
               BH
             </button>

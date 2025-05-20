@@ -464,6 +464,21 @@ body {
   color: var(--light-text-color) !important;
 }
 
+.disabled-button,
+button.disabled-button,
+button[disabled="disabled"],
+button[disabled],
+.shot-item-disabled button,
+.shot-item-disabled button.fh-button,
+.shot-item-disabled button.bh-button,
+.shot-item-disabled button.shot-hand {
+  opacity: 0.5 !important;
+  background-color: #e2e8f0 !important;
+  cursor: not-allowed !important;
+  color: #94a3b8 !important;
+  border-color: #cbd5e1 !important;
+}
+
 .disabled-note {
   font-style: italic;
   font-size: 0.8em;
