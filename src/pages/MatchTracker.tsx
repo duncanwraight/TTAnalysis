@@ -39,6 +39,9 @@ const MatchTracker = () => {
   const [winningShot, setWinningShot] = useState<string | null>(null);
   const [otherShot, setOtherShot] = useState<string | null>(null);
   
+  // We need to track the initial server separately from the current server
+  const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
+
   // Mock data - will be replaced with Supabase in Stage 3
   useEffect(() => {
     // Get match details from localStorage if available
@@ -61,6 +64,7 @@ const MatchTracker = () => {
         date: new Date().toISOString().split('T')[0],
         match_score: '0-0',
         notes: '',
+        initial_server: 'player',
         created_at: new Date().toISOString()
       };
     };
@@ -69,6 +73,12 @@ const MatchTracker = () => {
     setTimeout(() => {
       const mockMatch: Match = getMatchDetails();
       setMatch(mockMatch);
+      
+      // Set the initial server based on the match settings
+      if (mockMatch.initial_server) {
+        setInitialServer(mockMatch.initial_server as 'player' | 'opponent');
+      }
+      
       setLoading(false);
     }, 500);
   }, [id]);
@@ -194,9 +204,8 @@ const MatchTracker = () => {
     // In table tennis, service changes every 2 points
     const serverChangeCount = Math.floor(totalPoints / 2);
     
-    // First server is determined by who won the coin toss
-    // For simplicity, we'll assume player always serves first
-    return serverChangeCount % 2 === 0 ? 'player' : 'opponent';
+    // First server is determined by the match settings (initial server)
+    return serverChangeCount % 2 === 0 ? initialServer : (initialServer === 'player' ? 'opponent' : 'player');
   };
   
   if (loading) {

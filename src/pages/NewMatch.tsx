@@ -8,6 +8,7 @@ const NewMatch = () => {
     opponent_name: '',
     date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
     best_of: 5, // Default to best of 5 sets
+    initial_server: 'player', // Default to player serving first
     notes: ''
   });
   
@@ -96,6 +97,34 @@ const NewMatch = () => {
               <option value={5}>5 Sets</option>
               <option value={7}>7 Sets</option>
             </select>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="initial_server">First Server</label>
+            <div className="radio-group">
+              <div className="radio-option">
+                <input
+                  type="radio"
+                  id="player_serves"
+                  name="initial_server"
+                  value="player"
+                  checked={formData.initial_server === 'player'}
+                  onChange={handleChange}
+                />
+                <label htmlFor="player_serves">You</label>
+              </div>
+              <div className="radio-option">
+                <input
+                  type="radio"
+                  id="opponent_serves"
+                  name="initial_server"
+                  value="opponent"
+                  checked={formData.initial_server === 'opponent'}
+                  onChange={handleChange}
+                />
+                <label htmlFor="opponent_serves">Opponent</label>
+              </div>
+            </div>
           </div>
           
           <div className="form-group">

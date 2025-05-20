@@ -12,6 +12,7 @@ export type Match = {
   date: string;
   match_score: string;
   notes?: string;
+  initial_server?: 'player' | 'opponent';
   created_at: string;
 };
 
