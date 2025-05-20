@@ -366,15 +366,6 @@ const MatchTracker = () => {
           currentServer={getCurrentServer()}
         />
         
-        {/* Point History Visualization */}
-        {matchState.points.length > 0 && (
-          <PointHistory 
-            points={matchState.points}
-            currentSet={matchState.currentSet}
-            opponentName={match?.opponent_name}
-          />
-        )}
-        
         {selectedWinner === null ? (
           // Step 1: Select who won the point
           <div className="player-panels">
@@ -392,6 +383,15 @@ const MatchTracker = () => {
               <p>Tap on who won the point</p>
             </div>
           </div>
+          
+          {/* Point History Visualization */}
+          {matchState.points.length > 0 && (
+            <PointHistory 
+              points={matchState.points}
+              currentSet={matchState.currentSet}
+              opponentName={match?.opponent_name}
+            />
+          )}
         ) : (
           // Step 2: Select both winning and other shots at the same time
           <div className="shot-selection-container">
