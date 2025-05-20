@@ -12,29 +12,62 @@ A web application for tracking and analyzing table tennis matches, built with Re
 ## Quick Start
 
 ```bash
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
 ## Project Structure
 
 - `/src` - All application code
   - `/components` - Reusable UI components
+    - `/ui` - Common UI components (Button, Card)
+    - `/ShotSelector` - Shot selection components
   - `/pages` - Application pages
+  - `/context` - React context providers
   - `/lib` - Utilities and Supabase client
   - `/types` - TypeScript definitions
   - `/styles` - CSS stylesheets
+    - `/components` - Component-specific CSS
 - `/docs` - Project documentation
-  - `INSTRUCTIONS.md` - Project overview and requirements
-  - `ui-mockup.md` - UI design mockups
-  - `VITE-TEMPLATE.md` - Vite template information
 
-## Development
+## Component Architecture
 
-For detailed development information, see the documentation in the `/docs` directory.
+### UI Components
+- **Button**: Reusable button with primary, secondary, and outline variants
+- **Card**: Container component with consistent styling
+- **Layout**: Common application layout with header, main content, and footer
+- **PlayerPanel**: Player representation for selection
+- **ShotSelector**: Shot type selection with categories
+
+### Pages
+- **Home**: Application landing page
+- **MatchList**: Overview of recorded matches
+- **NewMatch**: Match creation form
+- **MatchTracker**: Point-by-point match recording
+- **MatchAnalysis**: Statistics and performance analysis
+
+### State Management
+- **MatchContext**: Centralized state for match tracking
 
 ## Technology Stack
 
 - **Frontend**: React with TypeScript
 - **Backend**: Supabase (PostgreSQL, Auth, Storage)
 - **Styling**: Custom CSS
+- **Build Tool**: Vite
+
+## Development Notes
+
+- Mobile-first design for courtside usage
+- Modular components for reusability
+- Context-based state management for complex workflows
+- CSS organization by component
