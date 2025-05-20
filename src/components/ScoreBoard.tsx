@@ -15,12 +15,10 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
   opponentName,
   currentServer
 }) => {
-  // Log the current server for debugging
-  console.log('ScoreBoard rendering with currentServer:', currentServer);
   return (
     <div className="score-board">
       <div className="set-indicator">
-        <span>Set {currentSet}</span>
+        <strong>SET {currentSet}</strong>
       </div>
       
       <div className="scores">
@@ -29,17 +27,15 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
           <span className="score-value">{playerScore}</span>
           {currentServer === 'player' && (
             <span className="server-indicator">
-              <span className="serve-icon">S</span>
+              <span className="serve-icon">🏓</span>
             </span>
           )}
         </div>
         
-        <div className="score-divider">-</div>
-        
         <div className={`opponent-score ${currentServer === 'opponent' ? 'serving' : ''}`}>
           {currentServer === 'opponent' && (
             <span className="server-indicator opponent-indicator">
-              <span className="serve-icon">S</span>
+              <span className="serve-icon">🏓</span>
             </span>
           )}
           <span className="score-value">{opponentScore}</span>

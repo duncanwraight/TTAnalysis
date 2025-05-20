@@ -298,16 +298,20 @@ body {
 
 .set-indicator {
   text-align: center;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--secondary-color);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+  font-size: 1.25rem;
+  background-color: rgba(37, 99, 235, 0.1);
+  padding: 0.5rem;
+  border-radius: 0.375rem;
 }
 
 .scores {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: 2rem;
 }
 
 .player-score, .opponent-score {
@@ -315,8 +319,8 @@ body {
   align-items: center;
   gap: 0.5rem;
   position: relative;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
 }
 
 .serving {
@@ -328,7 +332,7 @@ body {
 }
 
 .score-value {
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: 700;
 }
 
@@ -342,13 +346,13 @@ body {
 
 .serve-icon {
   background-color: var(--primary-color);
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: bold;
 }
 
