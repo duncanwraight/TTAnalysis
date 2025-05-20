@@ -398,31 +398,129 @@ const MatchTracker = () => {
                 />
               
                 {/* Point History Visualization */}
-                {matchState.points.length > 0 && (
-                  <div style={{
-                    backgroundColor: 'white',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    padding: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: '100px'
-                  }}>
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '100px'
+                }}>
+                  {matchState.points.length > 0 ? (
                     <PointHistory 
                       points={matchState.points}
                       currentSet={matchState.currentSet}
                       opponentName={match?.opponent_name}
                     />
-                  </div>
-                )}
+                  ) : (
+                    <div className="point-history-title">Point History</div>
+                  )}
+                </div>
               </div>
               
-              <div>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
                 <PlayerPanel 
                   type="opponent"
                   name={match?.opponent_name || 'Opponent'}
                   onClick={() => handlePlayerSelect('opponent')}
                 />
+                
+                {/* Set Scores Panel */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '100px'
+                }}>
+                  <div style={{ 
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    marginBottom: '0.5rem',
+                    color: '#4b5563',
+                    textAlign: 'center'
+                  }}>
+                    Set Scores
+                  </div>
+                  {matchState.sets.length > 0 && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                      gap: '0.75rem',
+                      marginTop: '0.5rem'
+                    }}>
+                      {matchState.sets.map((set, index) => {
+                        // Only show completed sets or current set
+                        if (index < matchState.currentSet) {
+                          const isWin = set.playerScore > set.opponentScore;
+                          const isLoss = set.playerScore < set.opponentScore;
+                          const isTie = set.playerScore === set.opponentScore;
+                          
+                          const bgColor = isWin ? '#d1fae5' : isLoss ? '#fee2e2' : '#f3f4f6';
+                          const borderColor = isWin ? '#10b981' : isLoss ? '#ef4444' : '#d1d5db';
+                          
+                          return (
+                            <div 
+                              key={index} 
+                              style={{
+                                backgroundColor: bgColor,
+                                borderRadius: '0.5rem',
+                                border: `2px solid ${borderColor}`,
+                                padding: '0.5rem',
+                                textAlign: 'center',
+                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                              }}
+                            >
+                              <div style={{ 
+                                fontSize: '0.875rem', 
+                                fontWeight: 600,
+                                marginBottom: '0.25rem',
+                                color: '#4b5563'
+                              }}>
+                                Set {index + 1}
+                              </div>
+                              <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}>
+                                <span style={{ 
+                                  color: '#2563eb', 
+                                  fontWeight: 700, 
+                                  fontSize: '1.125rem' 
+                                }}>
+                                  {set.playerScore}
+                                </span>
+                                <span style={{ 
+                                  color: '#6b7280', 
+                                  fontWeight: 400 
+                                }}>
+                                  -
+                                </span>
+                                <span style={{ 
+                                  color: '#111827', 
+                                  fontWeight: 700, 
+                                  fontSize: '1.125rem' 
+                                }}>
+                                  {set.opponentScore}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             

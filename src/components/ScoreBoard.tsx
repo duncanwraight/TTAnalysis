@@ -44,23 +44,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
           <span className="score-label">Opponent</span>
         </div>
       </div>
-      
-      {sets.length > 0 && (
-        <div className="set-scores-summary">
-          {sets.map((set, index) => {
-            // Only show completed sets or current set
-            if (index < currentSet) {
-              return (
-                <div key={index} className={`set-score-badge ${index === currentSet - 1 ? 'current-set' : ''}`}>
-                  <span>{index + 1}: </span>
-                  <span className="set-score-badge-values">{set.playerScore}-{set.opponentScore}</span>
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      )}
+      {/* Set scores summary moved to PointHistory panel */}
     </div>
   );
 };
