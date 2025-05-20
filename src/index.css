@@ -539,6 +539,17 @@ body {
   background-color: rgba(100, 116, 139, 0.1);
 }
 
+.undo-btn {
+  background-color: rgba(255, 159, 64, 0.1);
+  border-color: rgb(255, 159, 64);
+  color: rgb(201, 129, 56);
+  font-weight: 600;
+}
+
+.undo-btn:hover {
+  background-color: rgba(255, 159, 64, 0.2);
+}
+
 /* Match Complete */
 .match-complete-container {
   background-color: var(--card-background);

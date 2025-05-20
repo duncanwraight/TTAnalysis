@@ -39,6 +39,9 @@ const MatchTracker = () => {
   const [winningShot, setWinningShot] = useState<string | null>(null);
   const [otherShot, setOtherShot] = useState<string | null>(null);
   
+  // State for tracking if we can undo the last point
+  const [canUndo, setCanUndo] = useState<boolean>(false);
+  
   // We need to track the initial server separately from the current server
   // Default to 'player' but this will be overridden by the match data if available
   const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
@@ -181,8 +184,66 @@ const MatchTracker = () => {
       });
     }
     
+    // Enable undo after recording a point
+    setCanUndo(true);
+    
     // Reset the point flow
     resetPointFlow();
+  };
+  
+  // Undo the last recorded point
+  const undoLastPoint = () => {
+    if (matchState.points.length === 0) {
+      return; // Nothing to undo
+    }
+    
+    // Copy current state
+    const updatedPoints = [...matchState.points];
+    const lastPoint = updatedPoints.pop(); // Remove the last point
+    
+    if (!lastPoint) return;
+    
+    // Update sets and scores
+    const updatedSets = [...matchState.sets];
+    
+    // Determine which set the last point was in
+    const setId = lastPoint.set_id;
+    const setNumber = parseInt(setId.split('-')[1], 10);
+    
+    // If we're in a new set and there are no points in this set,
+    // we need to go back to the previous set
+    if (setNumber < matchState.currentSet) {
+      // We're undoing a point that completed a set, go back to previous set
+      updatedSets.pop(); // Remove the current empty set
+      
+      setMatchState({
+        currentSet: matchState.currentSet - 1,
+        sets: updatedSets,
+        points: updatedPoints,
+        isMatchComplete: false // If we can undo, the match is not complete
+      });
+    } else {
+      // Normal undo within the current set
+      const currentSetIndex = matchState.currentSet - 1;
+      
+      // Decrement the score based on who won the point
+      if (lastPoint.winner === 'player') {
+        updatedSets[currentSetIndex].playerScore -= 1;
+      } else {
+        updatedSets[currentSetIndex].opponentScore -= 1;
+      }
+      
+      setMatchState({
+        ...matchState,
+        sets: updatedSets,
+        points: updatedPoints
+      });
+    }
+    
+    // Disable undo if no more points to undo
+    if (updatedPoints.length === 0) {
+      setCanUndo(false);
+    }
   };
   
   // Helper to check if a set is over
@@ -363,6 +424,17 @@ const MatchTracker = () => {
               }}
             >
               Back
+            </button>
+          )}
+          
+          {/* Undo button for removing the last point */}
+          {canUndo && selectedWinner === null && (
+            <button 
+              className="btn outline-btn undo-btn"
+              onClick={undoLastPoint}
+              title="Undo last point"
+            >
+              ↩️ Undo
             </button>
           )}
           
