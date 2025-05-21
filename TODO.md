@@ -5,10 +5,16 @@
 - [x] Ensure proper data synchronization between local state and database
 - [ ] Optimize database queries for match and point data
 
-## Authentication
-- [ ] Add user authentication system
-- [ ] Implement user registration and login flows
-- [ ] Set up database access controls
+## Authentication (Self-Hosted Supabase Auth)
+- [ ] Setup Supabase CLI for local development
+- [ ] Initialize local Supabase project connected to PostgreSQL database
+- [ ] Test connection between Supabase Auth and local database
+- [ ] Create Auth UI components (login, signup, password reset)
+- [ ] Implement auth state management with React context
+- [ ] Create protected routes in frontend
+- [ ] Implement JWT verification middleware in Express server
+- [ ] Update API endpoints to use authenticated user_id
+- [ ] Set up database access controls (Row Level Security)
 - [ ] Associate matches with authenticated users
 
 ## Analysis & Visualizations
