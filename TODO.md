@@ -1,7 +1,7 @@
 # TTAnalysis Project TODOs
 
 ## Database & Data Integration
-- [ ] Fix the Matches page to pull data from PostgreSQL database
+- [x] Fix the Matches page to pull data from PostgreSQL database
 - [ ] Ensure proper data synchronization between local state and database
 - [ ] Optimize database queries for match and point data
 

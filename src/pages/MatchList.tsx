@@ -2,37 +2,29 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import type { Match } from '../types/database.types';
+import { matchApi } from '../lib/api';
 
 const MatchList = () => {
-  // This will be replaced with actual Supabase data in stage 3
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock data for now
-    const mockMatches: Match[] = [
-      {
-        id: '1',
-        user_id: 'user123',
-        opponent_name: 'John Doe',
-        date: '2023-05-15',
-        match_score: '3-1',
-        notes: 'Good match, struggled with his serves',
-        created_at: '2023-05-15T10:30:00'
-      },
-      {
-        id: '2',
-        user_id: 'user123',
-        opponent_name: 'Jane Smith',
-        date: '2023-05-10',
-        match_score: '2-3',
-        notes: 'Need to work on my backhand',
-        created_at: '2023-05-10T14:45:00'
+    const fetchMatches = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await matchApi.getAllMatches();
+        setMatches(data);
+      } catch (err) {
+        console.error('Failed to fetch matches:', err);
+        setError('Failed to load matches. Please try again later.');
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
 
-    setMatches(mockMatches);
-    setLoading(false);
+    fetchMatches();
   }, []);
 
   return (
@@ -47,6 +39,13 @@ const MatchList = () => {
 
         {loading ? (
           <p>Loading matches...</p>
+        ) : error ? (
+          <div className="error-message">
+            <p>{error}</p>
+            <button onClick={() => window.location.reload()} className="btn secondary-btn">
+              Try Again
+            </button>
+          </div>
         ) : matches.length === 0 ? (
           <div className="no-matches">
             <p>You haven't recorded any matches yet.</p>
