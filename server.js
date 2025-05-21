@@ -315,11 +315,31 @@ app.post('/api/points', async (req, res) => {
   try {
     const { set_id, point_number, winner, winning_shot, other_shot, notes } = req.body;
     
+    // Parse shot data to separate ID and hand
+    let winning_shot_id = null;
+    let winning_hand = null;
+    let other_shot_id = null;
+    let other_hand = null;
+    
+    if (winning_shot && winning_shot !== 'no_data') {
+      const parts = winning_shot.split('_');
+      winning_hand = parts[0]; // 'fh' or 'bh'
+      // Join the rest in case shot_id contains underscores
+      winning_shot_id = parts.slice(1).join('_');
+    }
+    
+    if (other_shot && other_shot !== 'no_data') {
+      const parts = other_shot.split('_');
+      other_hand = parts[0]; // 'fh' or 'bh'
+      // Join the rest in case shot_id contains underscores
+      other_shot_id = parts.slice(1).join('_');
+    }
+    
     const result = await pool.query(
-      `INSERT INTO points (set_id, point_number, winner, winning_shot, other_shot, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+      `INSERT INTO points (set_id, point_number, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, notes) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING *`,
-      [set_id, point_number, winner, winning_shot, other_shot, notes]
+      [set_id, point_number, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, notes]
     );
     
     res.status(201).json(result.rows[0]);
