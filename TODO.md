@@ -6,8 +6,8 @@
 - [ ] Optimize database queries for match and point data
 
 ## Authentication (Self-Hosted Supabase Auth)
-- [ ] Setup Supabase CLI for local development
-- [ ] Initialize local Supabase project connected to PostgreSQL database
+- [x] Setup Supabase CLI for local development
+- [x] Initialize local Supabase project connected to PostgreSQL database
 - [ ] Test connection between Supabase Auth and local database
 - [ ] Create Auth UI components (login, signup, password reset)
 - [ ] Implement auth state management with React context
