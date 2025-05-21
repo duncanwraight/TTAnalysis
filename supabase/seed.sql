@@ -1,6 +1,38 @@
 -- Seed data for TTAnalysis schema
 -- Contains only essential data needed for application functionality
 
+-- Insert test user in auth.users for our hardcoded test user ID
+-- Note: This is for local development only
+INSERT INTO auth.users (
+    id,
+    instance_id,
+    aud,
+    role,
+    email,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at,
+    last_sign_in_at
+)
+VALUES (
+    '00000000-0000-0000-0000-000000000001',  -- hardcoded test user ID
+    '00000000-0000-0000-0000-000000000000',  -- instance ID
+    'authenticated',                         -- audience
+    'authenticated',                         -- role
+    'test@example.com',                      -- email
+    NOW(),                                   -- email confirmed timestamp
+    '{"provider": "email", "providers": ["email"]}', -- app metadata
+    '{"name": "Test User"}',                 -- user metadata
+    NOW(),                                   -- created at
+    NOW(),                                   -- updated at
+    NOW()                                    -- last sign in
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- The trigger created in the migration should automatically create this user in the public.users table
+
 -- Insert shot categories
 INSERT INTO public.shot_categories (id, name, display_order, created_at, updated_at)
 VALUES
