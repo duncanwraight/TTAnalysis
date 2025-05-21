@@ -12,6 +12,10 @@ type MatchState = {
   sets: SetScore[];
   points: Point[];
   isMatchComplete: boolean;
+  // Adding an array of database sets for mapping set_number to set_id
+  dbSets: Set[];
+  // Track the current set's ID
+  currentSetId: string | null;
 };
 
 type MatchContextType = {
@@ -36,6 +40,8 @@ type MatchContextType = {
   getCurrentServer: () => 'player' | 'opponent';
   getTotalPoints: () => number;
   advanceToNextSet: () => void;
+  // Helper function to get the ID of the set with a specific set number
+  getSetIdByNumber: (setNumber: number) => string | null;
 };
 
 const MatchContext = createContext<MatchContextType | undefined>(undefined);
@@ -60,7 +66,9 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     currentSet: 1,
     sets: [{ playerScore: 0, opponentScore: 0 }],
     points: [],
-    isMatchComplete: false
+    isMatchComplete: false,
+    dbSets: [],
+    currentSetId: null
   });
   
   // State for the point recording flow
@@ -120,11 +128,23 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
           // Set the current set to the last one
           const currentSet = sets.length > 0 ? sets[sets.length - 1].set_number : 1;
           
+          // Find the current set ID
+          const currentSetId = sets.length > 0 ? sets[sets.length - 1].id : null;
+          
+          console.log('[MatchContext] Setting initial state with:', {
+            sets, 
+            points, 
+            currentSet, 
+            currentSetId
+          });
+          
           setMatchState({
             currentSet,
             sets: matchSets,
             points,
-            isMatchComplete: false // We'll calculate this based on sets later
+            isMatchComplete: false, // We'll calculate this based on sets later
+            dbSets: sets, // Store the database sets for ID mapping
+            currentSetId
           });
         } else {
           console.log('[MatchContext] Match not found in database, checking localStorage');
@@ -319,11 +339,26 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
           // Start next set
           console.log('[MatchContext] Starting next set');
           updatedSets.push({ playerScore: 0, opponentScore: 0 });
+          
+          // Create a new set in the database for the next set
+          console.log('[MatchContext] Creating next set in database');
+          const nextSetData = await setApi.createSet({
+            match_id: match.id,
+            set_number: matchState.currentSet + 1,
+            score: '0-0',
+            player_score: 0,
+            opponent_score: 0
+          });
+          
+          console.log('[MatchContext] Next set created:', nextSetData);
+          
           setMatchState({
             currentSet: matchState.currentSet + 1,
             sets: updatedSets,
             points: [...matchState.points, newPoint],
-            isMatchComplete: false
+            isMatchComplete: false,
+            dbSets: [...matchState.dbSets, nextSetData],
+            currentSetId: nextSetData.id
           });
         } else {
           // Match is complete
@@ -332,7 +367,9 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
             currentSet: matchState.currentSet,
             sets: updatedSets,
             points: [...matchState.points, newPoint],
-            isMatchComplete: true
+            isMatchComplete: true,
+            dbSets: matchState.dbSets,
+            currentSetId: matchState.currentSetId
           });
         }
       } else {
@@ -341,7 +378,9 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         setMatchState({
           ...matchState,
           sets: updatedSets,
-          points: [...matchState.points, newPoint]
+          points: [...matchState.points, newPoint],
+          dbSets: matchState.dbSets, // Maintain the database sets
+          currentSetId: matchState.currentSetId // Maintain the current set ID
         });
       }
       
@@ -415,12 +454,24 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         // We're undoing a point that completed a set, go back to previous set
         updatedSets.pop(); // Remove the current empty set
         
-        console.log('[MatchContext] Going back to previous set');
+        // Get the previous set's ID (we're going back one set)
+        const updatedDbSets = [...matchState.dbSets];
+        // Remove the last set
+        if (updatedDbSets.length > 0) {
+          updatedDbSets.pop();
+        }
+        
+        // Find the new current set ID (the last one in the list)
+        const newCurrentSetId = updatedDbSets.length > 0 ? updatedDbSets[updatedDbSets.length - 1].id : null;
+        
+        console.log('[MatchContext] Going back to previous set, set ID:', newCurrentSetId);
         setMatchState({
           currentSet: matchState.currentSet - 1,
           sets: updatedSets,
           points: updatedPoints,
-          isMatchComplete: false // If we can undo, the match is not complete
+          isMatchComplete: false, // If we can undo, the match is not complete
+          dbSets: updatedDbSets,
+          currentSetId: newCurrentSetId
         });
       } else {
         // Normal undo within the current set
@@ -445,7 +496,9 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         setMatchState({
           ...matchState,
           sets: updatedSets,
-          points: updatedPoints
+          points: updatedPoints,
+          dbSets: matchState.dbSets,
+          currentSetId: matchState.currentSetId
         });
       }
       
@@ -474,6 +527,13 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     return false;
   };
 
+  // Get set ID by set number
+  const getSetIdByNumber = (setNumber: number): string | null => {
+    const matchingSet = matchState.dbSets.find(set => set.set_number === setNumber);
+    console.log(`[MatchContext] Getting set ID for set number ${setNumber}:`, matchingSet);
+    return matchingSet ? matchingSet.id : null;
+  };
+
   // Force advancement to next set
   const advanceToNextSet = async () => {
     if (!match) {
@@ -488,7 +548,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       
       // Create a new set in the database
       console.log('[MatchContext] Creating new set in database');
-      await setApi.createSet({
+      const newSet = await setApi.createSet({
         match_id: match.id,
         set_number: matchState.currentSet + 1,
         score: '0-0',
@@ -501,7 +561,9 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         currentSet: matchState.currentSet + 1,
         sets: updatedSets,
         points: matchState.points,
-        isMatchComplete: false
+        isMatchComplete: false,
+        dbSets: [...matchState.dbSets, newSet],
+        currentSetId: newSet.id
       });
     } catch (error) {
       console.error('[MatchContext] Error advancing to next set:', error);
@@ -529,7 +591,8 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         resetPointFlow,
         getCurrentServer,
         getTotalPoints,
-        advanceToNextSet
+        advanceToNextSet,
+        getSetIdByNumber
       }}
     >
       {children}

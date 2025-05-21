@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PlayerPanel from '../components/PlayerPanel';
@@ -74,6 +74,8 @@ const MatchTrackerContent = () => {
               points={matchState.points}
               currentSet={matchState.currentSet}
               opponentName={match?.opponent_name}
+              sets={matchState.dbSets}
+              currentSetId={matchState.currentSetId}
             />
           </div>
         )}
@@ -114,77 +116,96 @@ const MatchTrackerContent = () => {
             <p>Tap on who won the point</p>
           </div>
           
-          <div className="match-columns">
-            <div className="match-column">
-              {/* Player Panel with fixed height */}
-              <div className="player-panel-container">
-                <PlayerPanel 
-                  type="player"
-                  name="You"
-                  onClick={() => handlePlayerSelect('player')}
-                />
-              </div>
-            
-              {/* Set Scores Panel */}
-              <Card className="set-scores-panel">
-                <div className="set-scores-title">
-                  Set Scores
+          <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1rem',
+              width: '100%'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                {/* Player Panel with fixed height */}
+                <div style={{
+                  height: '200px'
+                }}>
+                  <PlayerPanel 
+                    type="player"
+                    name="You"
+                    onClick={() => handlePlayerSelect('player')}
+                  />
                 </div>
-                {matchState.sets.length > 0 && (
-                  <div className="set-scores-grid">
-                    {matchState.sets.map((set, index) => {
-                      // Only show completed sets or current set
-                      if (index < matchState.currentSet) {
-                        const isWin = set.playerScore > set.opponentScore;
-                        const isLoss = set.playerScore < set.opponentScore;
-                        
-                        return (
-                          <div 
-                            key={index} 
-                            className={`set-score-card ${isWin ? 'win' : ''} ${isLoss ? 'loss' : ''}`}
-                          >
-                            <div className="set-number">
-                              Set {index + 1}
-                            </div>
-                            <div className="set-score-values">
-                              <span className="player-set-score">{set.playerScore}</span>
-                              <span className="score-separator">-</span>
-                              <span className="opponent-set-score">{set.opponentScore}</span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
+              
+                {/* Set Scores Panel */}
+                <Card className="set-scores-panel">
+                  <div className="set-scores-title">
+                    Set Scores
                   </div>
-                )}
-              </Card>
-            </div>
-            
-            <div className="match-column">
-              {/* Opponent Panel with fixed height */}
-              <div className="player-panel-container">
-                <PlayerPanel 
-                  type="opponent"
-                  name={match?.opponent_name || 'Opponent'}
-                  onClick={() => handlePlayerSelect('opponent')}
-                />
+                  {matchState.sets.length > 0 && (
+                    <div className="set-scores-grid">
+                      {matchState.sets.map((set, index) => {
+                        // Only show completed sets or current set
+                        if (index < matchState.currentSet) {
+                          const isWin = set.playerScore > set.opponentScore;
+                          const isLoss = set.playerScore < set.opponentScore;
+                          
+                          return (
+                            <div 
+                              key={index} 
+                              className={`set-score-card ${isWin ? 'win' : ''} ${isLoss ? 'loss' : ''}`}
+                            >
+                              <div className="set-number">
+                                Set {index + 1}
+                              </div>
+                              <div className="set-score-values">
+                                <span className="player-set-score">{set.playerScore}</span>
+                                <span className="score-separator">-</span>
+                                <span className="opponent-set-score">{set.opponentScore}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
+                  )}
+                </Card>
               </div>
               
-              {/* Point History Visualization */}
-              <Card className="point-history-panel">
-                {matchState.points.length > 0 ? (
-                  <PointHistory 
-                    points={matchState.points}
-                    currentSet={matchState.currentSet}
-                    opponentName={match?.opponent_name}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                {/* Opponent Panel with fixed height */}
+                <div style={{
+                  height: '200px'
+                }}>
+                  <PlayerPanel 
+                    type="opponent"
+                    name={match?.opponent_name || 'Opponent'}
+                    onClick={() => handlePlayerSelect('opponent')}
                   />
-                ) : (
-                  <div className="point-history-title">Point History</div>
-                )}
-              </Card>
+                </div>
+                
+                {/* Point History Visualization */}
+                <Card className="point-history-panel">
+                  {matchState.points.length > 0 ? (
+                    <PointHistory 
+                      points={matchState.points}
+                      currentSet={matchState.currentSet}
+                      opponentName={match?.opponent_name}
+                      sets={matchState.dbSets}
+                      currentSetId={matchState.currentSetId}
+                    />
+                  ) : (
+                    <div className="point-history-title">Point History</div>
+                  )}
+                </Card>
+              </div>
             </div>
-          </div>
         </>
       ) : (
         // Step 2: Select both winning and other shots at the same time
