@@ -88,12 +88,6 @@ const MatchList = () => {
                 </div>
                 <div className="match-card-footer">
                   <div className="match-card-actions">
-                    <Link to={`/matches/${match.id}`} className="btn secondary-btn">
-                      Edit
-                    </Link>
-                    <Link to={`/matches/${match.id}/analysis`} className="btn primary-btn">
-                      Analysis
-                    </Link>
                     <button 
                       onClick={(e) => handleDeleteMatch(match.id, e)} 
                       className="btn danger-btn"
@@ -101,6 +95,12 @@ const MatchList = () => {
                     >
                       Delete
                     </button>
+                    <Link to={`/matches/${match.id}`} className="btn secondary-btn">
+                      Edit
+                    </Link>
+                    <Link to={`/matches/${match.id}/analysis`} className="btn primary-btn">
+                      Analysis
+                    </Link>
                   </div>
                 </div>
               </div>

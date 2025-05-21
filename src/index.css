@@ -215,13 +215,13 @@ body {
 
 /* Add styles for danger button */
 .danger-btn {
-  background-color: var(--error-color);
+  background-color: #f87171; /* Lighter red with a touch of gray */
   color: white;
 }
 
 .danger-btn:hover {
-  background-color: #dc2626;
-  border-color: #dc2626;
+  background-color: #ef4444; /* Regular red on hover */
+  border-color: #ef4444;
 }
 
 .no-matches {
