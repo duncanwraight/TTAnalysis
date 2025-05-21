@@ -35,8 +35,31 @@ export type Point = {
   set_id: string;
   point_number: number;
   winner: 'player' | 'opponent';
-  winning_shot: string; // e.g., 'forehand', 'backhand'
-  other_shot: string; // e.g., 'serve', 'loop'
+  winning_shot: string; // Temporary for backwards compatibility 
+  other_shot: string;   // Temporary for backwards compatibility
+  winning_shot_id?: string; // UUID of the shot from shots table
+  winning_hand?: 'fh' | 'bh';
+  other_shot_id?: string;   // UUID of the shot from shots table
+  other_hand?: 'fh' | 'bh';
   notes?: string;
   created_at: string;
+};
+
+export type ShotCategory = {
+  id: string;
+  name: string;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Shot = {
+  id: string;
+  category_id: string;
+  name: string;
+  display_name: string;
+  display_order: number;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
 };
