@@ -15,11 +15,18 @@ A web application for tracking and analyzing table tennis matches, built with Re
 # Install dependencies
 npm install
 
-# Start Supabase local dev environment and the application
+# Recommended: Start Supabase, API server, and frontend all together
 ./start-dev.sh
 
-# Alternative: Start only the application without Supabase
+# Alternative: Start components individually
+# 1. Start only the Express API server
+./start-api.sh  # or npm run server
+
+# 2. Start only the frontend (without Supabase or API)
 npm run dev
+
+# 3. Start both API and frontend servers
+npm run dev:all
 
 # Build for production
 npm run build
@@ -28,7 +35,9 @@ npm run build
 npm run preview
 ```
 
-The `start-dev.sh` script will start the Supabase local development environment (including PostgreSQL database) and launch the application servers. This is the recommended way to start the development environment.
+**IMPORTANT**: Both the Express API server and frontend must be running for the application to work correctly. The API server handles database operations and runs on port 3001 by default.
+
+The `start-dev.sh` script starts the Supabase local development environment (including PostgreSQL database), the Express API server, and the frontend application. This is the recommended way to start the development environment.
 
 ## Project Structure
 

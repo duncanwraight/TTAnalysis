@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { matchApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import '../styles/components/NewMatch.css';
 
 const NewMatch = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const NewMatch = () => {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -34,13 +36,26 @@ const NewMatch = () => {
     
     try {
       setIsSubmitting(true);
+      setError(null);
       
       console.log('Creating match with data:', formData);
       
+      if (!user) {
+        throw new Error('You must be logged in to create a match');
+      }
+      
+      // Validate required fields
+      if (!formData.opponent_name.trim()) {
+        throw new Error('Opponent name is required');
+      }
+      
+      if (!formData.date) {
+        throw new Error('Match date is required');
+      }
+      
       // Use the API client to create a match in the database
-      // Note: user_id is now handled on the server side based on the JWT token
       const newMatch = await matchApi.createMatch({
-        opponent_name: formData.opponent_name,
+        opponent_name: formData.opponent_name.trim(),
         date: formData.date,
         match_score: '0-0',
         notes: formData.notes,
@@ -51,12 +66,21 @@ const NewMatch = () => {
       
       // Navigate to the match tracker with the new match ID
       navigate(`/matches/${newMatch.id}`);
-    } catch (error) {
-      console.error('Error creating match:', error);
+    } catch (err) {
+      console.error('Error creating match:', err);
       
-      // In a real application, show an error message to the user
-      alert('Failed to create match. Please try again.');
+      // Show more detailed error message
+      let errorMessage = 'Failed to create match. Please try again.';
       
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      if (errorMessage.includes('JWT')) {
+        errorMessage = 'Authentication error. Please log out and log in again.';
+      }
+      
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -65,6 +89,12 @@ const NewMatch = () => {
     <Layout>
       <div className="new-match-container">
         <h2>New Match</h2>
+        
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="match-form">
           <div className="form-group">
@@ -157,7 +187,7 @@ const NewMatch = () => {
           <div className="form-buttons">
             <button 
               type="button" 
-              className="btn secondary-btn" 
+              className="secondary-btn" 
               onClick={() => navigate('/matches')}
               disabled={isSubmitting}
             >
@@ -165,7 +195,7 @@ const NewMatch = () => {
             </button>
             <button 
               type="submit" 
-              className="btn primary-btn"
+              className="primary-btn"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Creating...' : 'Start Match'}

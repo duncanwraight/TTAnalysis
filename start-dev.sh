@@ -41,6 +41,32 @@ export VITE_PG_DATABASE=postgres
 export VITE_PG_USER=postgres
 export VITE_PG_PASSWORD=postgres
 
-# Start the development server with API server and frontend
-echo "Starting development servers..."
-npm run dev:all
+# Check if the Express server is already running
+EXPRESS_PID=$(lsof -t -i:3001 2>/dev/null)
+if [ ! -z "$EXPRESS_PID" ]; then
+  echo "Stopping existing Express server (PID: $EXPRESS_PID)..."
+  kill $EXPRESS_PID
+  sleep 2
+fi
+
+# Start the Express server in the background
+echo "Starting Express API server..."
+node server.js &
+EXPRESS_PID=$!
+echo "Express server started with PID: $EXPRESS_PID"
+
+# Give the server time to start
+echo "Waiting for Express server to start..."
+sleep 3
+
+# Check if the server is running
+if curl -s http://localhost:3001/api > /dev/null; then
+  echo "Express API server is running!"
+else
+  echo "WARNING: Express API server may not have started correctly."
+  echo "Check server logs for errors."
+fi
+
+# Start the frontend development server
+echo "Starting frontend development server..."
+npm run dev

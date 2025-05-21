@@ -55,33 +55,50 @@ const authenticateJWT = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   
   if (!authHeader) {
+    console.error('Authentication failed: Missing Authorization header');
     return res.status(401).json({ error: 'Authorization header is required' });
   }
   
   const token = authHeader.split(' ')[1];
   
   if (!token) {
+    console.error('Authentication failed: Missing Bearer token');
     return res.status(401).json({ error: 'Bearer token is required' });
   }
   
   try {
     if (!adminSupabase) {
+      console.error('Authentication failed: Supabase admin client not configured');
       throw new Error('Supabase admin client not configured');
     }
+    
+    // Log token details (without exposing the full token)
+    console.log(`Auth attempt with token: ${token.substring(0, 10)}...`);
     
     // Verify the JWT token with Supabase
     const { data: { user }, error } = await adminSupabase.auth.getUser(token);
     
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+    if (error) {
+      console.error('Authentication failed: Supabase error:', error);
+      return res.status(401).json({ error: 'Invalid or expired token', details: error.message });
     }
+    
+    if (!user) {
+      console.error('Authentication failed: No user found for token');
+      return res.status(401).json({ error: 'No user associated with this token' });
+    }
+    
+    console.log(`User authenticated successfully: ${user.id} (${user.email})`);
     
     // Add user to request object
     req.user = user;
     next();
   } catch (error) {
     console.error('JWT verification error:', error);
-    return res.status(401).json({ error: 'Failed to authenticate token' });
+    return res.status(401).json({ 
+      error: 'Failed to authenticate token',
+      message: error.message 
+    });
   }
 };
 
@@ -210,8 +227,32 @@ app.post('/api/matches', async (req, res) => {
   try {
     const { opponent_name, date, match_score, notes, initial_server } = req.body;
     
+    // Log full request information for debugging
+    console.log('Match creation request:', {
+      body: req.body,
+      user: req.user,
+      headers: req.headers
+    });
+    
+    // Validate required fields
+    if (!opponent_name) {
+      return res.status(400).json({ error: 'Opponent name is required' });
+    }
+    
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
+    }
+    
+    if (!initial_server || !['player', 'opponent'].includes(initial_server)) {
+      return res.status(400).json({ error: 'Valid initial server is required (player or opponent)' });
+    }
+    
     // Use the authenticated user's ID
     const userId = req.user.id;
+    console.log('Creating match for user:', userId);
+    
+    // Log SQL parameters
+    console.log('SQL parameters:', [userId, opponent_name, date, match_score, notes, initial_server]);
     
     const result = await pool.query(
       `INSERT INTO matches (user_id, opponent_name, date, match_score, notes, initial_server) 
@@ -220,10 +261,18 @@ app.post('/api/matches', async (req, res) => {
       [userId, opponent_name, date, match_score, notes, initial_server]
     );
     
+    console.log('Match created successfully:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating match:', error);
-    res.status(500).json({ error: 'Failed to create match' });
+    console.error('Error details:', error.message, error.code, error.stack);
+    
+    // Return more detailed error information
+    res.status(500).json({ 
+      error: 'Failed to create match',
+      message: error.message,
+      code: error.code
+    });
   }
 });
 
@@ -578,7 +627,13 @@ app.delete('/api/points/:id', async (req, res) => {
 
 // Default route for testing
 app.get('/api', (req, res) => {
-  res.json({ message: 'API running' });
+  console.log('API healthcheck - API server is running');
+  res.json({ 
+    message: 'API running', 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    supabase: !!adminSupabase ? 'configured' : 'not configured'
+  });
 });
 
 // Start server
