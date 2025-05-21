@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 interface LoginProps {
   onToggleView: () => void; // Toggle between login and signup views
@@ -13,6 +14,7 @@ const Login = ({ onToggleView }: LoginProps) => {
   const [error, setError] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const navigate = useNavigate();
 
   const { signIn, resetPassword } = useAuth();
 
@@ -23,8 +25,10 @@ const Login = ({ onToggleView }: LoginProps) => {
 
     try {
       await signIn(email, password);
-      // Successful login handled by AuthContext
+      console.log('Login successful, redirecting to home');
+      navigate('/');
     } catch (err) {
+      console.error('Login error:', err);
       setError((err as Error).message);
     } finally {
       setLoading(false);
