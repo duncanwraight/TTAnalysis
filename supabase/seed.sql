@@ -1,57 +1,69 @@
--- Seed data for Supabase Auth testing
--- This will initialize the auth schema and create test users and data
+-- Seed data for TTAnalysis schema
+-- Contains only essential data needed for application functionality
 
--- Add a test user with a known password for development
--- (Password is 'password123' - only for local development!)
-INSERT INTO auth.users (
-  id, 
-  email,
-  email_confirmed_at,
-  encrypted_password,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  created_at, 
-  updated_at
-)
-VALUES (
-  '00000000-0000-0000-0000-000000000001',
-  'test@example.com',
-  now(),
-  '$2a$10$kKNR1xjZ8nqj9gNsJI.WxePVMwIl2LGGgJJaPz.3YynJkGbxfD5T6', -- 'password123'
-  '{"provider":"email","providers":["email"]}',
-  '{"name":"Test User"}',
-  now(),
-  now()
-)
-ON CONFLICT (id) DO NOTHING;
-
--- Ensure we have a test user in our users table
--- (This should be synced with the auth.users table automatically by triggers, but we'll ensure it exists)
-INSERT INTO public.users (id, email, name, created_at, updated_at)
-VALUES 
-  ('00000000-0000-0000-0000-000000000001', 'test@example.com', 'Test User', now(), now())
-ON CONFLICT (id) DO NOTHING;
-
--- Create some sample matches for the test user
-INSERT INTO public.matches (id, user_id, opponent_name, date, match_score, initial_server)
+-- Insert shot categories
+INSERT INTO public.shot_categories (id, name, display_order, created_at, updated_at)
 VALUES
-  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'John Doe', '2023-01-15', '3-1', 'player'),
-  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Jane Smith', '2023-01-20', '2-3', 'opponent')
-ON CONFLICT (id) DO NOTHING;
+  ('a0000000-0000-0000-0000-000000000001', 'serve', 1, NOW(), NOW()),
+  ('a0000000-0000-0000-0000-000000000002', 'around_net', 2, NOW(), NOW()),
+  ('a0000000-0000-0000-0000-000000000003', 'pips', 3, NOW(), NOW()),
+  ('a0000000-0000-0000-0000-000000000004', 'attacks', 4, NOW(), NOW()),
+  ('a0000000-0000-0000-0000-000000000005', 'defence', 5, NOW(), NOW())
+ON CONFLICT (name) DO UPDATE SET
+  display_order = EXCLUDED.display_order,
+  updated_at = NOW();
 
--- Create some sample sets for the first match
-INSERT INTO public.sets (id, match_id, set_number, score, player_score, opponent_score)
+-- Insert shots
+-- Serves
+INSERT INTO public.shots (id, category_id, name, display_name, display_order, created_at, updated_at)
 VALUES
-  ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 1, '11-8', 11, 8),
-  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 2, '9-11', 9, 11),
-  ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', 3, '11-5', 11, 5),
-  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 4, '11-7', 11, 7)
-ON CONFLICT (id) DO NOTHING;
+  ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'serve', 'Serve', 1, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'serve_receive', 'Serve receive', 2, NOW(), NOW())
+ON CONFLICT (category_id, name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  display_order = EXCLUDED.display_order,
+  updated_at = NOW();
 
--- Create some sample points
-INSERT INTO public.points (id, set_id, point_number, winner, winning_shot, other_shot)
+-- Around the net
+INSERT INTO public.shots (id, category_id, name, display_name, display_order, created_at, updated_at)
 VALUES
-  ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 1, 'player', 'forehand', 'backhand'),
-  ('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 2, 'opponent', 'forehand', 'serve'),
-  ('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 3, 'player', 'backhand', 'forehand')
-ON CONFLICT (id) DO NOTHING;
+  ('b0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000002', 'push', 'Push', 1, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000002', 'flick', 'Flick', 2, NOW(), NOW())
+ON CONFLICT (category_id, name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  display_order = EXCLUDED.display_order,
+  updated_at = NOW();
+
+-- Pips
+INSERT INTO public.shots (id, category_id, name, display_name, display_order, created_at, updated_at)
+VALUES
+  ('b0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000003', 'bump', 'Bump', 1, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000003', 'sideswipe', 'Sideswipe', 2, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000003', 'attack', 'Attack', 3, NOW(), NOW())
+ON CONFLICT (category_id, name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  display_order = EXCLUDED.display_order,
+  updated_at = NOW();
+
+-- Attacks
+INSERT INTO public.shots (id, category_id, name, display_name, display_order, created_at, updated_at)
+VALUES
+  ('b0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000004', 'flat_hit', 'Flat-hit', 1, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000009', 'a0000000-0000-0000-0000-000000000004', 'loop', 'Loop', 2, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000010', 'a0000000-0000-0000-0000-000000000004', 'smash', 'Smash', 3, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000004', 'counter_loop', 'Counter-loop', 4, NOW(), NOW())
+ON CONFLICT (category_id, name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  display_order = EXCLUDED.display_order,
+  updated_at = NOW();
+
+-- Defence
+INSERT INTO public.shots (id, category_id, name, display_name, display_order, created_at, updated_at)
+VALUES
+  ('b0000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000005', 'chop', 'Chop', 1, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000013', 'a0000000-0000-0000-0000-000000000005', 'fish', 'Fish', 2, NOW(), NOW()),
+  ('b0000000-0000-0000-0000-000000000014', 'a0000000-0000-0000-0000-000000000005', 'lob', 'Lob', 3, NOW(), NOW())
+ON CONFLICT (category_id, name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  display_order = EXCLUDED.display_order,
+  updated_at = NOW();
