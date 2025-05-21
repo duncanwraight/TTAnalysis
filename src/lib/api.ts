@@ -51,6 +51,12 @@ export const matchApi = {
       method: 'PUT',
       body: JSON.stringify(match),
     }),
+    
+  // Delete a match
+  deleteMatch: (id: string) =>
+    fetchApi<{ message: string; id: string }>(`/matches/${id}`, {
+      method: 'DELETE',
+    }),
 };
 
 // Set API functions

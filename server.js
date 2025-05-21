@@ -197,6 +197,33 @@ app.put('/api/matches/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/matches/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First check if the match exists
+    const checkResult = await pool.query(
+      'SELECT id FROM matches WHERE id = $1',
+      [id]
+    );
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+    
+    // Delete all associated data (cascade will handle this due to the foreign key constraints)
+    const result = await pool.query(
+      'DELETE FROM matches WHERE id = $1 RETURNING id',
+      [id]
+    );
+    
+    res.json({ message: 'Match deleted successfully', id: result.rows[0].id });
+  } catch (error) {
+    console.error('Error deleting match:', error);
+    res.status(500).json({ error: 'Failed to delete match' });
+  }
+});
+
 // Sets
 app.get('/api/sets', async (req, res) => {
   try {

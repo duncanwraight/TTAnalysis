@@ -206,6 +206,24 @@ body {
   justify-content: flex-end;
 }
 
+.match-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+/* Add styles for danger button */
+.danger-btn {
+  background-color: var(--error-color);
+  color: white;
+}
+
+.danger-btn:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
 .no-matches {
   text-align: center;
   padding: 3rem 0;

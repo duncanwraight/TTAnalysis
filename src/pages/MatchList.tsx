@@ -8,22 +8,43 @@ const MatchList = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const fetchMatches = async () => {
+  const fetchMatches = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await matchApi.getAllMatches();
+      setMatches(data);
+    } catch (err) {
+      console.error('Failed to fetch matches:', err);
+      setError('Failed to load matches. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle match deletion
+  const handleDeleteMatch = async (id: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (window.confirm('Are you sure you want to delete this match? This action cannot be undone.')) {
       try {
-        setLoading(true);
-        setError(null);
-        const data = await matchApi.getAllMatches();
-        setMatches(data);
+        setIsDeleting(true);
+        await matchApi.deleteMatch(id);
+        // Refresh the match list after deletion
+        fetchMatches();
       } catch (err) {
-        console.error('Failed to fetch matches:', err);
-        setError('Failed to load matches. Please try again later.');
+        console.error('Failed to delete match:', err);
+        alert('Failed to delete match. Please try again.');
       } finally {
-        setLoading(false);
+        setIsDeleting(false);
       }
-    };
-
+    }
+  };
+  
+  useEffect(() => {
     fetchMatches();
   }, []);
 
@@ -66,9 +87,21 @@ const MatchList = () => {
                   {match.notes && <p className="match-notes">{match.notes}</p>}
                 </div>
                 <div className="match-card-footer">
-                  <Link to={`/matches/${match.id}`} className="btn secondary-btn">
-                    View Details
-                  </Link>
+                  <div className="match-card-actions">
+                    <Link to={`/matches/${match.id}`} className="btn secondary-btn">
+                      Edit
+                    </Link>
+                    <Link to={`/matches/${match.id}/analysis`} className="btn primary-btn">
+                      Analysis
+                    </Link>
+                    <button 
+                      onClick={(e) => handleDeleteMatch(match.id, e)} 
+                      className="btn danger-btn"
+                      disabled={isDeleting}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
