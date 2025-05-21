@@ -5,6 +5,10 @@ import MatchList from './pages/MatchList';
 import NewMatch from './pages/NewMatch';
 import MatchTracker from './pages/MatchTracker';
 import MatchAnalysis from './pages/MatchAnalysis';
+import Auth from './pages/Auth';
+import AdminPanel from './pages/AdminPanel';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import './index.css';
 
 function App() {
@@ -15,16 +19,60 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/matches" element={<MatchList />} />
-        <Route path="/matches/new" element={<NewMatch />} />
-        <Route path="/matches/:id" element={<MatchTracker />} />
-        <Route path="/matches/:id/analysis" element={<MatchAnalysis />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/auth" element={<Auth />} />
+          
+          {/* Protected routes requiring authentication */}
+          <Route 
+            path="/matches" 
+            element={
+              <ProtectedRoute>
+                <MatchList />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/matches/new" 
+            element={
+              <ProtectedRoute>
+                <NewMatch />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/matches/:id" 
+            element={
+              <ProtectedRoute>
+                <MatchTracker />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/matches/:id/analysis" 
+            element={
+              <ProtectedRoute>
+                <MatchAnalysis />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Admin route requiring admin status */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminPanel />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

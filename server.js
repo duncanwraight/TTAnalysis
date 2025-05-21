@@ -5,6 +5,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 // Get current directory
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -38,13 +39,101 @@ pool.connect()
     console.error('Error connecting to PostgreSQL database:', err);
   });
 
+// Create Supabase client with service role key for admin operations
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+let adminSupabase;
+if (supabaseUrl && supabaseServiceKey) {
+  adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
+} else {
+  console.warn('Missing Supabase credentials for admin operations');
+}
+
+// JWT Auth middleware
+const authenticateJWT = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Authorization header is required' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Bearer token is required' });
+  }
+  
+  try {
+    if (!adminSupabase) {
+      throw new Error('Supabase admin client not configured');
+    }
+    
+    // Verify the JWT token with Supabase
+    const { data: { user }, error } = await adminSupabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    
+    // Add user to request object
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    return res.status(401).json({ error: 'Failed to authenticate token' });
+  }
+};
+
+// Set user as admin
+app.post('/api/set-admin', authenticateJWT, async (req, res) => {
+  const { adminKey } = req.body;
+  const userId = req.user.id;
+  
+  // Verify admin key
+  const correctAdminKey = process.env.VITE_ADMIN_REGISTRATION_KEY;
+  
+  if (!correctAdminKey || adminKey !== correctAdminKey) {
+    return res.status(403).json({ error: 'Invalid admin registration key' });
+  }
+  
+  try {
+    if (!adminSupabase) {
+      throw new Error('Supabase admin client not configured');
+    }
+    
+    // Set the is_admin flag to true for the user
+    const { error } = await pool.query(
+      'UPDATE profiles SET is_admin = true WHERE id = $1',
+      [userId]
+    );
+    
+    if (error) {
+      console.error('Error setting admin status:', error);
+      return res.status(500).json({ error: 'Failed to set admin status' });
+    }
+    
+    res.status(200).json({ success: true, message: 'Admin status set successfully' });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // API endpoints
+
+// Secure all data endpoints with JWT middleware
+app.use('/api/matches', authenticateJWT);
+app.use('/api/sets', authenticateJWT);
+app.use('/api/points', authenticateJWT);
 
 // Matches
 app.get('/api/matches', async (req, res) => {
   try {
+    // Filter matches by the authenticated user
     const result = await pool.query(
-      'SELECT * FROM matches ORDER BY date DESC'
+      'SELECT * FROM matches WHERE user_id = $1 ORDER BY date DESC',
+      [req.user.id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -57,8 +146,8 @@ app.get('/api/matches/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      'SELECT * FROM matches WHERE id = $1',
-      [id]
+      'SELECT * FROM matches WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
     );
     
     if (result.rows.length === 0) {
@@ -78,8 +167,8 @@ app.get('/api/matches/:id/full', async (req, res) => {
     
     // Get match
     const matchResult = await pool.query(
-      'SELECT * FROM matches WHERE id = $1',
-      [id]
+      'SELECT * FROM matches WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
     );
     
     if (matchResult.rows.length === 0) {
@@ -119,13 +208,16 @@ app.get('/api/matches/:id/full', async (req, res) => {
 
 app.post('/api/matches', async (req, res) => {
   try {
-    const { user_id, opponent_name, date, match_score, notes, initial_server } = req.body;
+    const { opponent_name, date, match_score, notes, initial_server } = req.body;
+    
+    // Use the authenticated user's ID
+    const userId = req.user.id;
     
     const result = await pool.query(
       `INSERT INTO matches (user_id, opponent_name, date, match_score, notes, initial_server) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
-      [user_id, opponent_name, date, match_score, notes, initial_server]
+      [userId, opponent_name, date, match_score, notes, initial_server]
     );
     
     res.status(201).json(result.rows[0]);
@@ -139,6 +231,16 @@ app.put('/api/matches/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { opponent_name, date, match_score, notes, initial_server } = req.body;
+    
+    // First check if the match belongs to the authenticated user
+    const checkResult = await pool.query(
+      'SELECT id FROM matches WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
     
     // Create update query dynamically based on which fields are provided
     const updateFields = [];
@@ -180,9 +282,10 @@ app.put('/api/matches/:id', async (req, res) => {
     }
     
     values.push(id);
+    values.push(req.user.id);
     
     const result = await pool.query(
-      `UPDATE matches SET ${updateFields.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+      `UPDATE matches SET ${updateFields.join(', ')} WHERE id = $${paramCounter} AND user_id = $${paramCounter + 1} RETURNING *`,
       values
     );
     
@@ -201,10 +304,10 @@ app.delete('/api/matches/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // First check if the match exists
+    // First check if the match exists and belongs to the authenticated user
     const checkResult = await pool.query(
-      'SELECT id FROM matches WHERE id = $1',
-      [id]
+      'SELECT id FROM matches WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
     );
     
     if (checkResult.rows.length === 0) {
@@ -229,15 +332,19 @@ app.get('/api/sets', async (req, res) => {
   try {
     const { match_id } = req.query;
     
-    let query = 'SELECT * FROM sets';
-    const values = [];
+    let query = `
+      SELECT s.* FROM sets s
+      JOIN matches m ON s.match_id = m.id
+      WHERE m.user_id = $1
+    `;
+    const values = [req.user.id];
     
     if (match_id) {
-      query += ' WHERE match_id = $1';
+      query += ' AND s.match_id = $2';
       values.push(match_id);
     }
     
-    query += ' ORDER BY set_number';
+    query += ' ORDER BY s.set_number';
     
     const result = await pool.query(query, values);
     res.json(result.rows);
@@ -250,6 +357,16 @@ app.get('/api/sets', async (req, res) => {
 app.post('/api/sets', async (req, res) => {
   try {
     const { match_id, set_number, score, player_score, opponent_score } = req.body;
+    
+    // Verify that the match belongs to the authenticated user
+    const matchCheck = await pool.query(
+      'SELECT id FROM matches WHERE id = $1 AND user_id = $2',
+      [match_id, req.user.id]
+    );
+    
+    if (matchCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
     
     const result = await pool.query(
       `INSERT INTO sets (match_id, set_number, score, player_score, opponent_score) 
@@ -269,6 +386,18 @@ app.put('/api/sets/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { score, player_score, opponent_score } = req.body;
+    
+    // Verify the set belongs to a match owned by the authenticated user
+    const setCheck = await pool.query(
+      `SELECT s.id FROM sets s
+       JOIN matches m ON s.match_id = m.id
+       WHERE s.id = $1 AND m.user_id = $2`,
+      [id, req.user.id]
+    );
+    
+    if (setCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Set not found' });
+    }
     
     // Create update query dynamically based on which fields are provided
     const updateFields = [];
@@ -304,10 +433,6 @@ app.put('/api/sets/:id', async (req, res) => {
       values
     );
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Set not found' });
-    }
-    
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating set:', error);
@@ -320,15 +445,20 @@ app.get('/api/points', async (req, res) => {
   try {
     const { set_id } = req.query;
     
-    let query = 'SELECT * FROM points';
-    const values = [];
+    let query = `
+      SELECT p.* FROM points p
+      JOIN sets s ON p.set_id = s.id
+      JOIN matches m ON s.match_id = m.id
+      WHERE m.user_id = $1
+    `;
+    const values = [req.user.id];
     
     if (set_id) {
-      query += ' WHERE set_id = $1';
+      query += ' AND p.set_id = $2';
       values.push(set_id);
     }
     
-    query += ' ORDER BY point_number';
+    query += ' ORDER BY p.point_number';
     
     const result = await pool.query(query, values);
     res.json(result.rows);
@@ -363,6 +493,18 @@ async function getShotIdByName(shotName) {
 app.post('/api/points', async (req, res) => {
   try {
     const { set_id, point_number, winner, winning_shot, other_shot, notes } = req.body;
+    
+    // Verify the set belongs to a match owned by the authenticated user
+    const setCheck = await pool.query(
+      `SELECT s.id FROM sets s
+       JOIN matches m ON s.match_id = m.id
+       WHERE s.id = $1 AND m.user_id = $2`,
+      [set_id, req.user.id]
+    );
+    
+    if (setCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Set not found' });
+    }
     
     // Parse shot data to separate hand and shot name
     let winning_hand = null;
@@ -409,20 +551,34 @@ app.delete('/api/points/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Verify the point belongs to a set of a match owned by the authenticated user
+    const pointCheck = await pool.query(
+      `SELECT p.id FROM points p
+       JOIN sets s ON p.set_id = s.id
+       JOIN matches m ON s.match_id = m.id
+       WHERE p.id = $1 AND m.user_id = $2`,
+      [id, req.user.id]
+    );
+    
+    if (pointCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Point not found' });
+    }
+    
     const result = await pool.query(
       'DELETE FROM points WHERE id = $1 RETURNING id',
       [id]
     );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Point not found' });
-    }
     
     res.json({ message: 'Point deleted successfully' });
   } catch (error) {
     console.error('Error deleting point:', error);
     res.status(500).json({ error: 'Failed to delete point' });
   }
+});
+
+// Default route for testing
+app.get('/api', (req, res) => {
+  res.json({ message: 'API running' });
 });
 
 // Start server
