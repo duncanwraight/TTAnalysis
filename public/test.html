@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow: auto;
+            max-height: 400px;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Test</h1>
+    
+    <div>
+        <button onclick="testApi()">Test API Health</button>
+        <button onclick="testCreateMatch()">Test Create Match</button>
+    </div>
+    
+    <h2>Results:</h2>
+    <pre id="result">Click a button to run a test...</pre>
+    
+    <script>
+        async function testApi() {
+            const resultElem = document.getElementById('result');
+            resultElem.innerHTML = 'Testing API health endpoint...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api');
+                const statusText = response.ok ? 
+                    `<span class="success">SUCCESS</span>` : 
+                    `<span class="error">ERROR ${response.status}</span>`;
+                    
+                resultElem.innerHTML = `API Health Test: ${statusText}\n\nStatus: ${response.status}\n`;
+                
+                try {
+                    const text = await response.text();
+                    resultElem.innerHTML += `\nResponse Text:\n${text}`;
+                    
+                    try {
+                        // Try to parse JSON
+                        const data = JSON.parse(text);
+                        resultElem.innerHTML += `\n\nParsed JSON:\n${JSON.stringify(data, null, 2)}`;
+                    } catch (parseError) {
+                        resultElem.innerHTML += `\n\nCould not parse as JSON: ${parseError.message}`;
+                    }
+                } catch (textError) {
+                    resultElem.innerHTML += `\nCould not read response text: ${textError.message}`;
+                }
+            } catch (error) {
+                resultElem.innerHTML = `<span class="error">ERROR: ${error.message}</span>`;
+                resultElem.innerHTML += `\n\nThis may indicate a network issue or CORS problem.`;
+            }
+        }
+        
+        async function testCreateMatch() {
+            const resultElem = document.getElementById('result');
+            resultElem.innerHTML = 'Testing match creation...';
+            
+            const testData = {
+                opponent_name: 'Test Opponent',
+                date: new Date().toISOString().split('T')[0],
+                match_score: '0-0',
+                notes: 'Created via test page',
+                initial_server: 'player'
+            };
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/matches', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const statusText = response.ok ? 
+                    `<span class="success">SUCCESS</span>` : 
+                    `<span class="error">ERROR ${response.status}</span>`;
+                    
+                resultElem.innerHTML = `Match Creation Test: ${statusText}\n\nStatus: ${response.status}\n`;
+                
+                try {
+                    const text = await response.text();
+                    resultElem.innerHTML += `\nResponse Text:\n${text}`;
+                    
+                    try {
+                        // Try to parse JSON
+                        const data = JSON.parse(text);
+                        resultElem.innerHTML += `\n\nParsed JSON:\n${JSON.stringify(data, null, 2)}`;
+                    } catch (parseError) {
+                        resultElem.innerHTML += `\n\nCould not parse as JSON: ${parseError.message}`;
+                    }
+                } catch (textError) {
+                    resultElem.innerHTML += `\nCould not read response text: ${textError.message}`;
+                }
+            } catch (error) {
+                resultElem.innerHTML = `<span class="error">ERROR: ${error.message}</span>`;
+                resultElem.innerHTML += `\n\nThis may indicate a network issue or CORS problem.`;
+            }
+        }
+    </script>
+</body>
+</html>

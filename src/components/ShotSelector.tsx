@@ -93,12 +93,26 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   const [shotCategories, setShotCategories] = useState<ShotCategory[]>(fallbackShotCategories);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Fetch shot categories and shots from the database
+  // Fetch shot categories and shots from the database using direct API calls
   useEffect(() => {
     const loadShots = async () => {
       try {
         setIsLoading(true);
-        const { categories, shots } = await fetchShotsWithCategories();
+        
+        // Fetch categories from API
+        const categoriesResponse = await fetch('http://localhost:3001/api/shots/categories');
+        if (!categoriesResponse.ok) {
+          throw new Error(`Failed to fetch shot categories: ${categoriesResponse.status}`);
+        }
+        
+        // Fetch shots from API
+        const shotsResponse = await fetch('http://localhost:3001/api/shots');
+        if (!shotsResponse.ok) {
+          throw new Error(`Failed to fetch shots: ${shotsResponse.status}`);
+        }
+        
+        const categories = await categoriesResponse.json();
+        const shots = await shotsResponse.json();
         
         if (categories.length > 0 && shots.length > 0) {
           const formattedCategories = categories.map((category: DBShotCategory) => {
@@ -123,6 +137,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
         }
       } catch (error) {
         console.error('Error loading shot categories:', error);
+        console.error('Using fallback categories due to error');
         // Keep using fallback categories
       } finally {
         setIsLoading(false);

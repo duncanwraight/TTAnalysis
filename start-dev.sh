@@ -41,6 +41,16 @@ export VITE_PG_DATABASE=postgres
 export VITE_PG_USER=postgres
 export VITE_PG_PASSWORD=postgres
 
+# Ensure Supabase service role key is set for JWT authentication
+if [ -f .env ]; then
+  echo "Loading Supabase service role key from .env file..."
+  SUPABASE_SERVICE_ROLE_KEY=$(grep SUPABASE_SERVICE_ROLE_KEY .env | cut -d '=' -f2)
+  export SUPABASE_SERVICE_ROLE_KEY
+  echo "Supabase service role key loaded."
+else
+  echo "WARNING: .env file not found. JWT authentication may not work correctly."
+fi
+
 # Check if the Express server is already running
 EXPRESS_PID=$(lsof -t -i:3001 2>/dev/null)
 if [ ! -z "$EXPRESS_PID" ]; then
@@ -51,7 +61,14 @@ fi
 
 # Start the Express server in the background
 echo "Starting Express API server..."
-node server.js &
+# Print loaded environment variables for debugging
+echo "Environment variables being loaded:"
+echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL"
+echo "SUPABASE_SERVICE_ROLE_KEY exists: $(if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "YES"; else echo "NO"; fi)"
+echo "VITE_PG_HOST=$VITE_PG_HOST"
+
+# Load all environment variables from .env and start server
+node -r dotenv/config server.js &
 EXPRESS_PID=$!
 echo "Express server started with PID: $EXPRESS_PID"
 

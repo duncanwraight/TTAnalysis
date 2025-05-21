@@ -7,6 +7,7 @@ import MatchTracker from './pages/MatchTracker';
 import MatchAnalysis from './pages/MatchAnalysis';
 import Auth from './pages/Auth';
 import AdminPanel from './pages/AdminPanel';
+import Debug from './pages/Debug';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './index.css';
@@ -70,6 +71,9 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          
+          {/* Debug page without protection */}
+          <Route path="/debug" element={<Debug />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

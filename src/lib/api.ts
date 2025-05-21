@@ -3,7 +3,36 @@
 import { Match, Set, Point } from '../types/database.types';
 import { supabase } from './supabase';
 
+// Enable debugging mode for API requests
+const DEBUG_MODE = true;
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+// Add a test endpoint function to diagnose API connectivity issues
+export async function testApiConnection() {
+  try {
+    console.log('[TEST] Testing API connection to:', API_URL);
+    const response = await fetch(`${API_URL}`);
+    console.log('[TEST] API health check response:', {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('[TEST] API health check data:', data);
+      return { success: true, data };
+    } else {
+      const errorText = await response.text();
+      console.error('[TEST] API health check error:', errorText);
+      return { success: false, error: errorText };
+    }
+  } catch (error) {
+    console.error('[TEST] API connection test failed:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 // Helper function for making API requests
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -18,6 +47,39 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     if (!token) {
       console.error(`[${requestId}] No authentication token available for API request to ${endpoint}`);
       throw new Error('Authentication required. Please log in again.');
+    }
+    
+    // Debug session info (don't log sensitive tokens in production)
+    console.log(`[${requestId}] Session information:`, {
+      hasToken: !!token,
+      tokenFirstChars: token ? token.substring(0, 10) + '...' : 'none',
+      userId: session?.user?.id,
+      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown'
+    });
+    
+    // Test making a GET request to /api/matches first to check auth
+    if (endpoint === '/matches' && options.method === 'POST') {
+      try {
+        console.log(`[${requestId}] Testing auth token with GET /api/matches before creating match`);
+        const testResponse = await fetch(`${API_URL}/matches`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        console.log(`[${requestId}] Auth test response:`, {
+          ok: testResponse.ok,
+          status: testResponse.status,
+          statusText: testResponse.statusText
+        });
+        
+        if (!testResponse.ok) {
+          const errorText = await testResponse.text();
+          console.error(`[${requestId}] Auth test failed:`, errorText);
+        }
+      } catch (testError) {
+        console.error(`[${requestId}] Auth test request failed:`, testError);
+      }
     }
 
     // Set authorization header if token exists
@@ -51,6 +113,24 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       const errorText = await response.text();
       let errorData = {};
       
+      // Special handling for 404 Not Found
+      if (response.status === 404) {
+        console.error(`[${requestId}] API ENDPOINT NOT FOUND: ${API_URL}${endpoint}`);
+        console.error(`[${requestId}] This suggests the server route doesn't exist or the API server isn't configured correctly`);
+        
+        // Check server health
+        try {
+          const healthResponse = await fetch(`${API_URL}`);
+          console.log(`[${requestId}] API server health check:`, {
+            ok: healthResponse.ok,
+            status: healthResponse.status,
+            statusText: healthResponse.statusText
+          });
+        } catch (healthError) {
+          console.error(`[${requestId}] API server health check failed:`, healthError);
+        }
+      }
+      
       try {
         // Try to parse as JSON
         errorData = JSON.parse(errorText);
@@ -62,7 +142,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       }
       
       throw new Error(
-        errorData.message || errorData.error || `API request failed with status ${response.status}`
+        errorData.message || errorData.error || `API request failed with status ${response.status} (${response.statusText})`
       );
     }
 
