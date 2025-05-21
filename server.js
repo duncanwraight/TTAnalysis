@@ -311,29 +311,58 @@ app.get('/api/points', async (req, res) => {
   }
 });
 
+// Helper function to get shot by name
+async function getShotIdByName(shotName) {
+  if (!shotName || shotName === 'no_data') {
+    return null;
+  }
+  
+  try {
+    const result = await pool.query(
+      'SELECT id FROM shots WHERE name = $1 LIMIT 1',
+      [shotName]
+    );
+    
+    if (result.rows.length > 0) {
+      return result.rows[0].id;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching shot ID:', error);
+    return null;
+  }
+}
+
 app.post('/api/points', async (req, res) => {
   try {
     const { set_id, point_number, winner, winning_shot, other_shot, notes } = req.body;
     
-    // Parse shot data to separate ID and hand
-    let winning_shot_id = null;
+    // Parse shot data to separate hand and shot name
     let winning_hand = null;
-    let other_shot_id = null;
+    let winning_shot_name = null;
     let other_hand = null;
+    let other_shot_name = null;
     
     if (winning_shot && winning_shot !== 'no_data') {
       const parts = winning_shot.split('_');
       winning_hand = parts[0]; // 'fh' or 'bh'
-      // Join the rest in case shot_id contains underscores
-      winning_shot_id = parts.slice(1).join('_');
+      // Join the rest in case shot names contain underscores
+      winning_shot_name = parts.slice(1).join('_');
     }
     
     if (other_shot && other_shot !== 'no_data') {
       const parts = other_shot.split('_');
       other_hand = parts[0]; // 'fh' or 'bh'
-      // Join the rest in case shot_id contains underscores
-      other_shot_id = parts.slice(1).join('_');
+      // Join the rest in case shot names contain underscores
+      other_shot_name = parts.slice(1).join('_');
     }
+    
+    // Look up shot IDs from the database based on names
+    const winning_shot_id = await getShotIdByName(winning_shot_name);
+    const other_shot_id = await getShotIdByName(other_shot_name);
+    
+    // For now, handle the case where shots might not be in the database yet
+    // In the future, we'll update the frontend to use proper shot IDs
     
     const result = await pool.query(
       `INSERT INTO points (set_id, point_number, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, notes) 
