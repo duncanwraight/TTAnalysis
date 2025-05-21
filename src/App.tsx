@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import MatchList from './pages/MatchList';
 import NewMatch from './pages/NewMatch';
-import MatchTracker from './pages/MatchTracker-Refactored';
+import MatchTracker from './pages/MatchTracker';
 import MatchAnalysis from './pages/MatchAnalysis';
 import './index.css';
 
