@@ -18,67 +18,42 @@ const PointHistory: React.FC<PointHistoryProps> = ({
   sets,
   currentSetId
 }) => {
-  // Add debugging to help understand what's coming in
-  console.log('[PointHistory] Props:', { points, currentSet, sets, currentSetId });
-  if (points.length > 0) {
-    console.log('[PointHistory] First point:', points[0]);
-  }
-  if (sets && sets.length > 0) {
-    console.log('[PointHistory] Sets:', sets);
-  }
-  
-  // Add logging to understand the input data better
-  console.log('[PointHistory] All points:', points);
-  console.log('[PointHistory] Current set:', currentSet);
-  console.log('[PointHistory] Current set ID:', currentSetId);
-  console.log('[PointHistory] Sets:', sets);
+  // Optional debug logging - uncomment if needed during development
+  // console.log('[PointHistory] Props:', { 
+  //   pointsCount: points.length,
+  //   currentSet,
+  //   setsCount: sets?.length,
+  //   currentSetId
+  // });
 
-  // Filter points for the current set
-  // Handle both database UUID format and localStorage format
-  const currentSetPoints = points.filter(
-    point => {
-      // If currentSetId is provided and valid (from database), use it as the primary method
-      if (currentSetId) {
-        const matches = point.set_id === currentSetId; 
-        console.log(`[PointHistory] Point ${point.id}, checking against currentSetId=${currentSetId}: ${matches}`);
-        if (matches) return true;
-      }
-      
-      // If we have sets array (from database), find the set with matching set_number
-      if (sets && sets.length > 0) {
-        const matchingSet = sets.find(set => set.set_number === currentSet);
-        if (matchingSet) {
-          const matches = point.set_id === matchingSet.id;
-          console.log(`[PointHistory] Point ${point.id}, checking against matchingSet=${matchingSet.id}: ${matches}`);
-          if (matches) return true;
-        }
-      }
-      
-      // Get all points that were recorded in this session (likely the most recent points)
-      // This is a fallback for when the match is in progress and we haven't saved the set ID properly
-      const sessionPoints = points.filter(p => {
-        // Check if the point was created in the last hour (likely this session)
-        const pointTime = new Date(p.created_at).getTime();
-        const oneHourAgo = Date.now() - (60 * 60 * 1000);
-        return pointTime > oneHourAgo;
-      });
-      
-      if (sessionPoints.length > 0 && sessionPoints.includes(point)) {
-        console.log(`[PointHistory] Point ${point.id} is from current session, including it`);
-        return true;
-      }
-      
-      // Fallback to the localStorage format as a last resort
-      if (point.set_id === `set-${currentSet}`) {
-        console.log(`[PointHistory] Point ${point.id} matches localStorage format set-${currentSet}`);
-        return true;
-      }
-      
-      // If none of the above conditions match, don't include this point
-      console.log(`[PointHistory] Point ${point.id} does not match any criteria, excluding it`);
-      return false;
+  // Filter points for the current set - simplified and more reliable logic
+  const currentSetPoints = points.filter(point => {
+    // Primary method: Match by current set ID (most reliable)
+    if (currentSetId && point.set_id === currentSetId) {
+      return true;
     }
-  );
+    
+    // Secondary method: If we have sets array, find the matching set by set_number
+    if (sets && sets.length > 0) {
+      const matchingSet = sets.find(set => set.set_number === currentSet);
+      if (matchingSet && point.set_id === matchingSet.id) {
+        return true;
+      }
+    }
+    
+    // Fallback method: Check if point was recorded in this session (recent points)
+    if (point.created_at) {
+      const pointTime = new Date(point.created_at).getTime();
+      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      
+      // Only use this fallback if we don't have reliable set data yet
+      if (!currentSetId && !sets?.length && pointTime > oneHourAgo) {
+        return true;
+      }
+    }
+    
+    return false;
+  });
 
   // If there are no points in the current set, show a message
   if (currentSetPoints.length === 0) {

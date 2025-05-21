@@ -2,7 +2,7 @@
 
 ## Database & Data Integration
 - [x] Fix the Matches page to pull data from PostgreSQL database
-- [ ] Ensure proper data synchronization between local state and database
+- [x] Ensure proper data synchronization between local state and database
 - [ ] Optimize database queries for match and point data
 
 ## Authentication

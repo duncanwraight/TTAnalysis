@@ -57,24 +57,30 @@ const MatchTracker = () => {
   // Default to 'player' but this will be overridden by the match data if available
   const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
 
-  // Debug log to track API URL
+  // Initialize API URL
   useEffect(() => {
-    console.log('[MatchTracker] API URL:', import.meta.env.VITE_API_URL);
+    // Ensure API URL is properly set
+    if (!import.meta.env.VITE_API_URL) {
+      console.warn('VITE_API_URL is not defined in environment variables');
+    }
   }, []);
 
   // Load match data
   useEffect(() => {
     const loadMatchData = async () => {
       try {
-        console.log('[MatchTracker] Loading match data for ID:', id);
-        // Try to fetch match data from the API
-        const matchData = await matchApi.getFullMatchById(id || '').catch((err) => {
-          console.error('[MatchTracker] Error fetching match data:', err);
-          return null;
-        });
+        setLoading(true);
         
-        if (matchData) {
-          console.log('[MatchTracker] Match data loaded successfully:', matchData);
+        if (!id) {
+          console.error('No match ID provided');
+          setLoading(false);
+          return;
+        }
+        
+        // Try to fetch match data from the API
+        try {
+          const matchData = await matchApi.getFullMatchById(id);
+          
           // Match exists in the database
           const { match, sets, points } = matchData;
           
@@ -82,12 +88,7 @@ const MatchTracker = () => {
           setMatch(match);
           
           // Set initial server
-          if (match.initial_server) {
-            const server = match.initial_server === 'opponent' ? 'opponent' : 'player';
-            setInitialServer(server);
-          } else {
-            setInitialServer('player');
-          }
+          setInitialServer(match.initial_server || 'player');
           
           // Convert sets to the format used in state
           const matchSets = sets.map(set => ({
@@ -106,13 +107,6 @@ const MatchTracker = () => {
           // Find the current set ID
           const currentSetId = sets.length > 0 ? sets[sets.length - 1].id : null;
           
-          console.log('[MatchTracker] Setting initial state with:', {
-            sets, 
-            points, 
-            currentSet, 
-            currentSetId
-          });
-          
           setMatchState({
             currentSet,
             sets: matchSets,
@@ -121,62 +115,50 @@ const MatchTracker = () => {
             dbSets: sets, // Store the database sets for ID mapping
             currentSetId
           });
-        } else {
-          console.log('[MatchTracker] Match not found in database, checking localStorage');
-          // Match doesn't exist in DB, fallback to localStorage
-          // In real implementation, you would redirect to 404 or create a new match
+          
+          // Set canUndo based on whether there are points
+          setCanUndo(points.length > 0);
+          
+        } catch (err) {
+          // Match doesn't exist in database, create it
+          console.warn('Match not found in database, creating one');
+          
+          // Create a default match
+          const defaultMatch = {
+            user_id: '00000000-0000-0000-0000-000000000001', // Use our test user ID
+            opponent_name: 'Opponent',
+            date: new Date().toISOString().split('T')[0],
+            match_score: '0-0',
+            notes: '',
+            initial_server: 'player'
+          };
+          
+          // Try to get data from localStorage for backward compatibility
           try {
-            // Check if we have match details stored in localStorage
             const storedMatch = localStorage.getItem(`match_${id}`);
             if (storedMatch) {
-              console.log('[MatchTracker] Found match in localStorage:', storedMatch);
               const parsedMatch = JSON.parse(storedMatch);
               
-              // Create match in database
-              console.log('[MatchTracker] Creating match in database from localStorage data');
-              const newMatch = await matchApi.createMatch({
-                user_id: parsedMatch.user_id || '00000000-0000-0000-0000-000000000001',
-                opponent_name: parsedMatch.opponent_name || 'Opponent',
-                date: parsedMatch.date || new Date().toISOString().split('T')[0],
-                match_score: parsedMatch.match_score || '0-0',
-                notes: parsedMatch.notes || '',
-                initial_server: parsedMatch.initial_server || 'player'
-              });
-              
-              console.log('[MatchTracker] Match created successfully:', newMatch);
-              setMatch(newMatch);
-              
-              if (newMatch.initial_server) {
-                const server = newMatch.initial_server === 'opponent' ? 'opponent' : 'player';
-                setInitialServer(server);
-              } else {
-                setInitialServer('player');
-              }
-            } else {
-              console.log('[MatchTracker] No match found in localStorage, creating default match');
-              // Create a default match
-              const defaultMatch = {
-                user_id: '00000000-0000-0000-0000-000000000001', // Use our test user ID
-                opponent_name: 'Opponent',
-                date: new Date().toISOString().split('T')[0],
-                match_score: '0-0',
-                notes: '',
-                initial_server: 'player'
-              };
-              
-              const newMatch = await matchApi.createMatch(defaultMatch);
-              console.log('[MatchTracker] Default match created successfully:', newMatch);
-              setMatch(newMatch);
-              setInitialServer('player');
+              // Override default values with stored ones
+              defaultMatch.user_id = parsedMatch.user_id || defaultMatch.user_id;
+              defaultMatch.opponent_name = parsedMatch.opponent_name || defaultMatch.opponent_name;
+              defaultMatch.date = parsedMatch.date || defaultMatch.date;
+              defaultMatch.notes = parsedMatch.notes || defaultMatch.notes;
+              defaultMatch.initial_server = parsedMatch.initial_server || defaultMatch.initial_server;
             }
-          } catch (error) {
-            console.error('[MatchTracker] Error creating match:', error);
+          } catch (e) {
+            console.error('Error reading from localStorage:', e);
           }
+          
+          // Create the match in database
+          const newMatch = await matchApi.createMatch(defaultMatch);
+          setMatch(newMatch);
+          setInitialServer(defaultMatch.initial_server as 'player' | 'opponent');
         }
         
         setLoading(false);
       } catch (error) {
-        console.error('[MatchTracker] Error loading match data:', error);
+        console.error('Error loading match data:', error);
         setLoading(false);
       }
     };
@@ -224,14 +206,12 @@ const MatchTracker = () => {
   // Record a point with all the data collected
   const recordPoint = async (winner: 'player' | 'opponent', winningShot: string, otherShot: string) => {
     if (!match) {
-      console.error('[MatchTracker] Cannot record point: match is null');
+      console.error('Cannot record point: match is null');
       return;
     }
     
-    console.log('[MatchTracker] Recording point:', { winner, winningShot, otherShot });
     try {
       // Update local state first for immediate UI feedback
-      // Create a new point
       const pointNumber = getTotalPoints() + 1;
       
       // Update scores in local state
@@ -244,17 +224,31 @@ const MatchTracker = () => {
         updatedSets[currentSetIndex].opponentScore += 1;
       }
       
-      // Get or create set in database
-      console.log('[MatchTracker] Getting sets for match ID:', match.id);
+      // Get or create set in database - simplified logic
       let currentSetData;
-      try {
+      
+      // If we already have a currentSetId, use that
+      if (matchState.currentSetId) {
+        // Update existing set
+        currentSetData = await setApi.updateSet(matchState.currentSetId, {
+          score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
+          player_score: updatedSets[currentSetIndex].playerScore,
+          opponent_score: updatedSets[currentSetIndex].opponentScore
+        });
+      } else {
+        // Get sets for this match
         const sets = await setApi.getSetsByMatchId(match.id);
-        console.log('[MatchTracker] Sets retrieved:', sets);
         const existingSet = sets.find(s => s.set_number === matchState.currentSet);
         
-        if (!existingSet) {
+        if (existingSet) {
+          // Update existing set
+          currentSetData = await setApi.updateSet(existingSet.id, {
+            score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
+            player_score: updatedSets[currentSetIndex].playerScore,
+            opponent_score: updatedSets[currentSetIndex].opponentScore
+          });
+        } else {
           // Create new set in database
-          console.log('[MatchTracker] Creating new set for match');
           currentSetData = await setApi.createSet({
             match_id: match.id,
             set_number: matchState.currentSet,
@@ -262,24 +256,10 @@ const MatchTracker = () => {
             player_score: updatedSets[currentSetIndex].playerScore,
             opponent_score: updatedSets[currentSetIndex].opponentScore
           });
-          console.log('[MatchTracker] Set created:', currentSetData);
-        } else {
-          // Update existing set
-          console.log('[MatchTracker] Updating existing set:', existingSet.id);
-          currentSetData = await setApi.updateSet(existingSet.id, {
-            score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
-            player_score: updatedSets[currentSetIndex].playerScore,
-            opponent_score: updatedSets[currentSetIndex].opponentScore
-          });
-          console.log('[MatchTracker] Set updated:', currentSetData);
         }
-      } catch (error) {
-        console.error('[MatchTracker] Error getting/creating set:', error);
-        throw error;
       }
       
       // Create point in database
-      console.log('[MatchTracker] Creating point in database');
       const newPoint = await pointApi.createPoint({
         set_id: currentSetData.id,
         point_number: pointNumber,
@@ -288,7 +268,6 @@ const MatchTracker = () => {
         other_shot: otherShot,
         notes: ''
       });
-      console.log('[MatchTracker] Point created:', newPoint);
       
       // Check if current set is complete
       const currentSet = updatedSets[currentSetIndex];
@@ -302,18 +281,15 @@ const MatchTracker = () => {
         const isMatchComplete = playerSetsWon > bestOf / 2 || opponentSetsWon > bestOf / 2;
         
         // Update match score in database
-        console.log('[MatchTracker] Updating match score:', `${playerSetsWon}-${opponentSetsWon}`);
         await matchApi.updateMatch(match.id, {
           match_score: `${playerSetsWon}-${opponentSetsWon}`
         });
         
         if (!isMatchComplete) {
           // Start next set
-          console.log('[MatchTracker] Starting next set');
           updatedSets.push({ playerScore: 0, opponentScore: 0 });
           
           // Create a new set in the database for the next set
-          console.log('[MatchTracker] Creating next set in database');
           const nextSetData = await setApi.createSet({
             match_id: match.id,
             set_number: matchState.currentSet + 1,
@@ -321,8 +297,6 @@ const MatchTracker = () => {
             player_score: 0,
             opponent_score: 0
           });
-          
-          console.log('[MatchTracker] Next set created:', nextSetData);
           
           setMatchState({
             currentSet: matchState.currentSet + 1,
@@ -334,7 +308,6 @@ const MatchTracker = () => {
           });
         } else {
           // Match is complete
-          console.log('[MatchTracker] Match complete');
           setMatchState({
             currentSet: matchState.currentSet,
             sets: updatedSets,
@@ -346,31 +319,34 @@ const MatchTracker = () => {
         }
       } else {
         // Continue current set
-        console.log('[MatchTracker] Continuing current set');
-        
         // Update dbSets with the current set data if needed
         let updatedDbSets = [...matchState.dbSets];
-        let updatedCurrentSetId = matchState.currentSetId;
         
-        // If we don't have a currentSetId yet, but we now have a set in the database, use it
-        if (!matchState.currentSetId) {
-          updatedCurrentSetId = currentSetData.id;
+        // If currentSetData isn't in dbSets yet, add it
+        if (!updatedDbSets.some(set => set.id === currentSetData.id)) {
+          // Find the index where this set should go (by set_number)
+          const insertIndex = updatedDbSets.findIndex(set => set.set_number > currentSetData.set_number);
           
-          // Also update the dbSets if it's empty or doesn't include this set
-          const setExists = updatedDbSets.some(s => s.id === currentSetData.id);
-          if (!setExists) {
-            updatedDbSets = [...updatedDbSets, currentSetData];
+          if (insertIndex === -1) {
+            // Add to end if no higher set_number found
+            updatedDbSets.push(currentSetData);
+          } else {
+            // Insert at the correct position
+            updatedDbSets.splice(insertIndex, 0, currentSetData);
           }
+        } else {
+          // Update the existing set in dbSets
+          updatedDbSets = updatedDbSets.map(set => 
+            set.id === currentSetData.id ? currentSetData : set
+          );
         }
-        
-        console.log('[MatchTracker] Updating state with currentSetId:', updatedCurrentSetId);
         
         setMatchState({
           ...matchState,
           sets: updatedSets,
           points: [...matchState.points, newPoint],
           dbSets: updatedDbSets,
-          currentSetId: updatedCurrentSetId
+          currentSetId: currentSetData.id
         });
       }
       
@@ -380,61 +356,76 @@ const MatchTracker = () => {
       // Reset the point flow
       resetPointFlow();
     } catch (error) {
-      console.error('[MatchTracker] Error recording point:', error);
+      console.error('Error recording point:', error);
     }
   };
   
   // Undo the last recorded point
   const undoLastPoint = async () => {
     if (!match || matchState.points.length === 0) {
-      console.error('[MatchTracker] Cannot undo: match is null or no points');
+      console.error('Cannot undo: match is null or no points');
       return; // Nothing to undo
     }
     
-    console.log('[MatchTracker] Undoing last point');
     try {
-      // Copy current state
-      const updatedPoints = [...matchState.points];
-      const lastPoint = updatedPoints.pop(); // Remove the last point
+      // Get the most recent point
+      // Filter points that belong to the current match
+      const matchPoints = matchState.points.filter(point => {
+        // Find the set this point belongs to
+        const pointSet = matchState.dbSets.find(set => set.id === point.set_id);
+        return pointSet && pointSet.match_id === match.id;
+      });
       
-      if (!lastPoint) return;
-      
-      // Delete point from database
-      console.log('[MatchTracker] Deleting point from database:', lastPoint.id);
-      await pointApi.deletePoint(lastPoint.id);
-      
-      // Update sets and scores
-      const updatedSets = [...matchState.sets];
-      
-      // Get set for the last point
-      console.log('[MatchTracker] Getting sets for match ID:', match.id);
-      const sets = await setApi.getSetsByMatchId(match.id);
-      const setData = sets.find(s => s.id === lastPoint.set_id);
-      
-      if (!setData) {
-        console.error('[MatchTracker] Set not found for point:', lastPoint);
+      if (matchPoints.length === 0) {
+        console.error('No points to undo for this match');
         return;
       }
       
-      const setNumber = setData.set_number;
+      // Sort by date created, most recent first
+      const sortedPoints = [...matchPoints].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      });
       
-      // If we're in a new set and there are no points in this set,
+      const lastPoint = sortedPoints[0];
+      
+      // Delete point from database
+      await pointApi.deletePoint(lastPoint.id);
+      
+      // Find the set this point belongs to
+      const setData = matchState.dbSets.find(set => set.id === lastPoint.set_id);
+      
+      if (!setData) {
+        console.error('Set not found for point:', lastPoint.id);
+        return;
+      }
+      
+      // Copy current state
+      const updatedSets = [...matchState.sets];
+      
+      // If we're in a new set and there are no remaining points in this set,
       // we need to go back to the previous set
-      if (setNumber < matchState.currentSet) {
+      const remainingPointsInCurrentSet = matchState.points
+        .filter(p => p.id !== lastPoint.id)
+        .filter(p => p.set_id === matchState.currentSetId)
+        .length;
+      
+      const isCurrentlyInNewSet = setData.set_number < matchState.currentSet;
+      
+      if (isCurrentlyInNewSet && remainingPointsInCurrentSet === 0) {
         // We're undoing a point that completed a set, go back to previous set
         updatedSets.pop(); // Remove the current empty set
         
-        // Get the previous set's ID (we're going back one set)
-        const updatedDbSets = [...matchState.dbSets];
-        // Remove the last set
-        if (updatedDbSets.length > 0) {
-          updatedDbSets.pop();
-        }
+        // Get updated dbSets without the current set
+        const updatedDbSets = matchState.dbSets.filter(set => set.set_number < matchState.currentSet);
         
         // Find the new current set ID (the last one in the list)
         const newCurrentSetId = updatedDbSets.length > 0 ? updatedDbSets[updatedDbSets.length - 1].id : null;
         
-        console.log('[MatchTracker] Going back to previous set, set ID:', newCurrentSetId);
+        // Remove the point from our points array
+        const updatedPoints = matchState.points.filter(p => p.id !== lastPoint.id);
+        
         setMatchState({
           currentSet: matchState.currentSet - 1,
           sets: updatedSets,
@@ -445,39 +436,52 @@ const MatchTracker = () => {
         });
       } else {
         // Normal undo within the current set
-        const currentSetIndex = matchState.currentSet - 1;
+        const setIndex = matchState.sets.findIndex((_, index) => index + 1 === setData.set_number);
         
-        // Decrement the score based on who won the point
-        if (lastPoint.winner === 'player') {
-          updatedSets[currentSetIndex].playerScore -= 1;
-        } else {
-          updatedSets[currentSetIndex].opponentScore -= 1;
+        if (setIndex >= 0) {
+          // Decrement the score based on who won the point
+          if (lastPoint.winner === 'player') {
+            updatedSets[setIndex].playerScore -= 1;
+          } else {
+            updatedSets[setIndex].opponentScore -= 1;
+          }
+          
+          // Update set in database
+          await setApi.updateSet(setData.id, {
+            score: `${updatedSets[setIndex].playerScore}-${updatedSets[setIndex].opponentScore}`,
+            player_score: updatedSets[setIndex].playerScore,
+            opponent_score: updatedSets[setIndex].opponentScore
+          });
+          
+          // Update the matching set in dbSets
+          const updatedDbSets = matchState.dbSets.map(set => {
+            if (set.id === setData.id) {
+              return {
+                ...set,
+                score: `${updatedSets[setIndex].playerScore}-${updatedSets[setIndex].opponentScore}`,
+                player_score: updatedSets[setIndex].playerScore,
+                opponent_score: updatedSets[setIndex].opponentScore
+              };
+            }
+            return set;
+          });
+          
+          // Remove the point from our points array
+          const updatedPoints = matchState.points.filter(p => p.id !== lastPoint.id);
+          
+          setMatchState({
+            ...matchState,
+            sets: updatedSets,
+            points: updatedPoints,
+            dbSets: updatedDbSets
+          });
         }
-        
-        // Update set in database
-        console.log('[MatchTracker] Updating set in database:', setData.id);
-        await setApi.updateSet(setData.id, {
-          score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
-          player_score: updatedSets[currentSetIndex].playerScore,
-          opponent_score: updatedSets[currentSetIndex].opponentScore
-        });
-        
-        console.log('[MatchTracker] Updating local state');
-        setMatchState({
-          ...matchState,
-          sets: updatedSets,
-          points: updatedPoints,
-          dbSets: matchState.dbSets,
-          currentSetId: matchState.currentSetId
-        });
       }
       
       // Disable undo if no more points to undo
-      if (updatedPoints.length === 0) {
-        setCanUndo(false);
-      }
+      setCanUndo(matchState.points.length > 1);
     } catch (error) {
-      console.error('[MatchTracker] Error undoing point:', error);
+      console.error('Error undoing point:', error);
     }
   };
   
