@@ -25,27 +25,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Get session from storage
     const getSession = async () => {
       setLoading(true);
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-      } else if (data?.session) {
-        setSession(data.session);
-        setUser(data.session.user);
+      try {
+        const { data, error } = await supabase.auth.getSession();
         
-        // Check if user is admin (fetch from user metadata or a separate admin table)
-        if (data.session.user.email) {
-          const { data: userData } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', data.session.user.id)
-            .single();
-            
-          setIsAdmin(userData?.is_admin || false);
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
         }
+        
+        if (data?.session) {
+          console.log('Session found:', data.session);
+          setSession(data.session);
+          setUser(data.session.user);
+          
+          try {
+            // Check if user is admin
+            if (data.session.user.email) {
+              const { data: userData, error: profileError } = await supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', data.session.user.id)
+                .single();
+              
+              if (profileError) {
+                console.error('Error fetching profile:', profileError);
+                // Don't let profile errors block the auth flow
+              } else {
+                setIsAdmin(userData?.is_admin || false);
+              }
+            }
+          } catch (profileErr) {
+            console.error('Error in profile fetch:', profileErr);
+            // Continue even if profile fetch fails
+          }
+        } else {
+          console.log('No session found');
+        }
+      } catch (err) {
+        console.error('Unexpected error in getSession:', err);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     getSession();
@@ -53,18 +74,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Check admin status on auth change
-          const { data: userData } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', session.user.id)
-            .single();
-            
-          setIsAdmin(userData?.is_admin || false);
+          try {
+            // Check admin status on auth change
+            const { data: userData, error: profileError } = await supabase
+              .from('profiles')
+              .select('is_admin')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (profileError) {
+              console.error('Error fetching profile on auth change:', profileError);
+            } else {
+              setIsAdmin(userData?.is_admin || false);
+            }
+          } catch (err) {
+            console.error('Error checking admin status:', err);
+          }
         } else {
           setIsAdmin(false);
         }
@@ -72,32 +102,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     return () => {
-      if (authListener) authListener.subscription.unsubscribe();
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
     if (error) {
+      console.error('Sign in error:', error);
       throw error;
     }
+    
+    console.log('Sign in successful:', data?.user?.email);
+    return data;
   };
 
   // Sign up with email and password
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    
     if (error) {
+      console.error('Sign up error:', error);
       throw error;
     }
+    
+    console.log('Sign up successful:', data?.user?.email);
+    return data;
   };
 
   // Sign out
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
+    
     if (error) {
+      console.error('Sign out error:', error);
       throw error;
     }
+    
+    console.log('Sign out successful');
   };
 
   // Reset password
@@ -105,9 +151,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
+    
     if (error) {
+      console.error('Reset password error:', error);
       throw error;
     }
+    
+    console.log('Password reset email sent to:', email);
   };
 
   const value = {

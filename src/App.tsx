@@ -10,6 +10,8 @@ import AdminPanel from './pages/AdminPanel';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './index.css';
+import './styles/components/Auth.css';
+import './styles/components/Layout.css';
 
 function App() {
   // Log environment variables on startup

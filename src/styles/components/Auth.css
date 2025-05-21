@@ -75,6 +75,10 @@
   color: #2980b9;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .auth-container {
