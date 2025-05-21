@@ -1008,7 +1008,12 @@ body {
     padding: 1rem;
   }
   
-  .match-content-columns,
+  /* Don't change grid layout for match columns on mobile */
+  /*.match-content-columns {
+    flex-direction: column;
+    gap: 1.5rem;
+  }*/
+  
   .player-panels {
     flex-direction: column;
     gap: 1.5rem;

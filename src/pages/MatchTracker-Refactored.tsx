@@ -137,7 +137,7 @@ const MatchTrackerContent = () => {
                     onClick={() => handlePlayerSelect('player')}
                   />
                 </div>
-              
+                
                 {/* Set Scores Panel */}
                 <Card className="set-scores-panel">
                   <div className="set-scores-title">

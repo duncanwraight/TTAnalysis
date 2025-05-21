@@ -105,6 +105,8 @@
 /* Point history panel */
 .point-history-panel {
   min-height: 100px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Shot selection container */
@@ -243,9 +245,10 @@
 
 /* Responsive styles */
 @media (max-width: 768px) {
-  .match-columns {
+  /* Override this style to maintain 2-column layout on mobile */
+  /*.match-columns {
     grid-template-columns: 1fr;
-  }
+  }*/
   
   .set-scores-grid {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
