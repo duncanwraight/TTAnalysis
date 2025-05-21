@@ -293,7 +293,7 @@ body {
   border-radius: 0.5rem;
   box-shadow: var(--shadow);
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .set-indicator {
