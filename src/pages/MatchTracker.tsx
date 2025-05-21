@@ -604,11 +604,12 @@ const MatchTracker = () => {
           <>
             {/* Step 1: Select who won the point */}
             <div style={{
-              marginBottom: '1rem',
+              marginTop: '0.1rem',
+              marginBottom: '0.25rem',
               textAlign: 'center',
               color: 'var(--light-text-color)'
             }}>
-              <p>Tap on who won the point</p>
+              <p style={{ margin: 0 }}>Tap on who won the point</p>
             </div>
             
             <div style={{

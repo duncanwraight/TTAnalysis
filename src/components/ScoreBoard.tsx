@@ -23,25 +23,34 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
         <strong>SET {currentSet}</strong>
       </div>
       
-      <div className="scores">
-        <div className={`player-score ${currentServer === 'player' ? 'serving' : ''}`}>
-          <span className="score-label">You</span>
-          <span className="score-value">{playerScore}</span>
-          {currentServer === 'player' && (
-            <span className="server-indicator">
-              <span className="serve-icon">🏓</span>
-            </span>
-          )}
+      {/* Use CSS Grid for precise alignment */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
+        width: '100%',
+        alignItems: 'center'
+      }}>
+        {/* Player Side */}
+        <div style={{ textAlign: 'center' }}>
+          <div className="score-label">You</div>
+          <div className={`score-value ${currentServer === 'player' ? 'player-serving' : ''}`}>
+            {playerScore}
+            {currentServer === 'player' && <span className="serve-icon-small">🏓</span>}
+          </div>
         </div>
         
-        <div className={`opponent-score ${currentServer === 'opponent' ? 'serving' : ''}`}>
-          {currentServer === 'opponent' && (
-            <span className="server-indicator opponent-indicator">
-              <span className="serve-icon">🏓</span>
-            </span>
-          )}
-          <span className="score-value">{opponentScore}</span>
-          <span className="score-label">Opponent</span>
+        {/* Center spacer - no visible divider */}
+        <div style={{ 
+          margin: '0 20px'
+        }}></div>
+        
+        {/* Opponent Side */}
+        <div style={{ textAlign: 'center' }}>
+          <div className="score-label">Opponent</div>
+          <div className="score-value">
+            {opponentScore}
+            {currentServer === 'opponent' && <span className="serve-icon-small">🏓</span>}
+          </div>
         </div>
       </div>
       {/* Set scores summary moved to PointHistory panel */}

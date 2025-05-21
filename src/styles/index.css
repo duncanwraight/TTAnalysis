@@ -264,27 +264,27 @@ body {
 .match-tracker-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.75rem;
 }
 
 .score-board {
   background-color: var(--card-background);
   border-radius: 0.5rem;
   box-shadow: var(--shadow);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 0.75rem 1rem 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .set-indicator {
   text-align: center;
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   color: var(--secondary-color);
 }
 
 .scores {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   gap: 1rem;
 }
@@ -296,10 +296,17 @@ body {
   position: relative;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
+  width: 130px; /* Fixed width for both player and opponent score boxes */
 }
 
-.serving {
+.player-serving {
   background-color: rgba(37, 99, 235, 0.1);
+}
+
+.serve-icon-small {
+  font-size: 0.8rem;
+  margin-left: 5px;
+  color: var(--primary-color);
 }
 
 .score-label {
@@ -307,8 +314,10 @@ body {
 }
 
 .score-value {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
 }
 
 .server-indicator {
