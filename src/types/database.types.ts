@@ -7,6 +7,14 @@ export type User = {
   updated_at: string;
 };
 
+export type Profile = {
+  id: string;
+  email: string;
+  is_admin: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Match = {
   id: string;
   user_id: string;

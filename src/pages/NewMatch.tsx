@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { matchApi } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 const NewMatch = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
   const [formData, setFormData] = useState({
     opponent_name: '',
     date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
@@ -33,11 +36,10 @@ const NewMatch = () => {
       setIsSubmitting(true);
       
       console.log('Creating match with data:', formData);
-      console.log('Initial server:', formData.initial_server);
       
       // Use the API client to create a match in the database
+      // Note: user_id is now handled on the server side based on the JWT token
       const newMatch = await matchApi.createMatch({
-        user_id: '00000000-0000-0000-0000-000000000001', // Use our test user ID for now
         opponent_name: formData.opponent_name,
         date: formData.date,
         match_score: '0-0',

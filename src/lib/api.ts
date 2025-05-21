@@ -1,17 +1,26 @@
 // API client for interacting with the database
 
 import { Match, Set, Point } from '../types/database.types';
+import { supabase } from './supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Helper function for making API requests
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   try {
+    // Get the session for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    // Set authorization header if token exists
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...options.headers,
+    };
+
     const response = await fetch(`${API_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     });
 
@@ -39,7 +48,7 @@ export const matchApi = {
   getFullMatchById: (id: string) => fetchApi<{ match: Match; sets: Set[]; points: Point[] }>(`/matches/${id}/full`),
 
   // Create a new match
-  createMatch: (match: Omit<Match, 'id' | 'created_at' | 'updated_at'>) =>
+  createMatch: (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>) =>
     fetchApi<Match>('/matches', {
       method: 'POST',
       body: JSON.stringify(match),
