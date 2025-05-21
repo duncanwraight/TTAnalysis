@@ -27,29 +27,56 @@ const PointHistory: React.FC<PointHistoryProps> = ({
     console.log('[PointHistory] Sets:', sets);
   }
   
+  // Add logging to understand the input data better
+  console.log('[PointHistory] All points:', points);
+  console.log('[PointHistory] Current set:', currentSet);
+  console.log('[PointHistory] Current set ID:', currentSetId);
+  console.log('[PointHistory] Sets:', sets);
+
   // Filter points for the current set
-  // Handle both localStorage format and database UUID format
+  // Handle both database UUID format and localStorage format
   const currentSetPoints = points.filter(
     point => {
-      // If currentSetId is provided (from database), use it
+      // If currentSetId is provided and valid (from database), use it as the primary method
       if (currentSetId) {
         const matches = point.set_id === currentSetId; 
         console.log(`[PointHistory] Point ${point.id}, checking against currentSetId=${currentSetId}: ${matches}`);
-        return matches;
+        if (matches) return true;
       }
       
       // If we have sets array (from database), find the set with matching set_number
       if (sets && sets.length > 0) {
         const matchingSet = sets.find(set => set.set_number === currentSet);
-        const matches = matchingSet ? point.set_id === matchingSet.id : false;
-        console.log(`[PointHistory] Point ${point.id}, checking against matchingSet=${matchingSet?.id}: ${matches}`);
-        return matches;
+        if (matchingSet) {
+          const matches = point.set_id === matchingSet.id;
+          console.log(`[PointHistory] Point ${point.id}, checking against matchingSet=${matchingSet.id}: ${matches}`);
+          if (matches) return true;
+        }
       }
       
-      // Fallback to the old localStorage format
-      const matches = point.set_id === `set-${currentSet}`;
-      console.log(`[PointHistory] Point ${point.id}, checking against localStorage format set-${currentSet}: ${matches}`);
-      return matches;
+      // Get all points that were recorded in this session (likely the most recent points)
+      // This is a fallback for when the match is in progress and we haven't saved the set ID properly
+      const sessionPoints = points.filter(p => {
+        // Check if the point was created in the last hour (likely this session)
+        const pointTime = new Date(p.created_at).getTime();
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        return pointTime > oneHourAgo;
+      });
+      
+      if (sessionPoints.length > 0 && sessionPoints.includes(point)) {
+        console.log(`[PointHistory] Point ${point.id} is from current session, including it`);
+        return true;
+      }
+      
+      // Fallback to the localStorage format as a last resort
+      if (point.set_id === `set-${currentSet}`) {
+        console.log(`[PointHistory] Point ${point.id} matches localStorage format set-${currentSet}`);
+        return true;
+      }
+      
+      // If none of the above conditions match, don't include this point
+      console.log(`[PointHistory] Point ${point.id} does not match any criteria, excluding it`);
+      return false;
     }
   );
 

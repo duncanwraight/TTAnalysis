@@ -347,12 +347,30 @@ const MatchTracker = () => {
       } else {
         // Continue current set
         console.log('[MatchTracker] Continuing current set');
+        
+        // Update dbSets with the current set data if needed
+        let updatedDbSets = [...matchState.dbSets];
+        let updatedCurrentSetId = matchState.currentSetId;
+        
+        // If we don't have a currentSetId yet, but we now have a set in the database, use it
+        if (!matchState.currentSetId) {
+          updatedCurrentSetId = currentSetData.id;
+          
+          // Also update the dbSets if it's empty or doesn't include this set
+          const setExists = updatedDbSets.some(s => s.id === currentSetData.id);
+          if (!setExists) {
+            updatedDbSets = [...updatedDbSets, currentSetData];
+          }
+        }
+        
+        console.log('[MatchTracker] Updating state with currentSetId:', updatedCurrentSetId);
+        
         setMatchState({
           ...matchState,
           sets: updatedSets,
           points: [...matchState.points, newPoint],
-          dbSets: matchState.dbSets, // Maintain the database sets
-          currentSetId: matchState.currentSetId // Maintain the current set ID
+          dbSets: updatedDbSets,
+          currentSetId: updatedCurrentSetId
         });
       }
       
