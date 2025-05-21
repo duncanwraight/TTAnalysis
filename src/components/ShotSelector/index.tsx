@@ -77,7 +77,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
 
   return (
     <div className={`shot-selector ${disabled ? 'disabled' : ''} ${selected ? 'selection-made' : ''}`}>
-      {selected && onUndo && (
+      {selected && onUndo && shotType === 'winning' && (
         <div className="undo-button-container">
           <button 
             className="undo-shot-btn" 

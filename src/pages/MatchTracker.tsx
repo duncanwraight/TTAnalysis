@@ -185,9 +185,10 @@ const MatchTracker = () => {
   
   // Handler for when the other shot is selected
   const handleOtherShotSelect = (shot: string) => {
-    setOtherShot(shot);
+    // We don't need to set the state since we immediately record the point
+    // setOtherShot(shot);
     
-    // Only record the point if both shots are selected
+    // Always record the point immediately after other shot is selected
     if (winningShot) {
       recordPoint(selectedWinner!, winningShot, shot);
     }
@@ -799,16 +800,7 @@ const MatchTracker = () => {
                 isWinningPlayer={selectedWinner === 'player'}
               />
             </div>
-            {winningShot && otherShot && winningShot !== 'no_data' && (
-              <div className="submit-shots">
-                <button 
-                  className="btn primary-btn record-point-btn"
-                  onClick={() => recordPoint(selectedWinner!, winningShot, otherShot)}
-                >
-                  Record Point
-                </button>
-              </div>
-            )}
+            {/* Record Point button removed - point is now recorded automatically when other shot is selected */}
           </div>
         )}
         
