@@ -23,12 +23,12 @@ enabled = false
 
 [db]
 # Port to use for the local database URL.
-port = 5432  # Changed to match our existing PostgreSQL
+port = 54322  # Default Supabase PostgreSQL port
 # Port used by db diff command to initialize the shadow database.
 shadow_port = 54320
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
 # server_version;` on the remote database to check.
-major_version = 14  # Changed to match Docker Postgres 14
+major_version = 15  # Supabase default version
 
 [db.pooler]
 enabled = false

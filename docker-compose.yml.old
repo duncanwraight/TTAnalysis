@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: ttanalysis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ttuser
+      POSTGRES_PASSWORD: ttpassword
+      POSTGRES_DB: ttanalysis
+    ports:
+      - "5432:5432"
+    volumes:
+      - ttanalysis-data:/var/lib/postgresql/data
+      # We'll add an init script later to create tables
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ttuser -d ttanalysis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ttanalysis-data:
