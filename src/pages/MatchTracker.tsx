@@ -7,6 +7,7 @@ import ScoreBoard from '../components/ScoreBoard';
 import PointHistory from '../components/PointHistory';
 import { Match, Set, Point } from '../types/database.types';
 import { matchApi, setApi, pointApi } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 type SetScore = {
   player: number;
@@ -30,6 +31,7 @@ type MatchState = {
 const MatchTracker = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, session } = useAuth();
   
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,14 +59,6 @@ const MatchTracker = () => {
   // Default to 'player' but this will be overridden by the match data if available
   const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
 
-  // Initialize API URL
-  useEffect(() => {
-    // Ensure API URL is properly set
-    if (!import.meta.env.VITE_API_URL) {
-      console.warn('VITE_API_URL is not defined in environment variables');
-    }
-  }, []);
-
   // Load match data
   useEffect(() => {
     const loadMatchData = async () => {
@@ -77,16 +71,24 @@ const MatchTracker = () => {
           return;
         }
         
-        // Try to fetch match data using direct fetch instead of API client
+        // Check user authentication
+        if (!user) {
+          console.error('User not authenticated, cannot load match');
+          setLoading(false);
+          return;
+        }
+        
+        if (!session?.access_token) {
+          console.error('No access token available, cannot load match');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Loading match data with auth token...');
+        
         try {
-          console.log('Fetching match data directly...');
-          const response = await fetch(`http://localhost:3001/api/matches/${id}/full`);
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch match: ${response.status} ${response.statusText}`);
-          }
-          
-          const matchData = await response.json();
+          // Use the API client to fetch match data
+          const matchData = await matchApi.getFullMatchById(id);
           console.log('Match data loaded:', matchData);
           
           // Match exists in the database
@@ -128,12 +130,12 @@ const MatchTracker = () => {
           setCanUndo(points.length > 0);
           
         } catch (err) {
-          // Match doesn't exist in database, create it
-          console.warn('Match not found in database, creating one');
+          // Match doesn't exist in database or couldn't be loaded
+          console.error('Error loading match:', err);
+          console.warn('Match not found or error loading, creating one');
           
           // Create a default match
           const defaultMatch = {
-            user_id: '00000000-0000-0000-0000-000000000001', // Use our test user ID
             opponent_name: 'Opponent',
             date: new Date().toISOString().split('T')[0],
             match_score: '0-0',
@@ -148,7 +150,6 @@ const MatchTracker = () => {
               const parsedMatch = JSON.parse(storedMatch);
               
               // Override default values with stored ones
-              defaultMatch.user_id = parsedMatch.user_id || defaultMatch.user_id;
               defaultMatch.opponent_name = parsedMatch.opponent_name || defaultMatch.opponent_name;
               defaultMatch.date = parsedMatch.date || defaultMatch.date;
               defaultMatch.notes = parsedMatch.notes || defaultMatch.notes;
@@ -158,22 +159,10 @@ const MatchTracker = () => {
             console.error('Error reading from localStorage:', e);
           }
           
-          // Create the match in database using direct fetch
-          console.log('Creating match directly from MatchTracker...');
+          // Create the match in database using the API client
+          console.log('Creating match with API client...');
           try {
-            const createResponse = await fetch('http://localhost:3001/api/matches', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(defaultMatch)
-            });
-            
-            if (!createResponse.ok) {
-              throw new Error(`Failed to create match: ${createResponse.status} ${createResponse.statusText}`);
-            }
-            
-            const newMatch = await createResponse.json();
+            const newMatch = await matchApi.createMatch(defaultMatch);
             console.log('Match created from MatchTracker:', newMatch);
             setMatch(newMatch);
             setInitialServer(defaultMatch.initial_server as 'player' | 'opponent');
@@ -191,7 +180,7 @@ const MatchTracker = () => {
     };
     
     loadMatchData();
-  }, [id]);
+  }, [id, user, session]);
   
   // Reset point flow when a point is completed
   const resetPointFlow = () => {
@@ -238,6 +227,12 @@ const MatchTracker = () => {
       return;
     }
     
+    // Ensure we have an auth token
+    if (!session?.access_token) {
+      console.error('No authentication token available for recording point');
+      return;
+    }
+    
     try {
       // Update local state first for immediate UI feedback
       const pointNumber = getTotalPoints() + 1;
@@ -252,65 +247,51 @@ const MatchTracker = () => {
         updatedSets[currentSetIndex].opponentScore += 1;
       }
       
-      // Get or create set in database - simplified logic
+      // Get or create set in database
       let currentSetData;
       
       // If we already have a currentSetId, use that
       if (matchState.currentSetId) {
-        // Update existing set with direct fetch
+        // Update existing set
         const setUpdateData = {
           score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
           player_score: updatedSets[currentSetIndex].playerScore,
           opponent_score: updatedSets[currentSetIndex].opponentScore
         };
         
-        const updateResponse = await fetch(`http://localhost:3001/api/sets/${matchState.currentSetId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(setUpdateData)
-        });
-        
-        if (!updateResponse.ok) {
-          throw new Error(`Failed to update set: ${updateResponse.status}`);
+        try {
+          currentSetData = await setApi.updateSet(matchState.currentSetId, setUpdateData);
+        } catch (error) {
+          console.error('Error updating set:', error);
+          throw new Error(`Failed to update set: ${error.message}`);
         }
-        
-        currentSetData = await updateResponse.json();
       } else {
-        // Get sets for this match with direct fetch
-        const setsResponse = await fetch(`http://localhost:3001/api/sets?match_id=${match.id}`);
-        
-        if (!setsResponse.ok) {
-          throw new Error(`Failed to fetch sets: ${setsResponse.status}`);
+        // Get sets for this match
+        let sets;
+        try {
+          sets = await setApi.getSetsByMatchId(match.id);
+        } catch (error) {
+          console.error('Error fetching sets:', error);
+          throw new Error(`Failed to fetch sets: ${error.message}`);
         }
-        
-        const sets = await setsResponse.json();
         const existingSet = sets.find(s => s.set_number === matchState.currentSet);
         
         if (existingSet) {
-          // Update existing set with direct fetch
+          // Update existing set
           const setUpdateData = {
             score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
             player_score: updatedSets[currentSetIndex].playerScore,
             opponent_score: updatedSets[currentSetIndex].opponentScore
           };
           
-          const updateResponse = await fetch(`http://localhost:3001/api/sets/${existingSet.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(setUpdateData)
-          });
-          
-          if (!updateResponse.ok) {
-            throw new Error(`Failed to update set: ${updateResponse.status}`);
+          try {
+            currentSetData = await setApi.updateSet(existingSet.id, setUpdateData);
+          } catch (error) {
+            console.error('Error updating existing set:', error);
+            throw new Error(`Failed to update set: ${error.message}`);
           }
-          
-          currentSetData = await updateResponse.json();
         } else {
-          // Create new set in database with direct fetch
+          // Create new set in database
           const newSetData = {
             match_id: match.id,
             set_number: matchState.currentSet,
@@ -319,23 +300,16 @@ const MatchTracker = () => {
             opponent_score: updatedSets[currentSetIndex].opponentScore
           };
           
-          const createResponse = await fetch('http://localhost:3001/api/sets', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newSetData)
-          });
-          
-          if (!createResponse.ok) {
-            throw new Error(`Failed to create set: ${createResponse.status}`);
+          try {
+            currentSetData = await setApi.createSet(newSetData);
+          } catch (error) {
+            console.error('Error creating set:', error);
+            throw new Error(`Failed to create set: ${error.message}`);
           }
-          
-          currentSetData = await createResponse.json();
         }
       }
       
-      // Create point in database with direct fetch
+      // Create point in database
       const pointData = {
         set_id: currentSetData.id,
         point_number: pointNumber,
@@ -345,19 +319,13 @@ const MatchTracker = () => {
         notes: ''
       };
       
-      const pointResponse = await fetch('http://localhost:3001/api/points', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(pointData)
-      });
-      
-      if (!pointResponse.ok) {
-        throw new Error(`Failed to create point: ${pointResponse.status}`);
+      let newPoint;
+      try {
+        newPoint = await pointApi.createPoint(pointData);
+      } catch (error) {
+        console.error('Error creating point:', error);
+        throw new Error(`Failed to create point: ${error.message}`);
       }
-      
-      const newPoint = await pointResponse.json();
       
       // Check if current set is complete
       const currentSet = updatedSets[currentSetIndex];
@@ -370,45 +338,34 @@ const MatchTracker = () => {
         const opponentSetsWon = updatedSets.filter(set => set.opponentScore > set.playerScore).length;
         const isMatchComplete = playerSetsWon > bestOf / 2 || opponentSetsWon > bestOf / 2;
         
-        // Update match score in database with direct fetch
-        const matchUpdateResponse = await fetch(`http://localhost:3001/api/matches/${match.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
+        // Update match score in database
+        try {
+          await matchApi.updateMatch(match.id, {
             match_score: `${playerSetsWon}-${opponentSetsWon}`
-          })
-        });
-        
-        if (!matchUpdateResponse.ok) {
-          console.error(`Failed to update match score: ${matchUpdateResponse.status}`);
+          });
+        } catch (error) {
+          console.error('Error updating match score:', error);
+          // Continue execution even if match score update fails
         }
         
         if (!isMatchComplete) {
           // Start next set
           updatedSets.push({ playerScore: 0, opponentScore: 0 });
           
-          // Create a new set in the database with direct fetch
-          const nextSetResponse = await fetch('http://localhost:3001/api/sets', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+          // Create a new set in the database
+          let nextSetData;
+          try {
+            nextSetData = await setApi.createSet({
               match_id: match.id,
               set_number: matchState.currentSet + 1,
               score: '0-0',
               player_score: 0,
               opponent_score: 0
-            })
-          });
-          
-          if (!nextSetResponse.ok) {
-            throw new Error(`Failed to create next set: ${nextSetResponse.status}`);
+            });
+          } catch (error) {
+            console.error('Error creating next set:', error);
+            throw new Error(`Failed to create next set: ${error.message}`);
           }
-          
-          const nextSetData = await nextSetResponse.json();
           
           setMatchState({
             currentSet: matchState.currentSet + 1,
@@ -479,6 +436,11 @@ const MatchTracker = () => {
       return; // Nothing to undo
     }
     
+    if (!session?.access_token) {
+      console.error('No authentication token available for undoing point');
+      return;
+    }
+    
     try {
       // Get the most recent point
       // Filter points that belong to the current match
@@ -502,13 +464,12 @@ const MatchTracker = () => {
       
       const lastPoint = sortedPoints[0];
       
-      // Delete point from database with direct fetch
-      const deleteResponse = await fetch(`http://localhost:3001/api/points/${lastPoint.id}`, {
-        method: 'DELETE'
-      });
-      
-      if (!deleteResponse.ok) {
-        throw new Error(`Failed to delete point: ${deleteResponse.status}`);
+      // Delete point from database
+      try {
+        await pointApi.deletePoint(lastPoint.id);
+      } catch (error) {
+        console.error('Error deleting point:', error);
+        throw new Error(`Failed to delete point: ${error.message}`);
       }
       
       // Find the set this point belongs to
@@ -564,21 +525,16 @@ const MatchTracker = () => {
             updatedSets[setIndex].opponentScore -= 1;
           }
           
-          // Update set in database with direct fetch
-          const setUpdateResponse = await fetch(`http://localhost:3001/api/sets/${setData.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+          // Update set in database
+          try {
+            await setApi.updateSet(setData.id, {
               score: `${updatedSets[setIndex].playerScore}-${updatedSets[setIndex].opponentScore}`,
               player_score: updatedSets[setIndex].playerScore,
               opponent_score: updatedSets[setIndex].opponentScore
-            })
-          });
-          
-          if (!setUpdateResponse.ok) {
-            throw new Error(`Failed to update set: ${setUpdateResponse.status}`);
+            });
+          } catch (error) {
+            console.error('Error updating set after deleting point:', error);
+            throw new Error(`Failed to update set: ${error.message}`);
           }
           
           // Update the matching set in dbSets
@@ -1017,32 +973,31 @@ const MatchTracker = () => {
                 return;
               }
               
+              if (!session?.access_token) {
+                console.error('[MatchTracker] No auth token available for next set');
+                return;
+              }
+              
               console.log('[MatchTracker] Advancing to next set');
               try {
                 const updatedSets = [...matchState.sets];
                 updatedSets.push({ playerScore: 0, opponentScore: 0 });
                 
-                // Create a new set in the database with direct fetch
+                // Create a new set in the database
                 console.log('[MatchTracker] Creating new set in database');
-                const createResponse = await fetch('http://localhost:3001/api/sets', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
+                let newSet;
+                try {
+                  newSet = await setApi.createSet({
                     match_id: match.id,
                     set_number: matchState.currentSet + 1,
                     score: '0-0',
                     player_score: 0,
                     opponent_score: 0
-                  })
-                });
-                
-                if (!createResponse.ok) {
-                  throw new Error(`Failed to create set: ${createResponse.status}`);
+                  });
+                } catch (error) {
+                  console.error('[MatchTracker] Error creating set:', error);
+                  throw new Error(`Failed to create set: ${error.message}`);
                 }
-                
-                const newSet = await createResponse.json();
                 
                 console.log('[MatchTracker] Updating local state');
                 setMatchState({

@@ -3,160 +3,156 @@
 import { Match, Set, Point } from '../types/database.types';
 import { supabase } from './supabase';
 
-// Enable debugging mode for API requests
-const DEBUG_MODE = true;
-
+// API URL from environment variables
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// Add a test endpoint function to diagnose API connectivity issues
-export async function testApiConnection() {
-  try {
-    console.log('[TEST] Testing API connection to:', API_URL);
-    const response = await fetch(`${API_URL}`);
-    console.log('[TEST] API health check response:', {
-      ok: response.ok,
-      status: response.status,
-      statusText: response.statusText
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('[TEST] API health check data:', data);
-      return { success: true, data };
-    } else {
-      const errorText = await response.text();
-      console.error('[TEST] API health check error:', errorText);
-      return { success: false, error: errorText };
-    }
-  } catch (error) {
-    console.error('[TEST] API connection test failed:', error);
-    return { success: false, error: error.message };
-  }
-}
+// Request timeout in milliseconds
+const REQUEST_TIMEOUT = 10000;
 
-// Helper function for making API requests
+// NOTE: We're using a direct approach for match creation instead of the general fetchApi
+// function due to issues with the match creation endpoint specifically
+
+/**
+ * Simple API client for making authenticated requests to the backend
+ * @param endpoint - The API endpoint to call (e.g. '/matches')
+ * @param options - Fetch options (method, body, etc.)
+ * @returns Promise with the JSON response data
+ */
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const requestId = Math.random().toString(36).substring(2, 10); // Generate unique ID for this request
+  const timestamp = new Date().toISOString();
+  const requestId = Math.random().toString(36).substring(2, 8);
+  console.log(`[${timestamp}][${requestId}] API Client: Fetching ${endpoint} with method ${options.method || 'GET'}`);
+  const startTime = Date.now();
+  
   try {
-    console.log(`[${requestId}] API Request: ${options.method || 'GET'} ${endpoint}`);
-    
-    // Get the session for authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    // Get the session token
+    console.log(`[${timestamp}][${requestId}] API Client: Requesting auth session...`);
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
     
     if (!token) {
-      console.error(`[${requestId}] No authentication token available for API request to ${endpoint}`);
+      console.error(`[${timestamp}][${requestId}] API Client: No authentication token available`);
       throw new Error('Authentication required. Please log in again.');
     }
     
-    // Debug session info (don't log sensitive tokens in production)
-    console.log(`[${requestId}] Session information:`, {
-      hasToken: !!token,
-      tokenFirstChars: token ? token.substring(0, 10) + '...' : 'none',
-      userId: session?.user?.id,
-      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown'
-    });
+    console.log(`[${timestamp}][${requestId}] API Client: Token retrieved (${token.substring(0, 10)}...)`);
     
-    // Test making a GET request to /api/matches first to check auth
-    if (endpoint === '/matches' && options.method === 'POST') {
-      try {
-        console.log(`[${requestId}] Testing auth token with GET /api/matches before creating match`);
-        const testResponse = await fetch(`${API_URL}/matches`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        console.log(`[${requestId}] Auth test response:`, {
-          ok: testResponse.ok,
-          status: testResponse.status,
-          statusText: testResponse.statusText
-        });
-        
-        if (!testResponse.ok) {
-          const errorText = await testResponse.text();
-          console.error(`[${requestId}] Auth test failed:`, errorText);
-        }
-      } catch (testError) {
-        console.error(`[${requestId}] Auth test request failed:`, testError);
-      }
-    }
-
-    // Set authorization header if token exists
+    // Add auth header
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
       ...options.headers,
     };
-
-    console.log(`[${requestId}] Sending request to ${API_URL}${endpoint}`);
     
-    if (options.body) {
-      console.log(`[${requestId}] Request body:`, options.body);
-    }
-
-    // Timeout after 15 seconds
+    console.log(`[${timestamp}][${requestId}] API Client: Headers prepared`, Object.keys(headers));
+    
+    // Set up timeout - using a shorter timeout for debugging
+    const REQUEST_TIMEOUT_DEBUG = 5000; // 5 seconds for debugging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => {
+      console.warn(`[${timestamp}][${requestId}] API Client: Request to ${endpoint} is taking too long, aborting after ${REQUEST_TIMEOUT_DEBUG}ms`);
+      controller.abort();
+    }, REQUEST_TIMEOUT_DEBUG);
     
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    // Log the request body if it exists
+    if (options.body) {
+      console.log(`[${timestamp}][${requestId}] API Client: Request body:`, options.body);
+    }
+    
+    // Create the fetch URL
+    const fetchUrl = `${API_URL}${endpoint}`;
+    console.log(`[${timestamp}][${requestId}] API Client: Sending request to ${fetchUrl}`);
+    
+    // Make the fetch request with detailed logging
+    console.time(`[${requestId}] fetch-request`);
+    const fetchPromise = fetch(fetchUrl, {
       headers,
       signal: controller.signal,
       ...options,
     });
     
+    // Add additional timeout logging
+    const fetchStartTime = Date.now();
+    const loggingInterval = setInterval(() => {
+      const elapsedTime = Date.now() - fetchStartTime;
+      console.log(`[${timestamp}][${requestId}] API Client: Still waiting for response after ${elapsedTime}ms...`);
+    }, 1000); // Log every second
+    
+    const response = await fetchPromise;
+    console.timeEnd(`[${requestId}] fetch-request`);
+    
+    // Clear the timers
     clearTimeout(timeoutId);
-
-    console.log(`[${requestId}] API Response: ${response.status} ${response.statusText}`);
-
+    clearInterval(loggingInterval);
+    
+    console.log(`[${timestamp}][${requestId}] API Client: Response received in ${Date.now() - startTime}ms with status ${response.status}`);
+    
+    // Process the response
     if (!response.ok) {
+      // Handle error response
+      console.log(`[${timestamp}][${requestId}] API Client: Reading error response text...`);
       const errorText = await response.text();
-      let errorData = {};
+      let errorMessage = `API error: ${response.status} ${response.statusText}`;
+      console.error(`[${timestamp}][${requestId}] API Client: Request failed with status ${response.status}`, errorText);
       
-      // Special handling for 404 Not Found
-      if (response.status === 404) {
-        console.error(`[${requestId}] API ENDPOINT NOT FOUND: ${API_URL}${endpoint}`);
-        console.error(`[${requestId}] This suggests the server route doesn't exist or the API server isn't configured correctly`);
-        
-        // Check server health
-        try {
-          const healthResponse = await fetch(`${API_URL}`);
-          console.log(`[${requestId}] API server health check:`, {
-            ok: healthResponse.ok,
-            status: healthResponse.status,
-            statusText: healthResponse.statusText
-          });
-        } catch (healthError) {
-          console.error(`[${requestId}] API server health check failed:`, healthError);
+      try {
+        // Try to parse error as JSON
+        const errorData = JSON.parse(errorText);
+        if (errorData.error || errorData.message) {
+          errorMessage = errorData.error || errorData.message;
+        }
+      } catch (e) {
+        // If not JSON, use text as is
+        if (errorText) {
+          errorMessage = errorText;
         }
       }
       
-      try {
-        // Try to parse as JSON
-        errorData = JSON.parse(errorText);
-        console.error(`[${requestId}] API Error:`, errorData);
-      } catch (e) {
-        // Not JSON, use text
-        console.error(`[${requestId}] API Error (raw):`, errorText);
-        errorData = { error: errorText };
-      }
-      
-      throw new Error(
-        errorData.message || errorData.error || `API request failed with status ${response.status} (${response.statusText})`
-      );
-    }
-
-    const data = await response.json();
-    console.log(`[${requestId}] API Response data:`, data);
-    return data;
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      console.error(`[${requestId}] API request timeout`);
-      throw new Error('Request timed out. Please try again.');
+      throw new Error(errorMessage);
     }
     
-    console.error(`[${requestId}] API request error:`, error);
+    // Process successful response
+    console.log(`[${timestamp}][${requestId}] API Client: Reading response body...`);
+    console.time(`[${requestId}] response-json`);
+    
+    // Force the response to be processed as text first for debugging
+    const responseText = await response.text();
+    console.log(`[${timestamp}][${requestId}] API Client: Response text received (${responseText.length} chars)`);
+    
+    let responseData;
+    try {
+      // Try to parse the text as JSON
+      responseData = JSON.parse(responseText);
+      console.log(`[${timestamp}][${requestId}] API Client: Successfully parsed JSON response from ${endpoint}`);
+    } catch (jsonError) {
+      console.error(`[${timestamp}][${requestId}] API Client: Error parsing JSON:`, jsonError);
+      console.error(`[${timestamp}][${requestId}] API Client: Response text:`, responseText);
+      throw new Error(`Failed to parse JSON response: ${jsonError.message}`);
+    }
+    
+    console.timeEnd(`[${requestId}] response-json`);
+    return responseData;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error(`[${timestamp}][${requestId}] API Client: Request to ${endpoint} timed out after ${REQUEST_TIMEOUT}ms`);
+      throw new Error(`Request timed out after ${REQUEST_TIMEOUT}ms. Please try again.`);
+    }
+    console.error(`[${timestamp}][${requestId}] API Client: Error fetching ${endpoint}:`, error);
     throw error;
+  }
+}
+
+// API to test connectivity
+export async function testApiConnection() {
+  try {
+    const response = await fetch(`${API_URL}`);
+    if (!response.ok) {
+      return { success: false, error: `API server returned ${response.status} ${response.statusText}` };
+    }
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 }
 
@@ -171,21 +167,83 @@ export const matchApi = {
   // Get a match with all sets and points
   getFullMatchById: (id: string) => fetchApi<{ match: Match; sets: Set[]; points: Point[] }>(`/matches/${id}/full`),
 
-  // Create a new match
-  createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    console.log('Creating match with data:', match);
+  // Create a new match - using exact implementation from ApiDebug that's known to work
+  createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Match> => {
+    console.log('Creating match using ApiDebug approach that works');
     
-    // Ensure we have an auth session
+    // Get the session token
     const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      console.error('No authenticated session found when attempting to create a match');
-      throw new Error('You must be logged in to create a match');
+    const token = data.session?.access_token;
+    
+    if (!token) {
+      throw new Error('Authentication required. Please log in again.');
     }
     
-    return fetchApi<Match>('/matches', {
-      method: 'POST',
-      body: JSON.stringify(match),
-    });
+    console.log('Session found, token available:', !!token);
+    
+    // Use a controller for timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    try {
+      // Using hardcoded URL like ApiDebug does
+      console.log('Making POST request to http://localhost:3001/api/matches');
+      const response = await fetch('http://localhost:3001/api/matches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(match),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeout);
+      
+      const status = {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
+      };
+      
+      console.log('API response status:', status);
+      
+      // Handle error response
+      if (!response.ok) {
+        console.error('Match creation failed with status:', status);
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+      
+      // Read and log response text
+      let text = '';
+      try {
+        text = await response.text();
+        console.log('API response raw text:', text);
+        
+        try {
+          // Parse JSON response
+          const data = JSON.parse(text);
+          console.log('API response parsed JSON:', data);
+          return data;
+        } catch (jsonError) {
+          console.log('Response is not JSON:', jsonError);
+          throw new Error('Failed to parse response as JSON');
+        }
+      } catch (e) {
+        console.error('Error reading response:', e);
+        throw new Error('Failed to read response');
+      }
+    } catch (error) {
+      clearTimeout(timeout);
+      
+      if (error.name === 'AbortError') {
+        console.error('Match creation request timed out after 5 seconds');
+        throw new Error('Request timed out after 5 seconds. Please try again.');
+      }
+      
+      console.error('Error during match creation:', error);
+      throw error;
+    }
   },
 
   // Update a match
@@ -241,8 +299,18 @@ export const pointApi = {
     }),
 };
 
+// Shot API functions
+export const shotApi = {
+  // Get all shot categories
+  getCategories: () => fetchApi<any[]>('/shots/categories'),
+  
+  // Get all shots
+  getShots: () => fetchApi<any[]>('/shots'),
+};
+
 export default {
   match: matchApi,
   set: setApi,
   point: pointApi,
+  shot: shotApi,
 };

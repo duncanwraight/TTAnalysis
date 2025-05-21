@@ -18,7 +18,7 @@ const port = process.env.API_PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow all origins
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -47,94 +47,49 @@ pool.connect()
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Debug environment variables
-console.log('Environment variables debug:');
-console.log('- VITE_SUPABASE_URL:', supabaseUrl || 'NOT SET');
-console.log('- SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET (value hidden)' : 'NOT SET');
-console.log('- API_PORT:', process.env.API_PORT || 'NOT SET');
-console.log('- Other env vars:', Object.keys(process.env).filter(key => 
-  key.includes('SUPABASE') || key.includes('VITE')).join(', '));
-
 let adminSupabase;
 if (supabaseUrl && supabaseServiceKey) {
   adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
-  console.log('Supabase admin client created successfully');
 } else {
   console.warn('Missing Supabase credentials for admin operations');
-  if (!supabaseUrl) console.warn('Missing VITE_SUPABASE_URL');
-  if (!supabaseServiceKey) console.warn('Missing SUPABASE_SERVICE_ROLE_KEY');
 }
 
 // JWT Auth middleware
 const authenticateJWT = async (req, res, next) => {
-  console.log('===== JWT Authentication =====');
-  console.log('API Request to:', req.originalUrl);
-  console.log('Method:', req.method);
-  
-  // TEMPORARILY FORCE ENABLE AUTH BYPASS
-  console.log('**** AUTH BYPASS ENABLED - SKIPPING TOKEN VERIFICATION ****');
-  // Set a default test user
-  req.user = {
-    id: '00000000-0000-0000-0000-000000000001',
-    email: 'test@example.com',
-    role: 'authenticated'
-  };
-  return next();
-  
   const authHeader = req.headers.authorization;
   
   if (!authHeader) {
-    console.error('Authentication failed: Missing Authorization header');
     return res.status(401).json({ error: 'Authorization header is required' });
   }
   
   const token = authHeader.split(' ')[1];
   
   if (!token) {
-    console.error('Authentication failed: Missing Bearer token');
     return res.status(401).json({ error: 'Bearer token is required' });
   }
   
   try {
-    // Debug Supabase admin client
-    console.log('Supabase URL:', supabaseUrl);
-    console.log('Service Key available:', !!supabaseServiceKey);
-    console.log('Admin Client configured:', !!adminSupabase);
-    console.log('JWT Secret available:', !!process.env.SUPABASE_JWT_SECRET);
-    
     if (!adminSupabase) {
-      console.error('Authentication failed: Supabase admin client not configured');
-      console.error('SUPABASE_SERVICE_ROLE_KEY environment variable may be missing');
       throw new Error('Supabase admin client not configured');
     }
-    
-    // Log token details (without exposing the full token)
-    console.log(`Auth attempt with token: ${token.substring(0, 10)}...`);
     
     // Verify the JWT token with Supabase
     const { data, error } = await adminSupabase.auth.getUser(token);
     
     if (error) {
-      console.error('Authentication failed: Supabase error:', error);
       return res.status(401).json({ error: 'Invalid or expired token', details: error.message });
     }
     
     if (!data || !data.user) {
-      console.error('Authentication failed: No user found for token');
       return res.status(401).json({ error: 'No user associated with this token' });
     }
     
     const user = data.user;
-    console.log(`User authenticated successfully: ${user.id} (${user.email})`);
     
     // Add user to request object
     req.user = user;
-    console.log('===== JWT Authentication Successful =====');
     return next();
   } catch (error) {
-    console.error('JWT verification error:', error);
-    console.error('Error details:', error.stack);
-    
     return res.status(401).json({ 
       error: 'Failed to authenticate token',
       message: error.message 
@@ -166,23 +121,20 @@ app.post('/api/set-admin', authenticateJWT, async (req, res) => {
     );
     
     if (error) {
-      console.error('Error setting admin status:', error);
       return res.status(500).json({ error: 'Failed to set admin status' });
     }
     
     res.status(200).json({ success: true, message: 'Admin status set successfully' });
   } catch (error) {
-    console.error('Server error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // API endpoints
 
-// Add a test endpoint that doesn't require auth
+// Test authentication endpoint
 app.get('/api/test/auth', async (req, res) => {
   const authHeader = req.headers.authorization;
-  console.log('Auth test endpoint hit with auth header:', !!authHeader);
   
   if (!authHeader) {
     return res.status(401).json({ 
@@ -226,7 +178,6 @@ app.get('/api/test/auth', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Auth test error:', error);
     return res.status(500).json({
       error: 'Server error',
       message: error.message
@@ -243,7 +194,6 @@ app.get('/api/shots/categories', async (req, res) => {
     
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching shot categories:', error);
     res.status(500).json({ error: 'Failed to fetch shot categories' });
   }
 });
@@ -256,8 +206,42 @@ app.get('/api/shots', async (req, res) => {
     
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching shots:', error);
     res.status(500).json({ error: 'Failed to fetch shots' });
+  }
+});
+
+// Add debug logging middleware for match creation
+app.use('/api/matches', (req, res, next) => {
+  if (req.method === 'POST') {
+    console.log('POST /api/matches request received at', new Date().toISOString());
+    console.log('Request headers:', req.headers);
+    console.log('Request body:', req.body);
+    
+    // Track original end method
+    const originalEnd = res.end;
+    const chunks = [];
+    
+    // Override end method to capture response
+    res.end = function(chunk) {
+      if (chunk) {
+        chunks.push(Buffer.from(chunk));
+      }
+      
+      const body = Buffer.concat(chunks).toString('utf8');
+      console.log('Response for POST /api/matches:', {
+        statusCode: res.statusCode,
+        statusMessage: res.statusMessage,
+        body: body.length < 1000 ? body : body.substring(0, 1000) + '... [truncated]'
+      });
+      
+      // Call original end method
+      originalEnd.apply(res, arguments);
+    };
+    
+    // Continue to next middleware
+    next();
+  } else {
+    next();
   }
 });
 
@@ -276,7 +260,6 @@ app.get('/api/matches', async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching matches:', error);
     res.status(500).json({ error: 'Failed to fetch matches' });
   }
 });
@@ -295,7 +278,6 @@ app.get('/api/matches/:id', async (req, res) => {
     
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error fetching match:', error);
     res.status(500).json({ error: 'Failed to fetch match' });
   }
 });
@@ -340,26 +322,13 @@ app.get('/api/matches/:id/full', async (req, res) => {
     
     res.json({ match, sets, points });
   } catch (error) {
-    console.error('Error fetching full match data:', error);
     res.status(500).json({ error: 'Failed to fetch full match data' });
   }
 });
 
 app.post('/api/matches', async (req, res) => {
-  console.log('============================================================');
-  console.log('MATCH CREATION ENDPOINT HIT - POST /api/matches');
-  console.log('============================================================');
-  
   try {
     const { opponent_name, date, match_score, notes, initial_server } = req.body;
-    
-    // Log full request information for debugging
-    console.log('Match creation request:', {
-      body: req.body,
-      userId: req.user?.id,
-      userEmail: req.user?.email,
-      authHeader: req.headers.authorization ? 'Present (not shown)' : 'Missing'
-    });
     
     // Validate required fields
     if (!opponent_name) {
@@ -376,49 +345,23 @@ app.post('/api/matches', async (req, res) => {
     
     // Use the authenticated user's ID
     const userId = req.user.id;
-    console.log('Creating match for user:', userId);
     
-    // Log SQL parameters
-    console.log('SQL parameters:', [userId, opponent_name, date, match_score, notes, initial_server]);
+    const result = await pool.query(
+      `INSERT INTO matches (user_id, opponent_name, date, match_score, notes, initial_server) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [userId, opponent_name, date, match_score, notes, initial_server]
+    );
     
-    try {
-      console.log('Executing database query to create match...');
-      console.log('SQL parameters:', [userId, opponent_name, date, match_score, notes, initial_server]);
-      
-      // Make sure we have a valid UUID for the user ID
-      if (!userId || userId.length < 36) {
-        console.log('Using default test user ID because supplied ID was invalid');
-        userId = '00000000-0000-0000-0000-000000000001'; // Use test user
-      }
-      
-      const result = await pool.query(
-        `INSERT INTO matches (user_id, opponent_name, date, match_score, notes, initial_server) 
-         VALUES ($1, $2, $3, $4, $5, $6) 
-         RETURNING *`,
-        [userId, opponent_name, date, match_score, notes, initial_server]
-      );
-      
-      if (result.rows && result.rows.length > 0) {
-        console.log('Match created successfully:', result.rows[0]);
-        console.log('Responding with status 201...');
-        return res.status(201).json(result.rows[0]);
-      } else {
-        console.error('Database query succeeded but no rows returned!');
-        return res.status(500).json({ error: 'Database query succeeded but no rows returned' });
-      }
-    } catch (dbError) {
-      console.error('Database error during match creation:', dbError);
-      throw dbError; // Re-throw to be caught by outer try/catch
+    if (result.rows && result.rows.length > 0) {
+      return res.status(201).json(result.rows[0]);
+    } else {
+      return res.status(500).json({ error: 'Database query succeeded but no rows returned' });
     }
   } catch (error) {
-    console.error('Error creating match:', error);
-    console.error('Error details:', error.message, error.code, error.stack);
-    
-    // Return more detailed error information
     res.status(500).json({ 
       error: 'Failed to create match',
-      message: error.message,
-      code: error.code
+      message: error.message
     });
   }
 });
@@ -491,7 +434,6 @@ app.put('/api/matches/:id', async (req, res) => {
     
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating match:', error);
     res.status(500).json({ error: 'Failed to update match' });
   }
 });
@@ -518,7 +460,6 @@ app.delete('/api/matches/:id', async (req, res) => {
     
     res.json({ message: 'Match deleted successfully', id: result.rows[0].id });
   } catch (error) {
-    console.error('Error deleting match:', error);
     res.status(500).json({ error: 'Failed to delete match' });
   }
 });
@@ -545,7 +486,6 @@ app.get('/api/sets', async (req, res) => {
     const result = await pool.query(query, values);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching sets:', error);
     res.status(500).json({ error: 'Failed to fetch sets' });
   }
 });
@@ -573,7 +513,6 @@ app.post('/api/sets', async (req, res) => {
     
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating set:', error);
     res.status(500).json({ error: 'Failed to create set' });
   }
 });
@@ -631,7 +570,6 @@ app.put('/api/sets/:id', async (req, res) => {
     
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating set:', error);
     res.status(500).json({ error: 'Failed to update set' });
   }
 });
@@ -659,7 +597,6 @@ app.get('/api/points', async (req, res) => {
     const result = await pool.query(query, values);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching points:', error);
     res.status(500).json({ error: 'Failed to fetch points' });
   }
 });
@@ -681,7 +618,6 @@ async function getShotIdByName(shotName) {
     }
     return null;
   } catch (error) {
-    console.error('Error fetching shot ID:', error);
     return null;
   }
 }
@@ -726,9 +662,6 @@ app.post('/api/points', async (req, res) => {
     const winning_shot_id = await getShotIdByName(winning_shot_name);
     const other_shot_id = await getShotIdByName(other_shot_name);
     
-    // For now, handle the case where shots might not be in the database yet
-    // In the future, we'll update the frontend to use proper shot IDs
-    
     const result = await pool.query(
       `INSERT INTO points (set_id, point_number, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, notes) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
@@ -738,7 +671,6 @@ app.post('/api/points', async (req, res) => {
     
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating point:', error);
     res.status(500).json({ error: 'Failed to create point' });
   }
 });
@@ -767,16 +699,12 @@ app.delete('/api/points/:id', async (req, res) => {
     
     res.json({ message: 'Point deleted successfully' });
   } catch (error) {
-    console.error('Error deleting point:', error);
     res.status(500).json({ error: 'Failed to delete point' });
   }
 });
 
 // Default route for testing
 app.get('/api', (req, res) => {
-  console.log('API healthcheck - API server is running');
-  
-  // Added detailed environment configuration info
   const envInfo = {
     SUPABASE_URL: process.env.VITE_SUPABASE_URL ? 'SET' : 'NOT SET',
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET',
@@ -791,6 +719,45 @@ app.get('/api', (req, res) => {
     supabase: !!adminSupabase ? 'configured' : 'not configured',
     env: envInfo
   });
+});
+
+// Debug route for testing the database connection
+app.get('/api/debug/db', async (req, res) => {
+  try {
+    console.log('Testing database connection...');
+    // Test database connection with a simple query
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release();
+    
+    res.json({
+      success: true,
+      message: 'Database connection successful',
+      timestamp: result.rows[0].now,
+      connectionConfig: {
+        host: process.env.VITE_PG_HOST,
+        port: process.env.VITE_PG_PORT,
+        database: process.env.VITE_PG_DATABASE,
+        user: process.env.VITE_PG_USER,
+        // Don't send password in response
+      }
+    });
+  } catch (error) {
+    console.error('Database connection test failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      connectionConfig: {
+        host: process.env.VITE_PG_HOST,
+        port: process.env.VITE_PG_PORT, 
+        database: process.env.VITE_PG_DATABASE,
+        user: process.env.VITE_PG_USER,
+        // Don't send password in response
+      }
+    });
+  }
 });
 
 // Start server

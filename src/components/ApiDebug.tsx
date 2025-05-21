@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { testApiConnection } from '../lib/api';
+import * as directApi from '../utils/directApi';
+import * as xhr from '../utils/xhr';
+import * as form from '../utils/form';
 
 /**
  * Component for debugging API issues
@@ -154,34 +157,6 @@ const ApiDebug: React.FC = () => {
     try {
       console.log('Starting match creation test');
       
-      // Direct API health check
-      try {
-        const healthResult = await fetch('http://localhost:3001/api');
-        const healthStatus = healthResult.ok ? 'OK' : 'ERROR';
-        console.log(`API health check: ${healthStatus}`);
-      } catch (e) {
-        console.error('API health check failed - server might be down:', e);
-        setError('API server might be down. Check console and server logs.');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Get current session
-      const sessionResult = await supabase.auth.getSession();
-      console.log('Auth session result:', sessionResult);
-      
-      const session = sessionResult.data.session;
-      
-      if (!session) {
-        console.error('No active session found');
-        setError('No active session found. Please log in.');
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log('Session found, token available:', !!session.access_token);
-      console.log('Token starts with:', session.access_token.substring(0, 10));
-      
       // Create test match data
       const matchData = {
         opponent_name: 'Debug Test',
@@ -191,90 +166,51 @@ const ApiDebug: React.FC = () => {
         initial_server: 'player'
       };
       
-      console.log('Match data for creation:', matchData);
+      // Use the Form utility with callbacks
+      console.log('Using Form submission for test match creation');
       
-      // Testing with a timeout to ensure we don't get stuck
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      
-      try {
-        // Test the match creation endpoint directly
-        console.log('Making POST request to API/matches');
-        const response = await fetch('http://localhost:3001/api/matches', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`
-          },
-          body: JSON.stringify(matchData),
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeout);
-        
-        const status = {
-          ok: response.ok,
-          status: response.status,
-          statusText: response.statusText
-        };
-        
-        console.log('API response status:', status);
-        
-        let data;
-        let text = '';
-        try {
-          text = await response.text();
-          console.log('API response raw text:', text);
+      form.createMatch(
+        matchData,
+        // Success callback
+        (data) => {
+          console.log('Test match created successfully with ID:', data.id);
           
-          try {
-            data = JSON.parse(text);
-            console.log('API response parsed JSON:', data);
-          } catch (jsonError) {
-            console.log('Response is not JSON:', jsonError);
-            data = text;
-          }
-        } catch (e) {
-          console.error('Error reading response:', e);
-          data = 'Failed to read response';
+          setResult({ 
+            request: {
+              method: 'POST (via Form)',
+              data: matchData,
+            },
+            response: {
+              status: { ok: true, status: 200 }, 
+              data,
+            },
+            requestTime: new Date().toISOString() 
+          });
+          
+          setIsLoading(false);
+        },
+        // Error callback
+        (error) => {
+          console.error('Form error during test match creation:', error);
+          
+          setError(`Form Error: ${error.message}`);
+          
+          setResult({
+            request: {
+              method: 'POST (via Form)',
+              data: matchData,
+            },
+            error: error.message,
+            requestTime: new Date().toISOString() 
+          });
+          
+          setIsLoading(false);
         }
-        
-        setResult({ 
-          request: {
-            url: 'http://localhost:3001/api/matches',
-            method: 'POST',
-            data: matchData,
-            auth: `Bearer ${session.access_token.substring(0, 5)}...`,
-            userId: session.user.id
-          },
-          response: {
-            status, 
-            data,
-            rawResponse: text.substring(0, 100) + (text.length > 100 ? '...' : '')
-          },
-          requestTime: new Date().toISOString() 
-        });
-      } catch (fetchError) {
-        clearTimeout(timeout);
-        console.error('Fetch error during match creation test:', fetchError);
-        
-        // Check if this was an abort error
-        if (fetchError.name === 'AbortError') {
-          setError('Request timed out after 5 seconds - server might be unresponsive');
-        } else {
-          setError(`Fetch error: ${fetchError.message}`);
-        }
-        
-        setResult({
-          request: {
-            url: 'http://localhost:3001/api/matches',
-            method: 'POST',
-            data: matchData,
-            userId: session.user.id
-          },
-          error: fetchError.message,
-          requestTime: new Date().toISOString() 
-        });
-      }
+      );
+      
+      // Return early to prevent the finally block from running
+      // setIsLoading(false) is called in the callbacks
+      return;
     } catch (err) {
       console.error('Match creation test error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');

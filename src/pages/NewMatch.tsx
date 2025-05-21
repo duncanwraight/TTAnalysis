@@ -5,10 +5,13 @@ import { matchApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import '../styles/components/NewMatch.css';
 import ApiDebug from '../components/ApiDebug';
+import * as directApi from '../utils/directApi';
+import * as xhr from '../utils/xhr';
+import * as form from '../utils/form';
 
 const NewMatch = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   
   const [formData, setFormData] = useState({
     opponent_name: '',
@@ -58,8 +61,13 @@ const NewMatch = () => {
       setError(null);
       
       console.log('Creating match with data:', formData);
+      console.log('User authentication status:', !!user, user?.id);
+      console.log('Session available:', !!session, session?.access_token ? 'token available' : 'no token');
       
-      // Removed user check since we're using auth bypass
+      // Check if user is authenticated
+      if (!user) {
+        throw new Error('Authentication error: You must be logged in to create a match');
+      }
       
       // Validate required fields
       if (!formData.opponent_name.trim()) {
@@ -70,50 +78,47 @@ const NewMatch = () => {
         throw new Error('Match date is required');
       }
       
-      console.log('About to create match directly...');
+      // Create match data
+      const matchData = {
+        opponent_name: formData.opponent_name.trim(),
+        date: formData.date,
+        match_score: '0-0',
+        notes: formData.notes,
+        initial_server: formData.initial_server
+      };
       
-      // Use direct fetch instead of the API client to bypass auth issues
-      try {
-        // Create match data
-        const matchData = {
-          opponent_name: formData.opponent_name.trim(),
-          date: formData.date,
-          match_score: '0-0',
-          notes: formData.notes,
-          initial_server: formData.initial_server
-        };
-        
-        console.log('Sending match data:', matchData);
-        
-        // Direct fetch to API
-        const response = await fetch('http://localhost:3001/api/matches', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(matchData)
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API error response:', errorText);
-          throw new Error(`API error: ${response.status} ${response.statusText}`);
+      console.log('Using form submission for match creation as a last resort...');
+      
+      // Form submission approach with callbacks
+      form.createMatch(
+        matchData,
+        // Success callback
+        (newMatch) => {
+          console.log('Form Match creation completed successfully');
+          
+          if (!newMatch?.id) {
+            console.error('Match was created but no ID was returned!', newMatch);
+            setError('Match was created but no ID was returned');
+            setIsSubmitting(false);
+            return;
+          }
+          
+          console.log('Match created successfully, ID:', newMatch.id);
+          console.log('Navigating to:', `/matches/${newMatch.id}`);
+          
+          // Navigate to the match tracker with the new match ID
+          navigate(`/matches/${newMatch.id}`);
+        },
+        // Error callback
+        (apiError) => {
+          console.error('Form error during match creation:', apiError);
+          setError(apiError.message || 'Error creating match');
+          setIsSubmitting(false);
         }
-        
-        const newMatch = await response.json();
-        console.log('Match created successfully:', newMatch);
-        
-        if (!newMatch?.id) {
-          console.error('Match was created but no ID was returned!', newMatch);
-          throw new Error('Match was created but no ID was returned');
-        }
-        
-        // Navigate to the match tracker with the new match ID
-        navigate(`/matches/${newMatch.id}`);
-      } catch (apiError) {
-        console.error('Error during match creation:', apiError);
-        throw apiError;
-      }
+      );
+      
+      // Don't set isSubmitting to false here - do it in the callbacks
+      return; // Early return to prevent the finally block from executing
     } catch (err) {
       console.error('Error creating match:', err);
       
@@ -138,14 +143,8 @@ const NewMatch = () => {
         errorMessage = 'Request timed out. Please check if the API server is running and try again.';
       }
       
-      // Log browser info for debugging
-      console.log('Browser info:', {
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        cookiesEnabled: navigator.cookieEnabled
-      });
-      
       setError(errorMessage);
+    } finally {
       setIsSubmitting(false);
     }
   };
