@@ -5,13 +5,18 @@
 - [x] Ensure proper data synchronization between local state and database
 - [ ] Optimize database queries for match and point data
 
+## Shots Database & Integration
+- [x] Consolidate database migrations into a clean structure
+- [x] Move shots and categories into database tables
+- [x] Update application to fetch shots from database
+- [ ] Add admin interface for managing shots and categories
+- [ ] Update point recording to use shot IDs instead of names
+- [ ] Add shot statistics visualization based on database queries
+
 ## Authentication (Self-Hosted Supabase Auth)
 - [x] Setup Supabase CLI for local development
 - [x] Initialize local Supabase project connected to PostgreSQL database
 - [x] Test connection between Supabase Auth and local database
-- [x] Consolidate database migrations into a clean structure
-- [x] Move shots and categories into database tables
-- [x] Update application to fetch shots from database
 - [ ] Create Auth UI components (login, signup, password reset)
 - [ ] Implement auth state management with React context
 - [ ] Create protected routes in frontend
