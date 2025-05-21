@@ -15,7 +15,10 @@ A web application for tracking and analyzing table tennis matches, built with Re
 # Install dependencies
 npm install
 
-# Start development server
+# Start Supabase local dev environment and the application
+./start-dev.sh
+
+# Alternative: Start only the application without Supabase
 npm run dev
 
 # Build for production
@@ -24,6 +27,8 @@ npm run build
 # Preview production build
 npm run preview
 ```
+
+The `start-dev.sh` script will start the Supabase local development environment (including PostgreSQL database) and launch the application servers. This is the recommended way to start the development environment.
 
 ## Project Structure
 

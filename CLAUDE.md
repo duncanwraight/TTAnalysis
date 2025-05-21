@@ -12,8 +12,17 @@ TTAnalysis is a table tennis match analysis web application built using React, T
 # Install dependencies
 npm install
 
-# Start development server
+# Start Supabase and application servers (recommended)
+./start-dev.sh
+
+# Start only the development server (without Supabase)
 npm run dev
+
+# Start Express API server
+npm run server
+
+# Start both API and frontend servers
+npm run dev:all
 
 # Build for production
 npm run build
@@ -24,6 +33,12 @@ npm run lint
 # Preview the production build
 npm run preview
 ```
+
+The `start-dev.sh` script handles:
+1. Starting the local Supabase services (PostgreSQL, Auth, etc.)
+2. Setting environment variables for the Express server
+3. Creating a test user if one doesn't exist
+4. Starting the development servers
 
 ## Architecture
 
@@ -55,10 +70,14 @@ npm run preview
 
 ### Database Schema
 
+- **Users**: id, email, name, preferences
+- **Shot Categories**: id, name, display_order
+- **Shots**: id, category_id, name, display_name, description, display_order
 - **Matches**: id, user_id, opponent_name, date, match_score, notes, initial_server
-- **Sets**: id, match_id, set_number, score
-- **Points**: id, set_id, point_number, winner, winning_shot, other_shot, notes
-- **Users**: id, email, name, preferences (managed by Supabase Auth)
+- **Sets**: id, match_id, set_number, score, player_score, opponent_score
+- **Points**: id, set_id, point_number, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, notes
+
+The database uses PostgreSQL with Supabase for Auth and Row Level Security. The schema is defined in the `supabase/migrations` directory.
 
 ## Code Organization
 
@@ -79,8 +98,24 @@ npm run preview
 
 ## Development Notes
 
-- The application uses environment variables for Supabase configuration:
-  - `VITE_SUPABASE_URL`
-  - `VITE_SUPABASE_ANON_KEY`
-- Current implementation uses localStorage for data persistence before fully integrating with Supabase
+- The application uses environment variables:
+  - For Supabase:
+    - `VITE_SUPABASE_URL` - URL for Supabase instance
+    - `VITE_SUPABASE_ANON_KEY` - Anonymous API key for Supabase
+  - For PostgreSQL direct connection:
+    - `VITE_PG_HOST` - Database host (set by start-dev.sh)
+    - `VITE_PG_PORT` - Database port (set by start-dev.sh)
+    - `VITE_PG_DATABASE` - Database name (set by start-dev.sh)
+    - `VITE_PG_USER` - Database user (set by start-dev.sh)
+    - `VITE_PG_PASSWORD` - Database password (set by start-dev.sh)
+
+- Use `./start-dev.sh` for local development, which sets up:
+  - Local Supabase instance for authentication and database
+  - Express API server for database access
+  - React frontend with Vite
+  - Test user creation if needed
+
 - Mobile-first design for courtside usage during matches
+- Express server handles direct PostgreSQL access
+- Match deletion and creation are fully implemented
+- Point recording uses shot IDs from the shots database
