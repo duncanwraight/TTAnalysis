@@ -91,13 +91,9 @@ const MatchTracker = () => {
           return;
         }
         
-        console.log('Loading match data...');
-        
         try {
           // Use the API hook to fetch match data - token handling is automatic
           const matchData = await api.match.getFullMatchById(id);
-          console.log('Match data loaded:', matchData);
-          
           // Match exists in the database
           const { match, sets, points } = matchData;
           
@@ -139,7 +135,6 @@ const MatchTracker = () => {
         } catch (err) {
           // Match doesn't exist in database or couldn't be loaded
           console.error('Error loading match:', err);
-          console.warn('Match not found or error loading, creating one');
           
           // Create a default match
           const defaultMatch = {
@@ -167,10 +162,8 @@ const MatchTracker = () => {
           }
           
           // Create the match in database using the API hook
-          console.log('Creating match with API hook...');
           try {
             const newMatch = await api.match.createMatch(defaultMatch);
-            console.log('Match created from MatchTracker:', newMatch);
             setMatch(newMatch);
             setInitialServer(defaultMatch.initial_server as 'player' | 'opponent');
           } catch (createError) {
@@ -193,7 +186,6 @@ const MatchTracker = () => {
   
   // Reset point flow when a point is completed
   const resetPointFlow = () => {
-    console.log('MatchTracker: Resetting point flow');
     setSelectedWinner(null);
     setWinningShot(null);
     setOtherShot(null);
@@ -235,8 +227,6 @@ const MatchTracker = () => {
   
   // Record a point with all the data collected
   const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
-    console.log(`MatchTracker: Recording point - winner: ${winner}`, 'winningShot:', winningShot, 'otherShot:', otherShot);
-    
     if (!match) {
       console.error('Cannot record point: match is null');
       resetPointFlow();
@@ -339,9 +329,7 @@ const MatchTracker = () => {
       let newPoint;
       try {
         // Creating point with API hook (automatic token handling)
-        console.log('MatchTracker: Creating point');
         newPoint = await api.point.createPoint(pointData);
-        console.log('MatchTracker: Point created successfully:', newPoint);
       } catch (error) {
         console.error('Error creating point:', error);
         throw new Error(`Failed to create point: ${error.message}`);
@@ -445,7 +433,6 @@ const MatchTracker = () => {
       // Reset the point flow
       resetPointFlow();
       
-      console.log('MatchTracker: Point recorded successfully, flow reset');
     } catch (error) {
       console.error('Error recording point:', error);
       alert('Failed to record point. Please try again.');
@@ -622,8 +609,7 @@ const MatchTracker = () => {
     const currentServer = serverChangeCount % 2 === 0 ? 
       initialServer : 
       (initialServer === 'player' ? 'opponent' : 'player');
-      
-    console.log('Total points:', totalPoints, 'Server change count:', serverChangeCount, 'Initial server:', initialServer, 'Current server:', currentServer);
+    
     return currentServer;
   };
   
@@ -1037,13 +1023,11 @@ const MatchTracker = () => {
                 return;
               }
               
-              console.log('[MatchTracker] Advancing to next set');
               try {
                 const updatedSets = [...matchState.sets];
                 updatedSets.push({ playerScore: 0, opponentScore: 0 });
                 
                 // Create a new set in the database
-                console.log('[MatchTracker] Creating new set in database');
                 let newSet;
                 try {
                   newSet = await api.set.createSet({
@@ -1058,7 +1042,6 @@ const MatchTracker = () => {
                   throw new Error(`Failed to create set: ${error.message}`);
                 }
                 
-                console.log('[MatchTracker] Updating local state');
                 setMatchState({
                   currentSet: matchState.currentSet + 1,
                   sets: updatedSets,
