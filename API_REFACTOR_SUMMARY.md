@@ -21,17 +21,12 @@ The key fix was modifying the API client to accept an authentication token param
 ```javascript
 // Modified API client function
 async function directFetch<T>(endpoint: string, options: RequestInit = {}, token?: string): Promise<T> {
-  // Use provided token or get from Supabase if not provided
+  // Use provided token - we don't try to get it from Supabase as that seems to fail
   let authToken = token;
   
   if (!authToken) {
-    // Fallback to get token from Supabase
-    const { data } = await supabase.auth.getSession();
-    authToken = data.session?.access_token;
-    
-    if (!authToken) {
-      throw new Error('Authentication required. Please log in again.');
-    }
+    console.error('directFetch: No authentication token provided for API call');
+    throw new Error('Authentication required. No token provided for API call.');
   }
 
   // Create headers with authentication
@@ -95,20 +90,20 @@ The fundamental issue was the authentication token retrieval approach:
    - The API client was independently retrieving the token via supabase.auth.getSession()
 
 2. **Different Authentication States**:
-   - These two approaches could result in different tokens or authentication states
-   - The context token was guaranteed to be the same used throughout the component
-   - The independent getSession() call might be in a different state
+   - Using different approaches to get the token could result in inconsistent states
+   - The context token is guaranteed to be the same used throughout the component
+   - Direct getSession() calls are now avoided to prevent state inconsistencies
 
 3. **Timing Issues**:
-   - The context-based token was already available when the component rendered
-   - The API client's getSession() call was an additional async step that might not complete in time
+   - The context-based token is already available when the component renders
+   - Removing the API client's independent getSession() call eliminates timing problems
 
 ### 5. Benefits of the New Approach
 
 - **Consistent Authentication**: Using the same token source throughout the application
 - **Simplified Flow**: Fewer asynchronous operations in the authentication chain
 - **Better Control**: Components can decide which token to use
-- **Fallback Support**: API client still works independently if no token is provided
+- **Clear Error Handling**: API client explicitly requires a token and provides clear errors when missing
 - **Reliable Behavior**: Eliminates potential race conditions or timing issues
 
 ## Current Status
