@@ -43,12 +43,19 @@ const AdminRegistration = () => {
       // Register user first
       await signUp(email, password);
       
-      // Set admin flag via custom API endpoint
+      // Set admin flag via custom API endpoint using direct fetch
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
       const response = await fetch('/api/set-admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           email,
@@ -57,7 +64,8 @@ const AdminRegistration = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to set admin status');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to set admin status');
       }
       
       setSuccess(true);

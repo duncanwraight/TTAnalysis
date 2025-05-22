@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import { matchApi } from '../lib/api';
 import '../styles/components/NewMatch.css';
 
 /**
@@ -73,6 +74,10 @@ const NewMatch = () => {
         throw new Error('Match date is required');
       }
       
+      if (!session?.access_token) {
+        throw new Error('No authentication token available');
+      }
+      
       // Create match data
       const matchData = {
         opponent_name: formData.opponent_name.trim(),
@@ -81,34 +86,17 @@ const NewMatch = () => {
         notes: formData.notes,
         initial_server: formData.initial_server
       };
-
-      if (!session?.access_token) {
-        throw new Error('No authentication token available');
-      }
       
-      // Send API request to create match
-      const fetchResponse = await fetch('/api/matches', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify(matchData)
-      });
+      // Send API request to create match using the API client
+      // Pass the session token directly to ensure consistent authentication
+      const newMatch = await matchApi.createMatch(matchData, session.access_token);
       
-      if (!fetchResponse.ok) {
-        const errorText = await fetchResponse.text();
-        throw new Error(`API error: ${fetchResponse.status} ${fetchResponse.statusText}`);
-      }
-      
-      const responseData = await fetchResponse.json();
-      
-      if (!responseData.id) {
+      if (!newMatch.id) {
         throw new Error('No match ID returned');
       }
       
       // Navigate to the match tracker with the new match ID
-      navigate(`/matches/${responseData.id}`);
+      navigate(`/matches/${newMatch.id}`);
     } catch (err) {
       // Handle error cases
       let errorMessage = 'Failed to create match. Please try again.';

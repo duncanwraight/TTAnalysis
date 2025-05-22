@@ -1,4 +1,8 @@
-import { supabase } from './supabase';
+/**
+ * API client for shot-related operations
+ * Provides functions for retrieving and organizing shot data
+ */
+import { shotApi } from './api';
 
 // Types for shot data
 export interface ShotCategory {
@@ -16,33 +20,21 @@ export interface Shot {
   description?: string;
 }
 
-// Fetch all shot categories and their shots
-export const fetchShotsWithCategories = async (): Promise<{
+/**
+ * Fetch all shot categories and their shots
+ * @param token Optional authentication token
+ * @returns Object containing categories and shots arrays
+ */
+export const fetchShotsWithCategories = async (token?: string): Promise<{
   categories: ShotCategory[];
   shots: Shot[];
 }> => {
   try {
-    // Fetch categories
-    const { data: categories, error: categoriesError } = await supabase
-      .from('shot_categories')
-      .select('*')
-      .order('display_order', { ascending: true });
-
-    if (categoriesError) {
-      console.error('Error fetching shot categories:', categoriesError);
-      throw categoriesError;
-    }
-
-    // Fetch shots
-    const { data: shots, error: shotsError } = await supabase
-      .from('shots')
-      .select('*')
-      .order('display_order', { ascending: true });
-
-    if (shotsError) {
-      console.error('Error fetching shots:', shotsError);
-      throw shotsError;
-    }
+    // Fetch categories and shots using the API client
+    const [categories, shots] = await Promise.all([
+      shotApi.getCategories(token),
+      shotApi.getShots(token)
+    ]);
 
     return {
       categories: categories || [],
@@ -59,8 +51,18 @@ export const fetchShotsWithCategories = async (): Promise<{
   }
 };
 
-// Get shots by category name
-export const getShotsByCategory = (shots: Shot[], categories: ShotCategory[], categoryName: string): Shot[] => {
+/**
+ * Get shots by category name
+ * @param shots Array of shots to filter
+ * @param categories Array of categories to search in
+ * @param categoryName Category name to filter by
+ * @returns Filtered array of shots that belong to the specified category
+ */
+export const getShotsByCategory = (
+  shots: Shot[], 
+  categories: ShotCategory[], 
+  categoryName: string
+): Shot[] => {
   const category = categories.find(cat => cat.name === categoryName);
   if (!category) return [];
   

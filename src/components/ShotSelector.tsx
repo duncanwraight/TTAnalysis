@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Shot, ShotCategory as DBShotCategory, fetchShotsWithCategories, getShotsByCategory } from '../lib/shotsApi';
+import { shotApi } from '../lib/api';
+import { ShotCategory as DbShotCategory, Shot as DbShot } from '../types/database.types';
+import { useAuth } from '../context/AuthContext';
 
+/**
+ * ShotSelector component for selecting shot types in table tennis matches
+ * Displays shot categories and shot options with forehand/backhand selection
+ */
 type ShotSelectorProps = {
   onSelect: (shot: string) => void;
   shotType: 'winning' | 'other';
@@ -17,7 +23,7 @@ type ShotType = {
   label: string;
 };
 
-type ShotCategory = {
+type FormattedShotCategory = {
   id: string;
   name: string;
   label: string;
@@ -28,7 +34,7 @@ type ShotCategory = {
 let lastSelectedCategory = 'serve';
 
 // Fallback shot categories in case the database fetch fails
-const fallbackShotCategories: ShotCategory[] = [
+const fallbackShotCategories: FormattedShotCategory[] = [
   {
     id: 'serve',
     name: 'serve',
@@ -80,6 +86,9 @@ const fallbackShotCategories: ShotCategory[] = [
   }
 ];
 
+/**
+ * ShotSelector component for selecting shot types in table tennis matches
+ */
 const ShotSelector: React.FC<ShotSelectorProps> = ({ 
   onSelect, 
   shotType, 
@@ -89,37 +98,33 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   currentServer = 'player',
   isWinningPlayer = true
 }) => {
+  const { session } = useAuth();
   const [activeCategory, setActiveCategory] = useState<string>(lastSelectedCategory);
-  const [shotCategories, setShotCategories] = useState<ShotCategory[]>(fallbackShotCategories);
+  const [shotCategories, setShotCategories] = useState<FormattedShotCategory[]>(fallbackShotCategories);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Fetch shot categories and shots from the database using direct API calls
+  // Fetch shot categories and shots from the database using the API client
   useEffect(() => {
     const loadShots = async () => {
       try {
         setIsLoading(true);
         
-        // Fetch categories from API
-        const categoriesResponse = await fetch('http://localhost:3001/api/shots/categories');
-        if (!categoriesResponse.ok) {
-          throw new Error(`Failed to fetch shot categories: ${categoriesResponse.status}`);
-        }
+        // Get authentication token from context
+        const token = session?.access_token;
         
-        // Fetch shots from API
-        const shotsResponse = await fetch('http://localhost:3001/api/shots');
-        if (!shotsResponse.ok) {
-          throw new Error(`Failed to fetch shots: ${shotsResponse.status}`);
-        }
-        
-        const categories = await categoriesResponse.json();
-        const shots = await shotsResponse.json();
+        // Fetch categories and shots using the API client
+        const [categories, shots] = await Promise.all([
+          shotApi.getCategories(token),
+          shotApi.getShots(token)
+        ]);
         
         if (categories.length > 0 && shots.length > 0) {
-          const formattedCategories = categories.map((category: DBShotCategory) => {
+          // Format the categories and shots for display
+          const formattedCategories = categories.map((category: DbShotCategory) => {
             // Get shots for this category
             const categoryShots = shots
-              .filter((shot: Shot) => shot.category_id === category.id)
-              .map((shot: Shot) => ({
+              .filter((shot: DbShot) => shot.category_id === category.id)
+              .map((shot: DbShot) => ({
                 id: shot.id,
                 name: shot.name,
                 label: shot.display_name
@@ -136,23 +141,26 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
           setShotCategories(formattedCategories);
         }
       } catch (error) {
-        console.error('Error loading shot categories:', error);
-        console.error('Using fallback categories due to error');
-        // Keep using fallback categories
+        // Keep using fallback categories on error
+        console.error('Error loading shots:', error);
       } finally {
         setIsLoading(false);
       }
     };
     
     loadShots();
-  }, []);
+  }, [session]);
 
-  // Helper to get the hand ID (forehand or backhand)
+  /**
+   * Helper to get the hand ID (forehand or backhand)
+   */
   const getHandId = (shotId: string, hand: 'fh' | 'bh'): string => {
     return `${hand}_${shotId}`;
   };
 
-  // When a category is clicked
+  /**
+   * Handle category selection
+   */
   const handleCategoryClick = (categoryId: string) => {
     // Find the category with that ID
     const category = shotCategories.find(c => c.id === categoryId);
@@ -163,7 +171,9 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     }
   };
 
-  // When a shot is selected with hand specification
+  /**
+   * Handle shot selection with hand specification
+   */
   const handleShotSelect = (shotId: string, shotName: string, hand: 'fh' | 'bh') => {
     if (!disabled) {
       // For backward compatibility, use the shot name in the hand ID
@@ -176,8 +186,9 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     c.name === lastSelectedCategory || c.id === activeCategory
   ) || shotCategories[0];
 
-
-  // Determine if the serve shots should be disabled based on who's serving and who's winning
+  /**
+   * Determine if the serve shots should be disabled based on who's serving and who's winning
+   */
   const isServeDisabled = (shot: ShotType) => {
     // If the shot is not serve related, it's never disabled by server status
     if (shot.name !== 'serve' && shot.name !== 'serve_receive') {
@@ -194,7 +205,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
       isForPlayer = !isWinningPlayer; 
     }
 
-    // Now apply server/receiver logic
+    // Apply server/receiver logic
     if (shot.name === 'serve') {
       // Can only use 'serve' shot if this player is the server
       const playerIsServer = (isForPlayer && currentServer === 'player') || 

@@ -22,11 +22,11 @@ const Debug: React.FC = () => {
         console.log('Checking API health...');
         let apiData = null;
         try {
-          // Use a simple fetch with timeout
+          // Use a simple fetch with timeout - use relative URL
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 5000);
           
-          const healthResponse = await fetch('http://localhost:3001/api', {
+          const healthResponse = await fetch('/api', {
             signal: controller.signal
           });
           clearTimeout(timeout);

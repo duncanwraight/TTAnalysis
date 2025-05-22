@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { testApiConnection } from '../lib/api';
-import * as directApi from '../utils/directApi';
-import * as xhr from '../utils/xhr';
-import * as form from '../utils/form';
+import { testApiConnection, matchApi } from '../lib/api';
 
 /**
  * Component for debugging API issues
- * This is only intended for development environment
+ * This component provides tools for testing API connectivity, authentication, and operations
+ * It is intended for development environment use only
  */
 const ApiDebug: React.FC = () => {
   const [result, setResult] = useState<any>(null);
@@ -15,6 +13,9 @@ const ApiDebug: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showToken, setShowToken] = useState(false);
 
+  /**
+   * Test basic API connectivity
+   */
   const testApi = async () => {
     setIsLoading(true);
     setError(null);
@@ -30,20 +31,21 @@ const ApiDebug: React.FC = () => {
     }
   };
   
+  /**
+   * Test authentication with the API
+   */
   const testAuth = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('Starting auth test');
-      
       // Direct API health check using relative URL for proxy
       try {
         const healthResult = await fetch('/api');
         const healthStatus = healthResult.ok ? 'OK' : 'ERROR';
         console.log(`API health check: ${healthStatus}`);
       } catch (e) {
-        console.error('API health check failed - server might be down:', e);
+        console.error('API health check failed:', e);
         setError('API server might be down. Check console and server logs.');
         setIsLoading(false);
         return;
@@ -51,28 +53,20 @@ const ApiDebug: React.FC = () => {
       
       // Get current session
       const sessionResult = await supabase.auth.getSession();
-      console.log('Auth session result:', sessionResult);
-      
       const session = sessionResult.data.session;
       
       if (!session) {
-        console.error('No active session found');
         setError('No active session found. Please log in.');
         setIsLoading(false);
         return;
       }
-      
-      console.log('Session found, token available:', !!session.access_token);
-      console.log('Token starts with:', session.access_token.substring(0, 10));
-      console.log('User ID:', session.user.id);
       
       // Testing with a timeout to ensure we don't get stuck
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       
       try {
-        // Test using our special auth test endpoint with relative URL for proxy
-        console.log('Making test request to API auth test endpoint');
+        // Test using the auth test endpoint
         const response = await fetch('/api/test/auth', {
           headers: {
             'Authorization': `Bearer ${session.access_token}`
@@ -88,23 +82,17 @@ const ApiDebug: React.FC = () => {
           statusText: response.statusText
         };
         
-        console.log('API response status:', status);
-        
         let data;
         let text = '';
         try {
           text = await response.text();
-          console.log('API response raw text:', text);
           
           try {
             data = JSON.parse(text);
-            console.log('API response parsed JSON:', data);
           } catch (jsonError) {
-            console.log('Response is not JSON:', jsonError);
             data = text;
           }
         } catch (e) {
-          console.error('Error reading response:', e);
           data = 'Failed to read response';
         }
         
@@ -121,7 +109,6 @@ const ApiDebug: React.FC = () => {
         });
       } catch (fetchError) {
         clearTimeout(timeout);
-        console.error('Fetch error during auth test:', fetchError);
         
         // Check if this was an abort error
         if (fetchError.name === 'AbortError') {
@@ -150,12 +137,22 @@ const ApiDebug: React.FC = () => {
     }
   };
   
+  /**
+   * Test match creation using the API client
+   */
   const testCreateMatch = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('Starting match creation test');
+      // Get authentication token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setError('No active session found. Please log in.');
+        setIsLoading(false);
+        return;
+      }
       
       // Create test match data
       const matchData = {
@@ -163,54 +160,39 @@ const ApiDebug: React.FC = () => {
         date: new Date().toISOString().split('T')[0],
         match_score: '0-0',
         notes: 'Created by API debug tool',
-        initial_server: 'player'
+        initial_server: 'player' as 'player' | 'opponent'
       };
       
-      // Use the Form utility with callbacks
-      console.log('Using Form submission for test match creation');
-      
-      form.createMatch(
-        matchData,
-        // Success callback
-        (data) => {
-          console.log('Test match created successfully with ID:', data.id);
-          
-          setResult({ 
-            request: {
-              method: 'POST (via Form)',
-              data: matchData,
-            },
-            response: {
-              status: { ok: true, status: 200 }, 
-              data,
-            },
-            requestTime: new Date().toISOString() 
-          });
-          
-          setIsLoading(false);
-        },
-        // Error callback
-        (error) => {
-          console.error('Form error during test match creation:', error);
-          
-          setError(`Form Error: ${error.message}`);
-          
-          setResult({
-            request: {
-              method: 'POST (via Form)',
-              data: matchData,
-            },
-            error: error.message,
-            requestTime: new Date().toISOString() 
-          });
-          
-          setIsLoading(false);
-        }
-      );
-      
-      // Return early to prevent the finally block from running
-      // setIsLoading(false) is called in the callbacks
-      return;
+      // Use the API client for match creation with token
+      try {
+        const data = await matchApi.createMatch(matchData, session.access_token);
+        
+        setResult({ 
+          request: {
+            method: 'POST (via API client)',
+            data: matchData,
+          },
+          response: {
+            status: { ok: true }, 
+            data,
+          },
+          requestTime: new Date().toISOString() 
+        });
+      } catch (error) {
+        console.error('API error during test match creation:', error);
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setError(`API Error: ${errorMessage}`);
+        
+        setResult({
+          request: {
+            method: 'POST (via API client)',
+            data: matchData,
+          },
+          error: errorMessage,
+          requestTime: new Date().toISOString() 
+        });
+      }
     } catch (err) {
       console.error('Match creation test error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -219,6 +201,9 @@ const ApiDebug: React.FC = () => {
     }
   };
 
+  /**
+   * Show JWT token information
+   */
   const showJwtToken = async () => {
     setIsLoading(true);
     try {
