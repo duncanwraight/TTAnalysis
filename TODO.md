@@ -4,14 +4,14 @@
 - [x] Setup Supabase CLI for local development
 - [x] Initialize local Supabase project connected to PostgreSQL database
 - [x] Test connection between Supabase Auth and local database
-- [ ] Create Auth UI components (login, signup, password reset)
-- [ ] Implement auth state management with React context
-- [ ] Create protected routes in frontend
-- [ ] Implement JWT verification middleware in Express server
-- [ ] Update API endpoints to use authenticated user_id
-- [ ] Set up database access controls (Row Level Security)
-- [ ] Associate matches with authenticated users
-- [ ] Make logout button functional
+- [x] Create Auth UI components (login, signup, password reset)
+- [x] Implement auth state management with React context
+- [x] Create protected routes in frontend
+- [x] Implement JWT verification middleware in Express server
+- [x] Update API endpoints to use authenticated user_id
+- [x] Set up database access controls (Row Level Security)
+- [x] Associate matches with authenticated users
+- [x] Make logout button functional
 
 ## Database & Data Integration
 - [x] Fix the Matches page to pull data from PostgreSQL database
@@ -25,7 +25,7 @@
 - [x] Move shots and categories into database tables
 - [x] Update application to fetch shots from database
 - [ ] Add admin interface for managing shots and categories
-- [ ] Update point recording to use shot IDs instead of names
+- [x] Update point recording to use shot IDs instead of names
 - [ ] Add shot statistics visualization based on database queries
 
 ## UI Improvements
