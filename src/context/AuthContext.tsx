@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Force exit from loading state after 5 seconds max
+  /* Authentication Loading Management */
   useEffect(() => {
     const timer = setTimeout(() => {
       if (loading) {
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loading]);
 
   useEffect(() => {
-    // Get session from storage
+    /* Session Management */
     const getSession = async () => {
       setLoading(true);
       try {
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     getSession();
 
-    // Listen for auth changes
+    /* Auth State Change Listener */
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Sign in with email and password
+  /* Authentication Methods */
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
   };
 
-  // Provide auth context values to children
+  /* Context Provider */
   const value = {
     user,
     session,

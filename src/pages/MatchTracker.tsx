@@ -46,13 +46,13 @@ const MatchTracker = () => {
     currentSetId: null
   });
   
-  // Shot info type for passing between components
+  /* Shot Information Type Definition */
   type ShotInfo = {
     shotId: string | null; // Database UUID or null for "no data"
     hand: 'fh' | 'bh' | null; // Hand or null for "no data"
   };
   
-  // State for the point recording flow
+  /* Point Recording State */
   const [selectedWinner, setSelectedWinner] = useState<'player' | 'opponent' | null>(null);
   const [winningShot, setWinningShot] = useState<ShotInfo | null>(null);
   const [otherShot, setOtherShot] = useState<ShotInfo | null>(null);
@@ -63,11 +63,12 @@ const MatchTracker = () => {
   // State for end match confirmation
   const [showEndMatchConfirm, setShowEndMatchConfirm] = useState<boolean>(false);
   
-  // We need to track the initial server separately from the current server
-  // Default to 'player' but this will be overridden by the match data if available
+  /* Server Tracking */
+  // Initial server is tracked separately from current server
+  // Default to 'player' but will be overridden by match data if available
   const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
 
-  // Load match data
+  /* Match Data Loading */
   useEffect(() => {
     const loadMatchData = async () => {
       try {
@@ -184,7 +185,7 @@ const MatchTracker = () => {
     loadMatchData();
   }, [id, user]);
   
-  // Reset point flow when a point is completed
+  /* Point Flow Management */
   const resetPointFlow = () => {
     setSelectedWinner(null);
     setWinningShot(null);

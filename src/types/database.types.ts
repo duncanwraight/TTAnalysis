@@ -1,3 +1,4 @@
+/* User Data Types */
 export type User = {
   id: string;
   email: string;
@@ -15,6 +16,7 @@ export type Profile = {
   updated_at: string;
 };
 
+/* Match Data Types */
 export type Match = {
   id: string;
   user_id: string;
@@ -38,6 +40,7 @@ export type Set = {
   updated_at: string;
 };
 
+/* Point and Scoring Types */
 export type Point = {
   id: string;
   set_id: string;
@@ -51,6 +54,7 @@ export type Point = {
   created_at: string;
 };
 
+/* Shot Classification Types */
 export type ShotCategory = {
   id: string;
   name: string;

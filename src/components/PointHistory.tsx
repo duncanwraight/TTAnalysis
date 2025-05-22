@@ -19,14 +19,15 @@ const PointHistory: React.FC<PointHistoryProps> = ({
   sets,
   currentSetId
 }) => {
-  // Optional debug logging - uncomment if needed during development
+  // Uncomment for debugging during development
+  // console.log({
   //   pointsCount: points.length,
   //   currentSet,
   //   setsCount: sets?.length,
   //   currentSetId
   // });
 
-  // Filter points for the current set - simplified and more reliable logic
+  /* Points Filtering Logic */
   const currentSetPoints = points.filter(point => {
     // Primary method: Match by current set ID (most reliable)
     if (currentSetId && point.set_id === currentSetId) {
@@ -65,7 +66,7 @@ const PointHistory: React.FC<PointHistoryProps> = ({
     );
   }
 
-  // Calculate win streaks for visual representation
+  /* Streak Calculation for Visualization */
   let currentStreak = { player: 0, opponent: 0 };
   const pointsWithStreaks = currentSetPoints.map((point, index) => {
     // Reset opposite player's streak

@@ -5,7 +5,7 @@ import { ShotCategory as ShotCategoryType } from './types';
 import { useShotData, ShotCategory as DbShotCategory, Shot } from '../../lib/shotsApi';
 import '../../styles/components/ShotSelector.css';
 
-// Helper function to format category names
+/* String Formatting Helper */
 // Capitalizes each word and replaces underscores with spaces
 const formatCategoryName = (name: string): string => {
   return name
@@ -14,7 +14,7 @@ const formatCategoryName = (name: string): string => {
     .join(' ');
 };
 
-// Shot info type for passing between components
+/* Shot Information Type Definition */
 type ShotInfo = {
   shotId: string; // This should be the database UUID
   hand: 'fh' | 'bh';
@@ -30,7 +30,8 @@ type ShotSelectorProps = {
   isWinningPlayer?: boolean;
 };
 
-// Static variables outside of component to persist between renders
+/* Persistent State Variables */
+// These variables persist between component renders
 let lastSelectedCategory = 'serve';
 let cachedCategories: DbShotCategory[] = [];
 let cachedShots: Shot[] = [];
@@ -50,10 +51,10 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   const [loading, setLoading] = useState<boolean>(cachedCategories.length === 0);
   const [error, setError] = useState<string | null>(null);
   
-  // Use the shot data hook to fetch categories and shots
+  /* Data Fetching */
   const { fetchShotsWithCategories } = useShotData();
   
-  // Fetch shots and categories on component mount if not cached
+  /* Data Loading on Component Mount */
   useEffect(() => {
     const loadShotData = async () => {
       try {
@@ -142,7 +143,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   
   const currentCategory = getCurrentCategory();
 
-  // Determine if the serve shots should be disabled based on who's serving and who's winning
+  /* Serve Shot Availability Logic */
   const isServeDisabled = (shotId: string) => {
     // Get the name of the shot for checking serve-related shots
     const shot = dbShots.find(s => s.id === shotId);

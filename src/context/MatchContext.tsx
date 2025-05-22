@@ -72,7 +72,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     currentSetId: null
   });
   
-  // Shot info type for passing between components
+  /* Shot Information Type Definition */
   type ShotInfo = {
     shotId: string; // This should be the database UUID
     hand: 'fh' | 'bh';
@@ -89,11 +89,11 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
   // Initial server state
   const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
 
-  // Debug log to track API URL
+  /* API Configuration */
   useEffect(() => {
   }, []);
 
-  // Load match data
+  /* Match Data Loading */
   useEffect(() => {
     const loadMatchData = async () => {
       try {
@@ -206,7 +206,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     loadMatchData();
   }, [matchId]);
 
-  // Reset point flow when a point is completed
+  /* Point Flow Management */
   const resetPointFlow = () => {
     setSelectedWinner(null);
     setWinningShot(null);
@@ -243,7 +243,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     setOtherShot(null);
   };
 
-  // Record a point with all the data collected
+  /* Point Recording and Scoring Logic */
   const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
     if (!match) {
       console.error('[MatchContext] Cannot record point: match is null');
@@ -398,7 +398,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       (initialServer === 'player' ? 'opponent' : 'player');
   };
 
-  // Undo the last recorded point
+  /* Point Undo Functionality */
   const undoLastPoint = async () => {
     if (!match || matchState.points.length === 0) {
       console.error('[MatchContext] Cannot undo: match is null or no points');
@@ -511,7 +511,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     return matchingSet ? matchingSet.id : null;
   };
 
-  // Force advancement to next set
+  /* Set Management */
   const advanceToNextSet = async () => {
     if (!match) {
       console.error('[MatchContext] Cannot advance to next set: match is null');
