@@ -35,6 +35,7 @@ const MatchTracker = () => {
   
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [matchState, setMatchState] = useState<MatchState>({
     currentSet: 1,
     sets: [{ playerScore: 0, opponentScore: 0 }],
@@ -64,22 +65,29 @@ const MatchTracker = () => {
     const loadMatchData = async () => {
       try {
         setLoading(true);
+        setError(null); // Reset any previous errors
         
         if (!id) {
-          console.error('No match ID provided');
+          const errorMsg = 'No match ID provided';
+          console.error(errorMsg);
+          setError(errorMsg);
           setLoading(false);
           return;
         }
         
         // Check user authentication
         if (!user) {
-          console.error('User not authenticated, cannot load match');
+          const errorMsg = 'User not authenticated, cannot load match';
+          console.error(errorMsg);
+          setError(errorMsg);
           setLoading(false);
           return;
         }
         
         if (!session?.access_token) {
-          console.error('No access token available, cannot load match');
+          const errorMsg = 'No access token available, cannot load match';
+          console.error(errorMsg);
+          setError(errorMsg);
           setLoading(false);
           return;
         }
@@ -87,8 +95,11 @@ const MatchTracker = () => {
         console.log('Loading match data with auth token...');
         
         try {
-          // Use the API client to fetch match data
-          const matchData = await matchApi.getFullMatchById(id);
+          // Add more detailed logging for debugging
+          console.log('Fetching match data with token:', session.access_token.substring(0, 10) + '...');
+          
+          // Use the API client to fetch match data with explicit token
+          const matchData = await matchApi.getFullMatchById(id, session.access_token);
           console.log('Match data loaded:', matchData);
           
           // Match exists in the database
@@ -162,12 +173,13 @@ const MatchTracker = () => {
           // Create the match in database using the API client
           console.log('Creating match with API client...');
           try {
-            const newMatch = await matchApi.createMatch(defaultMatch);
+            const newMatch = await matchApi.createMatch(defaultMatch, session.access_token);
             console.log('Match created from MatchTracker:', newMatch);
             setMatch(newMatch);
             setInitialServer(defaultMatch.initial_server as 'player' | 'opponent');
           } catch (createError) {
             console.error('Error creating match:', createError);
+            setError(`Failed to create match: ${createError.message || 'Unknown error'}`);
             throw createError;
           }
         }
@@ -175,6 +187,7 @@ const MatchTracker = () => {
         setLoading(false);
       } catch (error) {
         console.error('Error loading match data:', error);
+        setError(`Failed to load match: ${error.message || 'Unknown error'}`);
         setLoading(false);
       }
     };
@@ -613,6 +626,45 @@ const MatchTracker = () => {
       <Layout>
         <div className="loading-container">
           <p>Loading match...</p>
+        </div>
+      </Layout>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Layout>
+        <div className="error-container" style={{ 
+          margin: '1rem', 
+          padding: '1rem', 
+          backgroundColor: '#fee2e2', 
+          borderRadius: '0.5rem',
+          color: '#b91c1c',
+          border: '1px solid #ef4444'
+        }}>
+          <h3>Error Loading Match</h3>
+          <p>{error}</p>
+          <p>You can try:</p>
+          <ul>
+            <li>Refreshing the page</li>
+            <li>Checking your internet connection</li>
+            <li>Logging out and back in</li>
+          </ul>
+          <div style={{ marginTop: '1rem' }}>
+            <button 
+              className="btn primary-btn"
+              onClick={() => navigate('/matches')}
+              style={{ marginRight: '0.5rem' }}
+            >
+              Return to Matches
+            </button>
+            <button 
+              className="btn outline-btn"
+              onClick={() => window.location.reload()}
+            >
+              Refresh Page
+            </button>
+          </div>
         </div>
       </Layout>
     );
