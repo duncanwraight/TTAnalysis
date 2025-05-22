@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import type { Match } from '../types/database.types';
-import { matchApi } from '../lib/api';
+import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 
 const MatchList = () => {
   const { session } = useAuth();
+  const api = useApi();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,14 +18,7 @@ const MatchList = () => {
       setLoading(true);
       setError(null);
       
-      if (!session?.access_token) {
-        console.error('No access token available for fetching matches');
-        setError('Authentication error. Please try logging in again.');
-        setLoading(false);
-        return;
-      }
-      
-      const data = await matchApi.getAllMatches(session.access_token);
+      const data = await api.match.getAllMatches();
       setMatches(data);
     } catch (err) {
       console.error('Failed to fetch matches:', err);
@@ -39,16 +33,10 @@ const MatchList = () => {
     event.preventDefault();
     event.stopPropagation();
     
-    if (!session?.access_token) {
-      console.error('No access token available for deleting match');
-      alert('Authentication error. Please try logging in again.');
-      return;
-    }
-    
     if (window.confirm('Are you sure you want to delete this match? This action cannot be undone.')) {
       try {
         setIsDeleting(true);
-        await matchApi.deleteMatch(id, session.access_token);
+        await api.match.deleteMatch(id);
         // Refresh the match list after deletion
         fetchMatches();
       } catch (err) {
@@ -61,10 +49,8 @@ const MatchList = () => {
   };
   
   useEffect(() => {
-    if (session?.access_token) {
-      fetchMatches();
-    }
-  }, [session]);
+    fetchMatches();
+  }, []);
 
   return (
     <Layout>

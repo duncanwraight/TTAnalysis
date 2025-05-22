@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { matchApi } from '../lib/api';
+import { useApi } from '../lib/useApi';
 import '../styles/components/NewMatch.css';
 
 /**
@@ -10,7 +10,8 @@ import '../styles/components/NewMatch.css';
  */
 const NewMatch = () => {
   const navigate = useNavigate();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
+  const api = useApi();
   
   const [formData, setFormData] = useState({
     opponent_name: '',
@@ -74,10 +75,6 @@ const NewMatch = () => {
         throw new Error('Match date is required');
       }
       
-      if (!session?.access_token) {
-        throw new Error('No authentication token available');
-      }
-      
       // Create match data
       const matchData = {
         opponent_name: formData.opponent_name.trim(),
@@ -87,9 +84,9 @@ const NewMatch = () => {
         initial_server: formData.initial_server
       };
       
-      // Send API request to create match using the API client
-      // Pass the session token directly to ensure consistent authentication
-      const newMatch = await matchApi.createMatch(matchData, session.access_token);
+      // Send API request to create match using our API hook
+      // No need to pass the session token - it's handled by the hook
+      const newMatch = await api.match.createMatch(matchData);
       
       if (!newMatch.id) {
         throw new Error('No match ID returned');

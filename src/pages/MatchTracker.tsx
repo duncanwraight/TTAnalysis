@@ -6,7 +6,7 @@ import ShotSelector from '../components/ShotSelector';
 import ScoreBoard from '../components/ScoreBoard';
 import PointHistory from '../components/PointHistory';
 import { Match, Set, Point } from '../types/database.types';
-import { matchApi, setApi, pointApi } from '../lib/api';
+import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 
 type SetScore = {
@@ -31,7 +31,8 @@ type MatchState = {
 const MatchTracker = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
+  const api = useApi();
   
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,22 +85,11 @@ const MatchTracker = () => {
           return;
         }
         
-        if (!session?.access_token) {
-          const errorMsg = 'No access token available, cannot load match';
-          console.error(errorMsg);
-          setError(errorMsg);
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Loading match data with auth token...');
+        console.log('Loading match data...');
         
         try {
-          // Add more detailed logging for debugging
-          console.log('Fetching match data with token:', session.access_token.substring(0, 10) + '...');
-          
-          // Use the API client to fetch match data with explicit token
-          const matchData = await matchApi.getFullMatchById(id, session.access_token);
+          // Use the API hook to fetch match data - token handling is automatic
+          const matchData = await api.match.getFullMatchById(id);
           console.log('Match data loaded:', matchData);
           
           // Match exists in the database
@@ -170,10 +160,10 @@ const MatchTracker = () => {
             console.error('Error reading from localStorage:', e);
           }
           
-          // Create the match in database using the API client
-          console.log('Creating match with API client...');
+          // Create the match in database using the API hook
+          console.log('Creating match with API hook...');
           try {
-            const newMatch = await matchApi.createMatch(defaultMatch, session.access_token);
+            const newMatch = await api.match.createMatch(defaultMatch);
             console.log('Match created from MatchTracker:', newMatch);
             setMatch(newMatch);
             setInitialServer(defaultMatch.initial_server as 'player' | 'opponent');
@@ -193,7 +183,7 @@ const MatchTracker = () => {
     };
     
     loadMatchData();
-  }, [id, user, session]);
+  }, [id, user]);
   
   // Reset point flow when a point is completed
   const resetPointFlow = () => {
@@ -246,16 +236,7 @@ const MatchTracker = () => {
       return;
     }
     
-    // Ensure we have an auth token and store it in a variable to ensure it doesn't change
-    const authToken = session?.access_token;
-    if (!authToken) {
-      console.error('No authentication token available for recording point');
-      alert('Authentication error: Please try again or refresh the page');
-      resetPointFlow();
-      return;
-    }
-    
-    console.log('Using authentication token for all API calls:', authToken.substring(0, 10) + '...');
+    // API calls are now handled by the useApi hook with automatic token handling
     
     try {
       // Update local state first for immediate UI feedback
@@ -284,7 +265,7 @@ const MatchTracker = () => {
         };
         
         try {
-          currentSetData = await setApi.updateSet(matchState.currentSetId, setUpdateData, authToken);
+          currentSetData = await api.set.updateSet(matchState.currentSetId, setUpdateData);
         } catch (error) {
           console.error('Error updating set:', error);
           throw new Error(`Failed to update set: ${error.message}`);
@@ -293,7 +274,7 @@ const MatchTracker = () => {
         // Get sets for this match
         let sets;
         try {
-          sets = await setApi.getSetsByMatchId(match.id, authToken);
+          sets = await api.set.getSetsByMatchId(match.id);
         } catch (error) {
           console.error('Error fetching sets:', error);
           throw new Error(`Failed to fetch sets: ${error.message}`);
@@ -309,7 +290,7 @@ const MatchTracker = () => {
           };
           
           try {
-            currentSetData = await setApi.updateSet(existingSet.id, setUpdateData, authToken);
+            currentSetData = await api.set.updateSet(existingSet.id, setUpdateData);
           } catch (error) {
             console.error('Error updating existing set:', error);
             throw new Error(`Failed to update set: ${error.message}`);
@@ -325,7 +306,7 @@ const MatchTracker = () => {
           };
           
           try {
-            currentSetData = await setApi.createSet(newSetData, authToken);
+            currentSetData = await api.set.createSet(newSetData);
           } catch (error) {
             console.error('Error creating set:', error);
             throw new Error(`Failed to create set: ${error.message}`);
@@ -345,9 +326,9 @@ const MatchTracker = () => {
       
       let newPoint;
       try {
-        // Explicitly pass the auth token to ensure authentication
-        console.log('MatchTracker: Creating point with token:', authToken.substring(0, 10) + '...');
-        newPoint = await pointApi.createPoint(pointData, authToken);
+        // Creating point with API hook (automatic token handling)
+        console.log('MatchTracker: Creating point');
+        newPoint = await api.point.createPoint(pointData);
         console.log('MatchTracker: Point created successfully:', newPoint);
       } catch (error) {
         console.error('Error creating point:', error);
@@ -367,9 +348,9 @@ const MatchTracker = () => {
         
         // Update match score in database
         try {
-          await matchApi.updateMatch(match.id, {
+          await api.match.updateMatch(match.id, {
             match_score: `${playerSetsWon}-${opponentSetsWon}`
-          }, authToken);
+          });
         } catch (error) {
           console.error('Error updating match score:', error);
           // Continue execution even if match score update fails
@@ -382,13 +363,13 @@ const MatchTracker = () => {
           // Create a new set in the database
           let nextSetData;
           try {
-            nextSetData = await setApi.createSet({
+            nextSetData = await api.set.createSet({
               match_id: match.id,
               set_number: matchState.currentSet + 1,
               score: '0-0',
               player_score: 0,
               opponent_score: 0
-            }, authToken);
+            });
           } catch (error) {
             console.error('Error creating next set:', error);
             throw new Error(`Failed to create next set: ${error.message}`);
@@ -467,11 +448,6 @@ const MatchTracker = () => {
       return; // Nothing to undo
     }
     
-    if (!session?.access_token) {
-      console.error('No authentication token available for undoing point');
-      return;
-    }
-    
     try {
       // Get the most recent point
       // Filter points that belong to the current match
@@ -497,7 +473,7 @@ const MatchTracker = () => {
       
       // Delete point from database
       try {
-        await pointApi.deletePoint(lastPoint.id);
+        await api.point.deletePoint(lastPoint.id);
       } catch (error) {
         console.error('Error deleting point:', error);
         throw new Error(`Failed to delete point: ${error.message}`);
@@ -558,7 +534,7 @@ const MatchTracker = () => {
           
           // Update set in database
           try {
-            await setApi.updateSet(setData.id, {
+            await api.set.updateSet(setData.id, {
               score: `${updatedSets[setIndex].playerScore}-${updatedSets[setIndex].opponentScore}`,
               player_score: updatedSets[setIndex].playerScore,
               opponent_score: updatedSets[setIndex].opponentScore
@@ -1043,11 +1019,6 @@ const MatchTracker = () => {
                 return;
               }
               
-              if (!session?.access_token) {
-                console.error('[MatchTracker] No auth token available for next set');
-                return;
-              }
-              
               console.log('[MatchTracker] Advancing to next set');
               try {
                 const updatedSets = [...matchState.sets];
@@ -1057,7 +1028,7 @@ const MatchTracker = () => {
                 console.log('[MatchTracker] Creating new set in database');
                 let newSet;
                 try {
-                  newSet = await setApi.createSet({
+                  newSet = await api.set.createSet({
                     match_id: match.id,
                     set_number: matchState.currentSet + 1,
                     score: '0-0',

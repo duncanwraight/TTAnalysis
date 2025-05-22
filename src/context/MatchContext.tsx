@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Match, Point } from '../types/database.types';
-import { matchApi, setApi, pointApi } from '../lib/api';
+import { useApi } from '../lib/useApi';
 
 type SetScore = {
   playerScore: number;
@@ -60,6 +60,7 @@ type MatchProviderProps = {
 };
 
 export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId }) => {
+  const api = useApi();
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [matchState, setMatchState] = useState<MatchState>({
@@ -93,7 +94,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       try {
         console.log('[MatchContext] Loading match data for ID:', matchId);
         // Try to fetch match data from the API
-        const matchData = await matchApi.getFullMatchById(matchId).catch((err) => {
+        const matchData = await api.match.getFullMatchById(matchId).catch((err) => {
           console.error('[MatchContext] Error fetching match data:', err);
           return null;
         });
@@ -159,7 +160,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
               
               // Create match in database
               console.log('[MatchContext] Creating match in database from localStorage data');
-              const newMatch = await matchApi.createMatch({
+              const newMatch = await api.match.createMatch({
                 user_id: parsedMatch.user_id || '00000000-0000-0000-0000-000000000001',
                 opponent_name: parsedMatch.opponent_name || 'Opponent',
                 date: parsedMatch.date || new Date().toISOString().split('T')[0],
@@ -189,7 +190,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
                 initial_server: 'player'
               };
               
-              const newMatch = await matchApi.createMatch(defaultMatch);
+              const newMatch = await api.match.createMatch(defaultMatch);
               console.log('[MatchContext] Default match created successfully:', newMatch);
               setMatch(newMatch);
               setInitialServer('player');
@@ -276,14 +277,14 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       console.log('[MatchContext] Getting sets for match ID:', match.id);
       let currentSetData;
       try {
-        const sets = await setApi.getSetsByMatchId(match.id);
+        const sets = await api.set.getSetsByMatchId(match.id);
         console.log('[MatchContext] Sets retrieved:', sets);
         const existingSet = sets.find(s => s.set_number === matchState.currentSet);
         
         if (!existingSet) {
           // Create new set in database
           console.log('[MatchContext] Creating new set for match');
-          currentSetData = await setApi.createSet({
+          currentSetData = await api.set.createSet({
             match_id: match.id,
             set_number: matchState.currentSet,
             score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
@@ -294,7 +295,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         } else {
           // Update existing set
           console.log('[MatchContext] Updating existing set:', existingSet.id);
-          currentSetData = await setApi.updateSet(existingSet.id, {
+          currentSetData = await api.set.updateSet(existingSet.id, {
             score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
             player_score: updatedSets[currentSetIndex].playerScore,
             opponent_score: updatedSets[currentSetIndex].opponentScore
@@ -308,7 +309,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       
       // Create point in database
       console.log('[MatchContext] Creating point in database');
-      const newPoint = await pointApi.createPoint({
+      const newPoint = await api.point.createPoint({
         set_id: currentSetData.id,
         point_number: pointNumber,
         winner,
@@ -331,7 +332,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         
         // Update match score in database
         console.log('[MatchContext] Updating match score:', `${playerSetsWon}-${opponentSetsWon}`);
-        await matchApi.updateMatch(match.id, {
+        await api.match.updateMatch(match.id, {
           match_score: `${playerSetsWon}-${opponentSetsWon}`
         });
         
@@ -342,7 +343,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
           
           // Create a new set in the database for the next set
           console.log('[MatchContext] Creating next set in database');
-          const nextSetData = await setApi.createSet({
+          const nextSetData = await api.set.createSet({
             match_id: match.id,
             set_number: matchState.currentSet + 1,
             score: '0-0',
@@ -431,14 +432,14 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       
       // Delete point from database
       console.log('[MatchContext] Deleting point from database:', lastPoint.id);
-      await pointApi.deletePoint(lastPoint.id);
+      await api.point.deletePoint(lastPoint.id);
       
       // Update sets and scores
       const updatedSets = [...matchState.sets];
       
       // Get set for the last point
       console.log('[MatchContext] Getting sets for match ID:', match.id);
-      const sets = await setApi.getSetsByMatchId(match.id);
+      const sets = await api.set.getSetsByMatchId(match.id);
       const setData = sets.find(s => s.id === lastPoint.set_id);
       
       if (!setData) {
@@ -486,7 +487,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         
         // Update set in database
         console.log('[MatchContext] Updating set in database:', setData.id);
-        await setApi.updateSet(setData.id, {
+        await api.set.updateSet(setData.id, {
           score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
           player_score: updatedSets[currentSetIndex].playerScore,
           opponent_score: updatedSets[currentSetIndex].opponentScore
@@ -548,7 +549,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       
       // Create a new set in the database
       console.log('[MatchContext] Creating new set in database');
-      const newSet = await setApi.createSet({
+      const newSet = await api.set.createSet({
         match_id: match.id,
         set_number: matchState.currentSet + 1,
         score: '0-0',

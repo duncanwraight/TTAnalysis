@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { testApiConnection, matchApi } from '../lib/api';
+import { useApi } from '../lib/useApi';
 
 /**
  * Component for debugging API issues
@@ -8,6 +8,7 @@ import { testApiConnection, matchApi } from '../lib/api';
  * It is intended for development environment use only
  */
 const ApiDebug: React.FC = () => {
+  const api = useApi();
   const [result, setResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,8 @@ const ApiDebug: React.FC = () => {
     setError(null);
     
     try {
-      const result = await testApiConnection();
+      // Call testApiConnection from our API hook
+      const result = await api.testApiConnection();
       setResult(result);
     } catch (err) {
       console.error('API test error:', err);
@@ -163,13 +165,13 @@ const ApiDebug: React.FC = () => {
         initial_server: 'player' as 'player' | 'opponent'
       };
       
-      // Use the API client for match creation with token
+      // Use the API hook for match creation
       try {
-        const data = await matchApi.createMatch(matchData, session.access_token);
+        const data = await api.match.createMatch(matchData);
         
         setResult({ 
           request: {
-            method: 'POST (via API client)',
+            method: 'POST (via API hook)',
             data: matchData,
           },
           response: {
@@ -186,7 +188,7 @@ const ApiDebug: React.FC = () => {
         
         setResult({
           request: {
-            method: 'POST (via API client)',
+            method: 'POST (via API hook)',
             data: matchData,
           },
           error: errorMessage,

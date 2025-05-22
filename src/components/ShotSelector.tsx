@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { shotApi } from '../lib/api';
 import { ShotCategory as DbShotCategory, Shot as DbShot } from '../types/database.types';
-import { useAuth } from '../context/AuthContext';
+import { useApi } from '../lib/useApi';
 
 /**
  * ShotSelector component for selecting shot types in table tennis matches
@@ -98,7 +97,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   currentServer = 'player',
   isWinningPlayer = true
 }) => {
-  const { session } = useAuth();
+  const api = useApi();
   const [activeCategory, setActiveCategory] = useState<string>(lastSelectedCategory);
   const [shotCategories, setShotCategories] = useState<FormattedShotCategory[]>(fallbackShotCategories);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -108,19 +107,16 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     console.log(`ShotSelector (${shotType}): rendered with selected=${selected}, disabled=${disabled}`);
   }, [shotType, selected, disabled]);
 
-  // Fetch shot categories and shots from the database using the API client
+  // Fetch shot categories and shots from the database using the API hook
   useEffect(() => {
     const loadShots = async () => {
       try {
         setIsLoading(true);
         
-        // Get authentication token from context
-        const token = session?.access_token;
-        
-        // Fetch categories and shots using the API client
+        // Fetch categories and shots using the API hook
         const [categories, shots] = await Promise.all([
-          shotApi.getCategories(token),
-          shotApi.getShots(token)
+          api.shot.getCategories(),
+          api.shot.getShots()
         ]);
         
         if (categories.length > 0 && shots.length > 0) {
@@ -154,7 +150,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     };
     
     loadShots();
-  }, [session]);
+  }, []);
 
   /**
    * Helper to get the hand ID (forehand or backhand)
@@ -183,7 +179,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     if (!disabled) {
       // For backward compatibility, use the shot name in the hand ID
       const handId = getHandId(shotName, hand);
-      console.log(`ShotSelector: Selected ${shotType} shot: ${handId} (token: ${session?.access_token ? 'Available' : 'Missing'})`);
+      console.log(`ShotSelector: Selected ${shotType} shot: ${handId}`);
       
       // Immediately call onSelect with the selected shot
       onSelect(handId);

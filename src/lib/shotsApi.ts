@@ -1,8 +1,8 @@
 /**
- * API client for shot-related operations
+ * Utility module for shot-related operations using the API hook
  * Provides functions for retrieving and organizing shot data
  */
-import { shotApi } from './api';
+import { useApi } from './useApi';
 
 // Types for shot data
 export interface ShotCategory {
@@ -21,37 +21,6 @@ export interface Shot {
 }
 
 /**
- * Fetch all shot categories and their shots
- * @param token Optional authentication token
- * @returns Object containing categories and shots arrays
- */
-export const fetchShotsWithCategories = async (token?: string): Promise<{
-  categories: ShotCategory[];
-  shots: Shot[];
-}> => {
-  try {
-    // Fetch categories and shots using the API client
-    const [categories, shots] = await Promise.all([
-      shotApi.getCategories(token),
-      shotApi.getShots(token)
-    ]);
-
-    return {
-      categories: categories || [],
-      shots: shots || []
-    };
-  } catch (error) {
-    console.error('Error in fetchShotsWithCategories:', error);
-    
-    // Fallback to empty arrays
-    return {
-      categories: [],
-      shots: []
-    };
-  }
-};
-
-/**
  * Get shots by category name
  * @param shots Array of shots to filter
  * @param categories Array of categories to search in
@@ -67,4 +36,44 @@ export const getShotsByCategory = (
   if (!category) return [];
   
   return shots.filter(shot => shot.category_id === category.id);
+};
+
+/**
+ * Custom hook for accessing shot data
+ * @returns Object with function to fetch shot data
+ */
+export const useShotData = () => {
+  const api = useApi();
+  
+  /**
+   * Fetch all shot categories and their shots
+   * @returns Object containing categories and shots arrays
+   */
+  const fetchShotsWithCategories = async (): Promise<{
+    categories: ShotCategory[];
+    shots: Shot[];
+  }> => {
+    try {
+      // Fetch categories and shots using the API hook
+      const [categories, shots] = await Promise.all([
+        api.shot.getCategories(),
+        api.shot.getShots()
+      ]);
+
+      return {
+        categories: categories || [],
+        shots: shots || []
+      };
+    } catch (error) {
+      console.error('Error in fetchShotsWithCategories:', error);
+      
+      // Fallback to empty arrays
+      return {
+        categories: [],
+        shots: []
+      };
+    }
+  };
+  
+  return { fetchShotsWithCategories };
 };
