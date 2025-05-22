@@ -25,7 +25,6 @@ const Login = ({ onToggleView }: LoginProps) => {
 
     try {
       await signIn(email, password);
-      console.log('Login successful, redirecting to home');
       navigate('/');
     } catch (err) {
       console.error('Login error:', err);

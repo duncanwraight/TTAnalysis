@@ -45,7 +45,6 @@ const ApiDebug: React.FC = () => {
       try {
         const healthResult = await fetch('/api');
         const healthStatus = healthResult.ok ? 'OK' : 'ERROR';
-        console.log(`API health check: ${healthStatus}`);
       } catch (e) {
         console.error('API health check failed:', e);
         setError('API server might be down. Check console and server logs.');

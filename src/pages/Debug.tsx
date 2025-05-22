@@ -13,13 +13,10 @@ const Debug: React.FC = () => {
       setLoading(true);
       try {
         // Check session
-        console.log('Checking Supabase session...');
         const sessionResult = await supabase.auth.getSession();
-        console.log('Session result:', sessionResult);
         setSessionData(sessionResult.data);
 
         // Check API health - use explicit try/catch
-        console.log('Checking API health...');
         let apiData = null;
         try {
           // Use a simple fetch with timeout - use relative URL
@@ -31,11 +28,9 @@ const Debug: React.FC = () => {
           });
           clearTimeout(timeout);
           
-          console.log('API health response status:', healthResponse.status);
           
           // Get response text first
           const responseText = await healthResponse.text();
-          console.log('API response text:', responseText);
           
           // Try to parse as JSON
           try {

@@ -18,7 +18,6 @@ async function directFetch<T>(endpoint: string, options: RequestInit = {}, token
   // Use provided token - we don't try to get it from Supabase as that seems to fail
   let authToken = token;
   
-  console.log('directFetch: Calling', endpoint, 'with token:', token ? `${token.substring(0, 10)}...` : 'undefined');
   
   if (!authToken) {
     console.error('directFetch: No authentication token provided for API call');
@@ -137,7 +136,6 @@ export const pointApi = {
 
   // Create a new point
   createPoint: (point: Omit<Point, 'id' | 'created_at'>, token?: string) => {
-    console.log('pointApi.createPoint: Creating point with token:', token ? `${token.substring(0, 10)}...` : 'undefined');
     return directFetch<Point>('/points', {
       method: 'POST',
       body: JSON.stringify(point),

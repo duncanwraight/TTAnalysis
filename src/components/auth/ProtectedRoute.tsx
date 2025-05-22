@@ -12,7 +12,6 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   const [showContent, setShowContent] = useState(!loading && !!user);
   
   // Debug log
-  console.log('ProtectedRoute:', { loading, authenticated: !!user, isAdmin, requireAdmin });
   
   // Force exit from loading state after 3 seconds
   useEffect(() => {
@@ -25,7 +24,6 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     }
     
     const timer = setTimeout(() => {
-      console.log('ProtectedRoute: Forcing exit from loading state after timeout');
       // If we're still loading after timeout, we'll make a decision based on current state
       if (user) {
         setShowContent(true);
@@ -40,13 +38,11 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
 
   // When not in loading state, handle redirect if not authenticated
   if (!loading && !user) {
-    console.log('ProtectedRoute: Redirecting to /auth - not authenticated');
     return <Navigate to="/auth" replace />;
   }
 
   // When not in loading state, handle redirect if not admin but admin required
   if (!loading && requireAdmin && !isAdmin) {
-    console.log('ProtectedRoute: Redirecting to / - not admin');
     return <Navigate to="/" replace />;
   }
 

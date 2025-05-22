@@ -38,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const getSession = async () => {
       setLoading(true);
       try {
-        console.log('AuthContext: Checking for existing session');
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -48,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         if (data?.session) {
-          console.log('Session found:', data.session.user.email);
           setSession(data.session);
           setUser(data.session.user);
           
@@ -66,7 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // Continue even if profile fetch fails
               } else {
                 setIsAdmin(userData?.is_admin || false);
-                console.log('Admin status:', userData?.is_admin);
               }
             }
           } catch (profileErr) {
@@ -74,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Continue even if profile fetch fails
           }
         } else {
-          console.log('No session found');
         }
       } catch (err) {
         console.error('Unexpected error in getSession:', err);
@@ -88,7 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -105,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.error('Error fetching profile on auth change:', profileError);
             } else {
               setIsAdmin(userData?.is_admin || false);
-              console.log('Admin status updated:', userData?.is_admin);
             }
           } catch (err) {
             console.error('Error checking admin status:', err);
@@ -125,7 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting to sign in:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
@@ -133,13 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     
-    console.log('Sign in successful:', data?.user?.email);
     return data;
   };
 
   // Sign up with email and password
   const signUp = async (email: string, password: string) => {
-    console.log('Attempting to sign up:', email);
     const { data, error } = await supabase.auth.signUp({ email, password });
     
     if (error) {
@@ -147,13 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     
-    console.log('Sign up successful:', data?.user?.email);
     return data;
   };
 
   // Sign out
   const signOut = async () => {
-    console.log('Signing out');
     const { error } = await supabase.auth.signOut();
     
     if (error) {
@@ -161,12 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     
-    console.log('Sign out successful');
   };
 
   // Reset password
   const resetPassword = async (email: string) => {
-    console.log('Sending password reset to:', email);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -176,7 +163,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     
-    console.log('Password reset email sent to:', email);
   };
 
   // Provide auth context values to children

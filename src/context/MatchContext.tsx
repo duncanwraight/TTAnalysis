@@ -91,14 +91,12 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
 
   // Debug log to track API URL
   useEffect(() => {
-    console.log('[MatchContext] API URL:', import.meta.env.VITE_API_URL);
   }, []);
 
   // Load match data
   useEffect(() => {
     const loadMatchData = async () => {
       try {
-        console.log('[MatchContext] Loading match data for ID:', matchId);
         // Try to fetch match data from the API
         const matchData = await api.match.getFullMatchById(matchId).catch((err) => {
           console.error('[MatchContext] Error fetching match data:', err);
@@ -106,7 +104,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         });
         
         if (matchData) {
-          console.log('[MatchContext] Match data loaded successfully:', matchData);
           // Match exists in the database
           const { match, sets, points } = matchData;
           
@@ -138,7 +135,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
           // Find the current set ID
           const currentSetId = sets.length > 0 ? sets[sets.length - 1].id : null;
           
-          console.log('[MatchContext] Setting initial state with:', {
             sets, 
             points, 
             currentSet, 
@@ -154,18 +150,15 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
             currentSetId
           });
         } else {
-          console.log('[MatchContext] Match not found in database, checking localStorage');
           // Match doesn't exist in DB, fallback to localStorage
           // In real implementation, you would redirect to 404 or create a new match
           try {
             // Check if we have match details stored in localStorage
             const storedMatch = localStorage.getItem(`match_${matchId}`);
             if (storedMatch) {
-              console.log('[MatchContext] Found match in localStorage:', storedMatch);
               const parsedMatch = JSON.parse(storedMatch);
               
               // Create match in database
-              console.log('[MatchContext] Creating match in database from localStorage data');
               const newMatch = await api.match.createMatch({
                 user_id: parsedMatch.user_id || '00000000-0000-0000-0000-000000000001',
                 opponent_name: parsedMatch.opponent_name || 'Opponent',
@@ -175,7 +168,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
                 initial_server: parsedMatch.initial_server || 'player'
               });
               
-              console.log('[MatchContext] Match created successfully:', newMatch);
               setMatch(newMatch);
               
               if (newMatch.initial_server) {
@@ -185,7 +177,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
                 setInitialServer('player');
               }
             } else {
-              console.log('[MatchContext] No match found in localStorage, creating default match');
               // Create a default match
               const defaultMatch: Omit<Match, 'id' | 'created_at' | 'updated_at'> = {
                 user_id: '00000000-0000-0000-0000-000000000001', // Use our test user ID
@@ -197,7 +188,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
               };
               
               const newMatch = await api.match.createMatch(defaultMatch);
-              console.log('[MatchContext] Default match created successfully:', newMatch);
               setMatch(newMatch);
               setInitialServer('player');
             }
@@ -225,19 +215,16 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
 
   // Handler for when a player panel is clicked (indicating who won the point)
   const handlePlayerSelect = (winner: 'player' | 'opponent') => {
-    console.log('[MatchContext] Player selected:', winner);
     setSelectedWinner(winner);
   };
 
   // Handler for when a winning shot is selected
   const handleWinningShotSelect = (shot: ShotInfo) => {
-    console.log('[MatchContext] Winning shot selected:', shot);
     setWinningShot(shot);
   };
 
   // Handler for when the other shot is selected
   const handleOtherShotSelect = (shot: ShotInfo) => {
-    console.log('[MatchContext] Other shot selected:', shot);
     setOtherShot(shot);
     
     // Only record the point if both shots are selected
@@ -263,7 +250,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       return;
     }
     
-    console.log('[MatchContext] Recording point:', { winner, winningShot, otherShot });
     try {
       // Update local state first for immediate UI feedback
       // Create a new point
@@ -280,16 +266,13 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       }
       
       // Get or create set in database
-      console.log('[MatchContext] Getting sets for match ID:', match.id);
       let currentSetData;
       try {
         const sets = await api.set.getSetsByMatchId(match.id);
-        console.log('[MatchContext] Sets retrieved:', sets);
         const existingSet = sets.find(s => s.set_number === matchState.currentSet);
         
         if (!existingSet) {
           // Create new set in database
-          console.log('[MatchContext] Creating new set for match');
           currentSetData = await api.set.createSet({
             match_id: match.id,
             set_number: matchState.currentSet,
@@ -297,16 +280,13 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
             player_score: updatedSets[currentSetIndex].playerScore,
             opponent_score: updatedSets[currentSetIndex].opponentScore
           });
-          console.log('[MatchContext] Set created:', currentSetData);
         } else {
           // Update existing set
-          console.log('[MatchContext] Updating existing set:', existingSet.id);
           currentSetData = await api.set.updateSet(existingSet.id, {
             score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
             player_score: updatedSets[currentSetIndex].playerScore,
             opponent_score: updatedSets[currentSetIndex].opponentScore
           });
-          console.log('[MatchContext] Set updated:', currentSetData);
         }
       } catch (error) {
         console.error('[MatchContext] Error getting/creating set:', error);
@@ -314,7 +294,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       }
       
       // Create point in database
-      console.log('[MatchContext] Creating point in database with shot IDs:',
         winningShot.shotId, otherShot.shotId);
       
       // Use the new ShotInfo format
@@ -328,7 +307,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         other_hand: otherShot.hand,
         notes: ''
       });
-      console.log('[MatchContext] Point created:', newPoint);
       
       // Check if current set is complete
       const currentSet = updatedSets[currentSetIndex];
@@ -342,18 +320,15 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         const isMatchComplete = playerSetsWon > bestOf / 2 || opponentSetsWon > bestOf / 2;
         
         // Update match score in database
-        console.log('[MatchContext] Updating match score:', `${playerSetsWon}-${opponentSetsWon}`);
         await api.match.updateMatch(match.id, {
           match_score: `${playerSetsWon}-${opponentSetsWon}`
         });
         
         if (!isMatchComplete) {
           // Start next set
-          console.log('[MatchContext] Starting next set');
           updatedSets.push({ playerScore: 0, opponentScore: 0 });
           
           // Create a new set in the database for the next set
-          console.log('[MatchContext] Creating next set in database');
           const nextSetData = await api.set.createSet({
             match_id: match.id,
             set_number: matchState.currentSet + 1,
@@ -362,7 +337,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
             opponent_score: 0
           });
           
-          console.log('[MatchContext] Next set created:', nextSetData);
           
           setMatchState({
             currentSet: matchState.currentSet + 1,
@@ -374,7 +348,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
           });
         } else {
           // Match is complete
-          console.log('[MatchContext] Match complete');
           setMatchState({
             currentSet: matchState.currentSet,
             sets: updatedSets,
@@ -386,7 +359,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         }
       } else {
         // Continue current set
-        console.log('[MatchContext] Continuing current set');
         setMatchState({
           ...matchState,
           sets: updatedSets,
@@ -433,7 +405,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       return; // Nothing to undo
     }
     
-    console.log('[MatchContext] Undoing last point');
     try {
       // Copy current state
       const updatedPoints = [...matchState.points];
@@ -442,14 +413,12 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       if (!lastPoint) return;
       
       // Delete point from database
-      console.log('[MatchContext] Deleting point from database:', lastPoint.id);
       await api.point.deletePoint(lastPoint.id);
       
       // Update sets and scores
       const updatedSets = [...matchState.sets];
       
       // Get set for the last point
-      console.log('[MatchContext] Getting sets for match ID:', match.id);
       const sets = await api.set.getSetsByMatchId(match.id);
       const setData = sets.find(s => s.id === lastPoint.set_id);
       
@@ -476,7 +445,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         // Find the new current set ID (the last one in the list)
         const newCurrentSetId = updatedDbSets.length > 0 ? updatedDbSets[updatedDbSets.length - 1].id : null;
         
-        console.log('[MatchContext] Going back to previous set, set ID:', newCurrentSetId);
         setMatchState({
           currentSet: matchState.currentSet - 1,
           sets: updatedSets,
@@ -497,14 +465,12 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         }
         
         // Update set in database
-        console.log('[MatchContext] Updating set in database:', setData.id);
         await api.set.updateSet(setData.id, {
           score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
           player_score: updatedSets[currentSetIndex].playerScore,
           opponent_score: updatedSets[currentSetIndex].opponentScore
         });
         
-        console.log('[MatchContext] Updating local state');
         setMatchState({
           ...matchState,
           sets: updatedSets,
@@ -542,7 +508,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
   // Get set ID by set number
   const getSetIdByNumber = (setNumber: number): string | null => {
     const matchingSet = matchState.dbSets.find(set => set.set_number === setNumber);
-    console.log(`[MatchContext] Getting set ID for set number ${setNumber}:`, matchingSet);
     return matchingSet ? matchingSet.id : null;
   };
 
@@ -553,13 +518,11 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       return;
     }
     
-    console.log('[MatchContext] Advancing to next set');
     try {
       const updatedSets = [...matchState.sets];
       updatedSets.push({ playerScore: 0, opponentScore: 0 });
       
       // Create a new set in the database
-      console.log('[MatchContext] Creating new set in database');
       const newSet = await api.set.createSet({
         match_id: match.id,
         set_number: matchState.currentSet + 1,
@@ -568,7 +531,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         opponent_score: 0
       });
       
-      console.log('[MatchContext] Updating local state');
       setMatchState({
         currentSet: matchState.currentSet + 1,
         sets: updatedSets,

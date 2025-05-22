@@ -11,12 +11,10 @@ const Auth = () => {
   const navigate = useNavigate();
   const [showLoginForm, setShowLoginForm] = useState(!loading);
 
-  console.log('Auth page - loading:', loading, 'user:', !!user);
 
   // Redirect to home if already logged in
   useEffect(() => {
     if (user && !loading) {
-      console.log('User logged in, redirecting to home');
       navigate('/');
     }
   }, [user, loading, navigate]);
@@ -25,7 +23,6 @@ const Auth = () => {
   useEffect(() => {
     if (loading) {
       const timeout = setTimeout(() => {
-        console.log('Forcing exit from loading state after timeout');
         setShowLoginForm(true);
       }, 3000);
       

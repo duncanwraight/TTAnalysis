@@ -20,7 +20,6 @@ const PointHistory: React.FC<PointHistoryProps> = ({
   currentSetId
 }) => {
   // Optional debug logging - uncomment if needed during development
-  // console.log('[PointHistory] Props:', { 
   //   pointsCount: points.length,
   //   currentSet,
   //   setsCount: sets?.length,

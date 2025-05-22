@@ -20,8 +20,6 @@ import './styles/components/ScoreBoard.css';
 function App() {
   // Log environment variables on startup
   useEffect(() => {
-    console.log('Environment variables:');
-    console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
   }, []);
 
   return (
