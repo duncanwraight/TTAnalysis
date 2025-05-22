@@ -17,7 +17,7 @@
 - [x] Fix the Matches page to pull data from PostgreSQL database
 - [x] Ensure proper data synchronization between local state and database
 - [ ] Optimize database queries for match and point data
-- [ ] Add session token to matches page
+- [x] Add session token to matches page
 - [ ] Check for better way of passing session token to API requests
 
 ## Shots Database & Integration
@@ -29,9 +29,9 @@
 - [ ] Add shot statistics visualization based on database queries
 
 ## UI Improvements
-- [ ] Fix point history panel
-- [ ] Fix serve indicator styling
-- [ ] Fix blue button hover styling (blue background then text goes blue on hover)
+- [x] Fix point history panel
+- [x] Fix serve indicator styling
+- [x] Fix blue button hover styling (blue background then text goes blue on hover)
 - [ ] Update text and make consistent styles across interfaces
 
 ## Analysis & Visualizations
