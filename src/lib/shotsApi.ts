@@ -60,21 +60,8 @@ export const useShotData = () => {
         api.shot.getShots()
       ]);
       
-      // Log detailed information about the shots and categories we received
-      console.log('SHOTS API - Raw shots count:', shots ? shots.length : 0);
-      console.log('SHOTS API - Raw categories count:', categories ? categories.length : 0);
-      
-      if (shots && shots.length > 0) {
-        console.log('SHOTS API - First shot example:', JSON.stringify(shots[0], null, 2));
-      }
-      
-      if (categories && categories.length > 0) {
-        console.log('SHOTS API - First category example:', JSON.stringify(categories[0], null, 2));
-      }
-      
-      // If no shots were loaded, or we got a bad response, log a detailed error
+      // If no shots were loaded, or we got a bad response, return empty arrays
       if (!shots || !Array.isArray(shots) || shots.length === 0) {
-        console.error('SHOTS API - Failed to load shots from API. Response:', shots);
         return {
           categories: [],
           shots: []

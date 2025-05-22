@@ -43,8 +43,6 @@ export type Point = {
   set_id: string;
   point_number: number;
   winner: 'player' | 'opponent';
-  winning_shot: string; // Temporary for backwards compatibility 
-  other_shot: string;   // Temporary for backwards compatibility
   winning_shot_id?: string; // UUID of the shot from shots table
   winning_hand?: 'fh' | 'bh';
   other_shot_id?: string;   // UUID of the shot from shots table

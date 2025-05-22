@@ -624,7 +624,14 @@ async function getShotIdByName(shotName) {
 
 app.post('/api/points', async (req, res) => {
   try {
-    const { set_id, point_number, winner, winning_shot, other_shot, notes } = req.body;
+    // Enhanced debug logging
+    console.log('Creating point with data (BEGIN):');
+    console.log(JSON.stringify(req.body, null, 2));
+    console.log('Request headers:', req.headers);
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Creating point with data (END)');
+    
+    const { set_id, point_number, winner, notes } = req.body;
     
     // Verify the set belongs to a match owned by the authenticated user
     const setCheck = await pool.query(
@@ -638,29 +645,97 @@ app.post('/api/points', async (req, res) => {
       return res.status(404).json({ error: 'Set not found' });
     }
     
-    // Parse shot data to separate hand and shot name
+    // Initialize variables for shot data
+    let winning_shot_id = null;
     let winning_hand = null;
-    let winning_shot_name = null;
+    let other_shot_id = null;
     let other_hand = null;
-    let other_shot_name = null;
     
-    if (winning_shot && winning_shot !== 'no_data') {
-      const parts = winning_shot.split('_');
-      winning_hand = parts[0]; // 'fh' or 'bh'
-      // Join the rest in case shot names contain underscores
-      winning_shot_name = parts.slice(1).join('_');
+    // Check if direct shot IDs are provided (ShotInfo format from client)
+    if (req.body.winning_shot_id !== undefined) {
+      console.log('Using direct winning_shot_id:', req.body.winning_shot_id);
+      
+      // Check if it's a valid UUID
+      const isValidWinningUuid = req.body.winning_shot_id && 
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.body.winning_shot_id);
+      
+      // Skip UUID validation for special "no data" case
+      const isNoDataUuid = req.body.winning_shot_id === '00000000-0000-0000-0000-000000000000';
+      
+      if (isValidWinningUuid || isNoDataUuid) {
+        winning_shot_id = req.body.winning_shot_id;
+        winning_hand = req.body.winning_hand;
+        console.log('Valid winning shot ID provided:', winning_shot_id, winning_hand);
+      } else {
+        console.warn('Invalid winning shot ID format:', req.body.winning_shot_id);
+        // Set to null to avoid database errors
+        winning_shot_id = null;
+      }
+    } 
+    
+    if (req.body.other_shot_id !== undefined) {
+      console.log('Using direct other_shot_id:', req.body.other_shot_id);
+      
+      // Check if it's a valid UUID
+      const isValidOtherUuid = req.body.other_shot_id && 
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.body.other_shot_id);
+      
+      // Skip UUID validation for special "no data" case
+      const isNoDataUuid = req.body.other_shot_id === '00000000-0000-0000-0000-000000000000';
+      
+      if (isValidOtherUuid || isNoDataUuid) {
+        other_shot_id = req.body.other_shot_id;
+        other_hand = req.body.other_hand;
+        console.log('Valid other shot ID provided:', other_shot_id, other_hand);
+      } else {
+        console.warn('Invalid other shot ID format:', req.body.other_shot_id);
+        // Set to null to avoid database errors
+        other_shot_id = null;
+      }
     }
     
-    if (other_shot && other_shot !== 'no_data') {
-      const parts = other_shot.split('_');
-      other_hand = parts[0]; // 'fh' or 'bh'
-      // Join the rest in case shot names contain underscores
-      other_shot_name = parts.slice(1).join('_');
+    // Fallback to string format if direct IDs are not provided (legacy support)
+    if (winning_shot_id === null && req.body.winning_shot) {
+      console.log('Parsing winning_shot string:', req.body.winning_shot);
+      if (req.body.winning_shot !== 'no_data') {
+        const parts = req.body.winning_shot.split('_');
+        winning_hand = parts[0]; // 'fh' or 'bh'
+        // Join the rest in case shot names contain underscores
+        const winning_shot_name = parts.slice(1).join('_');
+        winning_shot_id = await getShotIdByName(winning_shot_name);
+      }
     }
     
-    // Look up shot IDs from the database based on names
-    const winning_shot_id = await getShotIdByName(winning_shot_name);
-    const other_shot_id = await getShotIdByName(other_shot_name);
+    if (other_shot_id === null && req.body.other_shot) {
+      console.log('Parsing other_shot string:', req.body.other_shot);
+      if (req.body.other_shot !== 'no_data') {
+        const parts = req.body.other_shot.split('_');
+        other_hand = parts[0]; // 'fh' or 'bh'
+        // Join the rest in case shot names contain underscores
+        const other_shot_name = parts.slice(1).join('_');
+        other_shot_id = await getShotIdByName(other_shot_name);
+      }
+    }
+    
+    // If we're using the special "no data" UUID, set it to null for database storage
+    if (winning_shot_id === '00000000-0000-0000-0000-000000000000') {
+      winning_shot_id = null;
+    }
+    
+    if (other_shot_id === '00000000-0000-0000-0000-000000000000') {
+      other_shot_id = null;
+    }
+    
+    console.log('Inserting point with values:', {
+      set_id,
+      point_number,
+      winner,
+      winning_shot_id,
+      winning_hand,
+      other_shot_id,
+      other_hand,
+      notes
+    });
     
     const result = await pool.query(
       `INSERT INTO points (set_id, point_number, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, notes) 
@@ -669,9 +744,28 @@ app.post('/api/points', async (req, res) => {
       [set_id, point_number, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, notes]
     );
     
-    res.status(201).json(result.rows[0]);
+    // Include detailed return information for debugging
+    const pointResult = result.rows[0];
+    console.log('Point created successfully with ID:', pointResult.id);
+    console.log('Point data stored in database:', {
+      id: pointResult.id,
+      set_id: pointResult.set_id,
+      point_number: pointResult.point_number,
+      winner: pointResult.winner,
+      winning_shot_id: pointResult.winning_shot_id,
+      winning_hand: pointResult.winning_hand,
+      other_shot_id: pointResult.other_shot_id,
+      other_hand: pointResult.other_hand
+    });
+    
+    res.status(201).json(pointResult);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create point' });
+    console.error('Error creating point:', error);
+    res.status(500).json({ 
+      error: 'Failed to create point', 
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

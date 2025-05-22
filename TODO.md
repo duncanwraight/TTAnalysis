@@ -18,7 +18,7 @@
 - [x] Ensure proper data synchronization between local state and database
 - [ ] Optimize database queries for match and point data
 - [x] Add session token to matches page
-- [ ] Check for better way of passing session token to API requests
+- [x] Check for better way of passing session token to API requests
 
 ## Shots Database & Integration
 - [x] Consolidate database migrations into a clean structure
