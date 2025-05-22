@@ -51,26 +51,26 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
       return false;
     }
 
-    // First determine which player this shot selector represents
-    let isForPlayer: boolean;
-    if (shotType === 'winning') {
-      // This is for the winner of the point
-      isForPlayer = isWinningPlayer;
-    } else {
-      // This is for the loser of the point
-      isForPlayer = !isWinningPlayer; 
+    // If the component is disabled entirely, all shots are disabled
+    if (disabled) {
+      return true;
     }
-
-    // Now apply server/receiver logic
+    
+    // First determine which player this shot selector represents
+    // For the winning shot selector, this is the winner (determined by isWinningPlayer)
+    // For the other shot selector, this is the loser (opposite of isWinningPlayer)
+    const isForPlayer = shotType === 'winning' ? isWinningPlayer : !isWinningPlayer;
+    
+    // Determine if this player is the server
+    const playerIsServer = (isForPlayer && currentServer === 'player') || 
+                          (!isForPlayer && currentServer === 'opponent');
+    
+    // Logic for different shot types
     if (shotId === 'serve') {
-      // Can only use 'serve' shot if this player is the server
-      const playerIsServer = (isForPlayer && currentServer === 'player') || 
-                            (!isForPlayer && currentServer === 'opponent');
+      // Can only use 'serve' shot if this player IS the server
       return !playerIsServer; // Disable if the player is not the server
     } else { // serve_receive
       // Can only use 'serve_receive' shot if this player is NOT the server
-      const playerIsServer = (isForPlayer && currentServer === 'player') || 
-                            (!isForPlayer && currentServer === 'opponent');
       return playerIsServer; // Disable if the player is the server
     }
   };

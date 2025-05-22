@@ -1,5 +1,6 @@
 import React from 'react';
 import { Point, Set } from '../types/database.types';
+import '../styles/components/PointHistory.css';
 
 type PointHistoryProps = {
   points: Point[];

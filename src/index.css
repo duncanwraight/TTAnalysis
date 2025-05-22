@@ -301,7 +301,8 @@ a {
   color: var(--primary-color);
 }
 
-a:hover {
+/* Regular links hover, excluding btn class links */
+a:not(.btn):hover {
   color: var(--primary-hover-color);
 }
 

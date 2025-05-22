@@ -55,8 +55,18 @@
 }
 
 .serve-icon-small {
-  position: absolute;
-  top: -15px;
-  right: -15px;
+  display: inline-block;
+  margin-left: 8px;
   font-size: 1.25rem;
+  vertical-align: top;
+  animation: bounce 1s infinite alternate;
+}
+
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5px);
+  }
 }

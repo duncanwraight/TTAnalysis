@@ -7,39 +7,65 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
-  border: none;
+  /* Override global button styles */
+  border: none !important;
   font-size: 1rem;
   line-height: 1.5;
   text-align: center;
 }
 
+/* Ensure buttons and button-like links maintain their styling */
+a.btn {
+  display: inline-block;
+  text-decoration: none; 
+}
+
+/* Ensure all .btn elements maintain their text color on hover */
+a.btn:hover {
+  text-decoration: none;
+}
+
 /* Button variants */
-.primary-btn {
+/* Using higher specificity for button and anchor buttons */
+button.primary-btn, 
+a.primary-btn {
   background-color: var(--primary-color);
   color: white;
 }
 
-.primary-btn:hover:not(:disabled) {
+button.primary-btn:hover:not(:disabled), 
+a.primary-btn:hover:not(:disabled),
+a.btn.primary-btn:hover {
   background-color: var(--primary-hover-color);
+  color: white !important; /* Ensure text stays white on hover */
 }
 
-.secondary-btn {
+button.secondary-btn,
+a.secondary-btn {
   background-color: var(--secondary-color);
   color: white;
 }
 
-.secondary-btn:hover:not(:disabled) {
+button.secondary-btn:hover:not(:disabled),
+a.secondary-btn:hover:not(:disabled),
+a.btn.secondary-btn:hover {
   background-color: var(--secondary-hover-color);
+  color: white !important; /* Ensure text stays white on hover */
 }
 
-.outline-btn {
+button.outline-btn,
+a.outline-btn {
   background-color: transparent;
-  border: 1px solid var(--secondary-color);
+  border: 1px solid var(--secondary-color) !important;
   color: var(--secondary-color);
 }
 
-.outline-btn:hover:not(:disabled) {
+button.outline-btn:hover:not(:disabled),
+a.outline-btn:hover:not(:disabled),
+a.btn.outline-btn:hover {
   background-color: rgba(100, 116, 139, 0.1);
+  color: var(--secondary-color) !important; /* Ensure text color is maintained */
+  border-color: var(--secondary-color) !important;
 }
 
 /* Button sizes */

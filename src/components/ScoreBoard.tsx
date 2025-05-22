@@ -35,7 +35,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
           <div className="score-label">You</div>
           <div className={`score-value ${currentServer === 'player' ? 'player-serving' : ''}`}>
             {playerScore}
-            {currentServer === 'player' && <span className="serve-icon-small">🏓</span>}
+            {currentServer === 'player' && <span className="serve-icon-small" aria-label="Serving">🏓</span>}
           </div>
         </div>
         
@@ -47,9 +47,9 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
         {/* Opponent Side */}
         <div style={{ textAlign: 'center' }}>
           <div className="score-label">Opponent</div>
-          <div className="score-value">
+          <div className={`score-value ${currentServer === 'opponent' ? 'player-serving' : ''}`}>
             {opponentScore}
-            {currentServer === 'opponent' && <span className="serve-icon-small">🏓</span>}
+            {currentServer === 'opponent' && <span className="serve-icon-small" aria-label="Serving">🏓</span>}
           </div>
         </div>
       </div>

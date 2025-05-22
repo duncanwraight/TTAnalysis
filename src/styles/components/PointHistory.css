@@ -1,0 +1,79 @@
+/* PointHistory component styles */
+.point-history-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--secondary-color);
+  text-align: center;
+}
+
+.no-points-message {
+  text-align: center;
+  color: var(--light-text-color);
+  font-style: italic;
+  padding: 1rem 0;
+}
+
+.point-sequence {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  min-height: 40px;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background-color: var(--background-color);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.point-sequence::-webkit-scrollbar {
+  height: 4px;
+}
+
+.point-sequence::-webkit-scrollbar-track {
+  background: var(--background-color);
+}
+
+.point-sequence::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+.point-marker {
+  min-width: 8px;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.2s ease;
+}
+
+.player-point {
+  background-color: var(--primary-color);
+}
+
+.opponent-point {
+  background-color: var(--secondary-color);
+}
+
+.point-history-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--light-text-color);
+}
+
+.legend-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
