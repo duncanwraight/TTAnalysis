@@ -255,9 +255,8 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
               const fhSelected = selected === getHandId(shot.name, 'fh');
               const bhSelected = selected === getHandId(shot.name, 'bh');
               
-              const disabledStyle = isDisabled ? 
-                {opacity: 0.5, backgroundColor: '#e2e8f0', cursor: 'not-allowed', color: '#94a3b8', borderColor: '#cbd5e1'} : 
-                {};
+              // No inline styles - we'll use CSS classes instead
+              const disabledStyle = {};
                 
               return (
                 <div key={shot.id} className={`shot-item ${isDisabled ? 'shot-item-disabled' : ''}`}>
@@ -272,8 +271,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
                   </button>
                   
                   <span 
-                    className="shot-label"
-                    style={isDisabled ? {opacity: 0.5, color: '#94a3b8'} : {}}
+                    className={`shot-label ${isDisabled ? 'disabled-label' : ''}`}
                   >
                     {shot.label}
                   </span>

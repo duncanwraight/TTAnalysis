@@ -13,6 +13,9 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import './index.css';
 import './styles/components/Auth.css';
 import './styles/components/Layout.css';
+import './styles/components/ShotSelector.css';
+import './styles/components/MatchTracker.css';
+import './styles/components/ScoreBoard.css';
 
 function App() {
   // Log environment variables on startup
