@@ -137,39 +137,6 @@ export function useApi() {
 
     // Create a new point
     createPoint: (point: Omit<Point, 'id' | 'created_at'>) => {
-      // Add extensive debug logging to see what's being sent to the server
-      console.log('=== API: Creating point with data ===');
-      console.log(JSON.stringify(point, null, 2));
-      console.log('=== End point data ===');
-      
-      // Check what fields we're actually sending
-      console.log('API: Point has these fields:', Object.keys(point));
-      
-      // Inspect each ID field for debugging
-      if (point.winning_shot_id !== undefined) {
-        console.log('API: winning_shot_id =', point.winning_shot_id, 
-          'type =', typeof point.winning_shot_id);
-        
-        if (point.winning_shot_id) {
-          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(point.winning_shot_id);
-          console.log('API: Winning shot ID is valid UUID:', isUuid);
-        }
-      } else {
-        console.warn('API: winning_shot_id field is missing entirely!');
-      }
-      
-      if (point.other_shot_id !== undefined) {
-        console.log('API: other_shot_id =', point.other_shot_id, 
-          'type =', typeof point.other_shot_id);
-        
-        if (point.other_shot_id) {
-          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(point.other_shot_id);
-          console.log('API: Other shot ID is valid UUID:', isUuid);
-        }
-      } else {
-        console.warn('API: other_shot_id field is missing entirely!');
-      }
-      
       return directFetch<Point>('/points', {
         method: 'POST',
         body: JSON.stringify(point),

@@ -5,6 +5,15 @@ import { ShotCategory as ShotCategoryType } from './types';
 import { useShotData, ShotCategory as DbShotCategory, Shot } from '../../lib/shotsApi';
 import '../../styles/components/ShotSelector.css';
 
+// Helper function to format category names
+// Capitalizes each word and replaces underscores with spaces
+const formatCategoryName = (name: string): string => {
+  return name
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 // Shot info type for passing between components
 type ShotInfo = {
   shotId: string; // This should be the database UUID
@@ -85,7 +94,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     const shot = dbShots.find(s => s.id === shotId);
     
     if (!shot) {
-      console.error(`Shot with ID ${shotId} not found in database shots!`);
+      // Cannot find the shot in the database
       return;
     }
     
@@ -117,14 +126,13 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
         
         return {
           id: dbCategory.id,
-          label: dbCategory.name,
+          label: formatCategoryName(dbCategory.name),
           shots: mappedShots
         };
       }
     }
     
-    // If we can't find categories, return empty category with a console error
-    console.error('Failed to find shot category:', activeCategory);
+    // If we can't find categories, return empty category
     return {
       id: 'error',
       label: 'Error',
@@ -139,7 +147,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     // Get the name of the shot for checking serve-related shots
     const shot = dbShots.find(s => s.id === shotId);
     if (!shot) {
-      console.warn(`Shot with ID ${shotId} not found in database shots for isServeDisabled check.`);
+      // Shot not found, return false to prevent disabling
       return false;
     }
     
@@ -179,29 +187,15 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
 
   return (
     <div className={`shot-selector ${disabled ? 'disabled' : ''} ${selected ? 'selection-made' : ''}`}>
-      {selected && (
-        <div className="selection-display" style={{
-          backgroundColor: '#e6f7ff',
-          padding: '8px',
-          borderRadius: '4px',
-          marginBottom: '8px',
-          fontSize: '12px',
-          border: '1px solid #91d5ff'
-        }}>
-          <div><strong>Selected Shot:</strong></div>
-          <div>Shot ID: {selected.shotId.substring(0, 8)}...</div>
-          <div>Hand: {selected.hand.toUpperCase()}</div>
-          
-          {onUndo && shotType === 'winning' && (
-            <button 
-              className="undo-shot-btn" 
-              onClick={onUndo}
-              title="Undo shot selection"
-              style={{ marginTop: '4px' }}
-            >
-              ↩️ Change Selection
-            </button>
-          )}
+      {selected && onUndo && shotType === 'winning' && (
+        <div className="undo-button-container">
+          <button 
+            className="undo-shot-btn" 
+            onClick={onUndo}
+            title="Undo shot selection"
+          >
+            ↩️ Change Selection
+          </button>
         </div>
       )}
       
@@ -222,7 +216,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
               <ShotCategory 
                 key={category.id}
                 id={category.name.toLowerCase()}
-                label={category.name}
+                label={formatCategoryName(category.name)}
                 isActive={activeCategory === category.name.toLowerCase()}
                 onClick={handleCategoryClick}
                 disabled={selected !== null}
