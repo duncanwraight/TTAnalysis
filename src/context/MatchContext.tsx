@@ -23,19 +23,19 @@ type MatchContextType = {
   loading: boolean;
   matchState: MatchState;
   selectedWinner: 'player' | 'opponent' | null;
-  winningShot: string | null;
-  otherShot: string | null;
+  winningShot: ShotInfo | null;
+  otherShot: ShotInfo | null;
   canUndo: boolean;
   initialServer: 'player' | 'opponent';
   
   // Actions
   handlePlayerSelect: (winner: 'player' | 'opponent') => void;
-  handleWinningShotSelect: (shot: string) => void;
-  handleOtherShotSelect: (shot: string) => void;
+  handleWinningShotSelect: (shot: ShotInfo) => void;
+  handleOtherShotSelect: (shot: ShotInfo) => void;
   handleUndoWinningShot: () => void;
   handleUndoOtherShot: () => void;
   undoLastPoint: () => void;
-  recordPoint: (winner: 'player' | 'opponent', winningShot: string, otherShot: string) => void;
+  recordPoint: (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => void;
   resetPointFlow: () => void;
   getCurrentServer: () => 'player' | 'opponent';
   getTotalPoints: () => number;
@@ -72,10 +72,16 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     currentSetId: null
   });
   
+  // Shot info type for passing between components
+  type ShotInfo = {
+    shotId: string; // This should be the database UUID
+    hand: 'fh' | 'bh';
+  };
+
   // State for the point recording flow
   const [selectedWinner, setSelectedWinner] = useState<'player' | 'opponent' | null>(null);
-  const [winningShot, setWinningShot] = useState<string | null>(null);
-  const [otherShot, setOtherShot] = useState<string | null>(null);
+  const [winningShot, setWinningShot] = useState<ShotInfo | null>(null);
+  const [otherShot, setOtherShot] = useState<ShotInfo | null>(null);
   
   // State for tracking if we can undo the last point
   const [canUndo, setCanUndo] = useState<boolean>(false);
@@ -224,13 +230,13 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
   };
 
   // Handler for when a winning shot is selected
-  const handleWinningShotSelect = (shot: string) => {
+  const handleWinningShotSelect = (shot: ShotInfo) => {
     console.log('[MatchContext] Winning shot selected:', shot);
     setWinningShot(shot);
   };
 
   // Handler for when the other shot is selected
-  const handleOtherShotSelect = (shot: string) => {
+  const handleOtherShotSelect = (shot: ShotInfo) => {
     console.log('[MatchContext] Other shot selected:', shot);
     setOtherShot(shot);
     
@@ -251,7 +257,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
   };
 
   // Record a point with all the data collected
-  const recordPoint = async (winner: 'player' | 'opponent', winningShot: string, otherShot: string) => {
+  const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
     if (!match) {
       console.error('[MatchContext] Cannot record point: match is null');
       return;
@@ -308,13 +314,18 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       }
       
       // Create point in database
-      console.log('[MatchContext] Creating point in database');
+      console.log('[MatchContext] Creating point in database with shot IDs:',
+        winningShot.shotId, otherShot.shotId);
+      
+      // Use the new ShotInfo format
       const newPoint = await api.point.createPoint({
         set_id: currentSetData.id,
         point_number: pointNumber,
         winner,
-        winning_shot: winningShot,
-        other_shot: otherShot,
+        winning_shot_id: winningShot.shotId,
+        winning_hand: winningShot.hand,
+        other_shot_id: otherShot.shotId,
+        other_hand: otherShot.hand,
         notes: ''
       });
       console.log('[MatchContext] Point created:', newPoint);

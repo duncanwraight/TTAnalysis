@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PlayerPanel from '../components/PlayerPanel';
-import ShotSelector from '../components/ShotSelector';
+import ShotSelector from '../components/ShotSelector/index';
 import ScoreBoard from '../components/ScoreBoard';
 import PointHistory from '../components/PointHistory';
 import { Match, Set, Point } from '../types/database.types';
@@ -46,10 +46,16 @@ const MatchTracker = () => {
     currentSetId: null
   });
   
+  // Shot info type for passing between components
+  type ShotInfo = {
+    shotId: string | null; // Database UUID or null for "no data"
+    hand: 'fh' | 'bh' | null; // Hand or null for "no data"
+  };
+  
   // State for the point recording flow
   const [selectedWinner, setSelectedWinner] = useState<'player' | 'opponent' | null>(null);
-  const [winningShot, setWinningShot] = useState<string | null>(null);
-  const [otherShot, setOtherShot] = useState<string | null>(null);
+  const [winningShot, setWinningShot] = useState<ShotInfo | null>(null);
+  const [otherShot, setOtherShot] = useState<ShotInfo | null>(null);
   
   // State for tracking if we can undo the last point
   const [canUndo, setCanUndo] = useState<boolean>(false);
@@ -199,17 +205,41 @@ const MatchTracker = () => {
   };
   
   // Handler for when a winning shot is selected
-  const handleWinningShotSelect = (shot: string) => {
+  const handleWinningShotSelect = (shot: ShotInfo) => {
+    console.log('MatchTracker: Selected winning shot:', shot);
+    
+    // Validate shot has a valid ID
+    if (!shot || !shot.shotId) {
+      console.error('Invalid winning shot info received:', shot);
+      return;
+    }
+    
+    // Save the shot info
     setWinningShot(shot);
   };
   
   // Handler for when the other shot is selected
-  const handleOtherShotSelect = (shot: string) => {
-    console.log(`MatchTracker: Selected other shot: ${shot}, winningShot: ${winningShot}, selectedWinner: ${selectedWinner}`);
+  const handleOtherShotSelect = (shot: ShotInfo) => {
+    console.log('MatchTracker: Selected other shot:', shot);
+    
+    // Validate shot has a valid ID
+    if (!shot || !shot.shotId) {
+      console.error('Invalid other shot info received:', shot);
+      return;
+    }
+    
+    // Save the shot info in state
+    setOtherShot(shot);
     
     // Always record the point immediately after other shot is selected
     if (winningShot && selectedWinner) {
-      // Directly record the point without setting state first
+      console.log('MatchTracker: Recording point with:', {
+        winner: selectedWinner,
+        winningShot,
+        otherShot: shot
+      });
+      
+      // Directly record the point
       recordPoint(selectedWinner, winningShot, shot);
     } else {
       console.error('Cannot record point: missing winning shot or selected winner');
@@ -227,8 +257,8 @@ const MatchTracker = () => {
   };
   
   // Record a point with all the data collected
-  const recordPoint = async (winner: 'player' | 'opponent', winningShot: string, otherShot: string) => {
-    console.log(`MatchTracker: Recording point - winner: ${winner}, winningShot: ${winningShot}, otherShot: ${otherShot}`);
+  const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
+    console.log(`MatchTracker: Recording point - winner: ${winner}`, 'winningShot:', winningShot, 'otherShot:', otherShot);
     
     if (!match) {
       console.error('Cannot record point: match is null');
@@ -315,14 +345,39 @@ const MatchTracker = () => {
       }
       
       // Create point in database
+      // Use direct shot IDs and hands from the ShotInfo objects
       const pointData = {
         set_id: currentSetData.id,
         point_number: pointNumber,
         winner,
-        winning_shot: winningShot,
-        other_shot: otherShot,
+        winning_shot_id: winningShot.shotId,
+        winning_hand: winningShot.hand,
+        other_shot_id: otherShot.shotId,
+        other_hand: otherShot.hand,
         notes: ''
       };
+      
+      // Log for debugging
+      console.log(`MatchTracker: Creating point with data:`, pointData);
+      
+      // Show debug alert with the data being sent to API
+      alert(`Sending to API:
+      Winner: ${winner}
+      Winning Shot ID: ${pointData.winning_shot_id} (type: ${typeof pointData.winning_shot_id})
+      Winning Hand: ${pointData.winning_hand}
+      Other Shot ID: ${pointData.other_shot_id} (type: ${typeof pointData.other_shot_id})
+      Other Hand: ${pointData.other_hand}`);
+      
+      console.log("POINT DATA BEING SENT TO API:", pointData);
+      
+      // Log each field separately for debugging
+      console.log("API Request - set_id:", pointData.set_id, typeof pointData.set_id);
+      console.log("API Request - point_number:", pointData.point_number, typeof pointData.point_number);
+      console.log("API Request - winner:", pointData.winner, typeof pointData.winner);
+      console.log("API Request - winning_shot_id:", pointData.winning_shot_id, typeof pointData.winning_shot_id);
+      console.log("API Request - winning_hand:", pointData.winning_hand, typeof pointData.winning_hand);
+      console.log("API Request - other_shot_id:", pointData.other_shot_id, typeof pointData.other_shot_id);
+      console.log("API Request - other_hand:", pointData.other_hand, typeof pointData.other_hand);
       
       let newPoint;
       try {
@@ -988,9 +1043,15 @@ const MatchTracker = () => {
               <button
                 className="btn outline-btn no-data-btn"
                 onClick={() => {
-                  setWinningShot('no_data');
-                  setOtherShot('no_data');
-                  recordPoint(selectedWinner!, 'no_data', 'no_data');
+                  // Create a point without shot data by passing null values
+                  // The server will handle this appropriately
+                  const noDataShot: ShotInfo = {
+                    shotId: null as any, // Using null for the shotId
+                    hand: null as any // Using null for the hand
+                  };
+                  
+                  // Record the point without shot data
+                  recordPoint(selectedWinner!, noDataShot, noDataShot);
                 }}
                 title="Record point without shot data"
               >
