@@ -81,27 +81,13 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   const handleShotSelect = (shotId: string, hand: 'fh' | 'bh') => {
     if (disabled) return;
     
-    console.log(`ShotSelector: Shot selection initiated with ID ${shotId} and hand ${hand}`);
-    
     // Find the shot in our database to get complete info
     const shot = dbShots.find(s => s.id === shotId);
     
     if (!shot) {
-      console.error(`ShotSelector: ERROR - Shot with ID ${shotId} not found in database shots!`);
-      console.log('ShotSelector: Available shots:', dbShots.map(s => ({ id: s.id, name: s.name })));
-      alert(`Error: Shot with ID ${shotId} not found in database!`);
+      console.error(`Shot with ID ${shotId} not found in database shots!`);
       return;
     }
-    
-    // Log detailed shot information
-    console.log(`ShotSelector: Found shot:`, {
-      id: shot.id,
-      name: shot.name,
-      display_name: shot.display_name,
-      category_id: shot.category_id
-    });
-    
-    console.log(`ShotSelector: ${hand} button clicked for ${shotType} shot: ${shot.name}`);
     
     // Create a shot info object with the shot ID and hand
     const shotInfo: ShotInfo = {
@@ -109,47 +95,25 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
       hand: hand
     };
     
-    // Log the actual object we're passing to make sure it's correct
-    console.log(`ShotSelector: Passing to parent:`, JSON.stringify(shotInfo));
-    
-    // Show alert for debugging
-    alert(`Selected ${shotType} shot:\nID: ${shotInfo.shotId}\nName: ${shot.name}\nHand: ${shotInfo.hand}`);
-    
     // Pass the shot info object to the parent component
     onSelect(shotInfo);
   };
 
   // Find the current category
   const getCurrentCategory = () => {
-    console.log('ShotSelector: Finding category with dbCategories:', dbCategories);
-    console.log('ShotSelector: Current active category:', activeCategory);
-    
     if (dbCategories.length > 0) {
       // Try to find category by name in DB
       const dbCategory = dbCategories.find(c => c.name.toLowerCase() === activeCategory);
-      console.log('ShotSelector: Found category:', dbCategory);
       
       if (dbCategory) {
         // Get shots for this category
         const categoryShots = dbShots.filter(s => s.category_id === dbCategory.id);
-        
-        // Debug log to see what shot data we're working with
-        console.log(`ShotSelector: Getting shots for category ${dbCategory.name}:`, 
-          categoryShots.map(s => ({ id: s.id, name: s.name, display: s.display_name })));
-        
-        // Log the actual shots data to see what IDs we're getting
-        categoryShots.forEach((shot, index) => {
-          console.log(`ShotSelector: Shot ${index} - ID: ${shot.id}, Name: ${shot.name}, Type: ${typeof shot.id}`);
-        });
         
         const mappedShots = categoryShots.map(s => ({
           id: s.id, // This is the database UUID
           name: s.name, // Original shot name (serve, loop, etc.)
           label: s.display_name || s.name // Display name
         }));
-        
-        // Log the mapped shots to make sure IDs are preserved
-        console.log('ShotSelector: Mapped shots:', mappedShots);
         
         return {
           id: dbCategory.id,

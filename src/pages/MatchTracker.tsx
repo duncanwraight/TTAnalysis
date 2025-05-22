@@ -206,43 +206,20 @@ const MatchTracker = () => {
   
   // Handler for when a winning shot is selected
   const handleWinningShotSelect = (shot: ShotInfo) => {
-    console.log('MatchTracker: Selected winning shot:', shot);
-    
-    // Validate shot has a valid ID
-    if (!shot || !shot.shotId) {
-      console.error('Invalid winning shot info received:', shot);
-      return;
-    }
-    
-    // Save the shot info
+    if (!shot || !shot.shotId) return;
     setWinningShot(shot);
   };
   
   // Handler for when the other shot is selected
   const handleOtherShotSelect = (shot: ShotInfo) => {
-    console.log('MatchTracker: Selected other shot:', shot);
-    
-    // Validate shot has a valid ID
-    if (!shot || !shot.shotId) {
-      console.error('Invalid other shot info received:', shot);
-      return;
-    }
+    if (!shot || !shot.shotId) return;
     
     // Save the shot info in state
     setOtherShot(shot);
     
     // Always record the point immediately after other shot is selected
     if (winningShot && selectedWinner) {
-      console.log('MatchTracker: Recording point with:', {
-        winner: selectedWinner,
-        winningShot,
-        otherShot: shot
-      });
-      
-      // Directly record the point
       recordPoint(selectedWinner, winningShot, shot);
-    } else {
-      console.error('Cannot record point: missing winning shot or selected winner');
     }
   };
   
@@ -357,27 +334,7 @@ const MatchTracker = () => {
         notes: ''
       };
       
-      // Log for debugging
-      console.log(`MatchTracker: Creating point with data:`, pointData);
-      
-      // Show debug alert with the data being sent to API
-      alert(`Sending to API:
-      Winner: ${winner}
-      Winning Shot ID: ${pointData.winning_shot_id} (type: ${typeof pointData.winning_shot_id})
-      Winning Hand: ${pointData.winning_hand}
-      Other Shot ID: ${pointData.other_shot_id} (type: ${typeof pointData.other_shot_id})
-      Other Hand: ${pointData.other_hand}`);
-      
-      console.log("POINT DATA BEING SENT TO API:", pointData);
-      
-      // Log each field separately for debugging
-      console.log("API Request - set_id:", pointData.set_id, typeof pointData.set_id);
-      console.log("API Request - point_number:", pointData.point_number, typeof pointData.point_number);
-      console.log("API Request - winner:", pointData.winner, typeof pointData.winner);
-      console.log("API Request - winning_shot_id:", pointData.winning_shot_id, typeof pointData.winning_shot_id);
-      console.log("API Request - winning_hand:", pointData.winning_hand, typeof pointData.winning_hand);
-      console.log("API Request - other_shot_id:", pointData.other_shot_id, typeof pointData.other_shot_id);
-      console.log("API Request - other_hand:", pointData.other_hand, typeof pointData.other_hand);
+      // Create the point in the database
       
       let newPoint;
       try {

@@ -26,31 +26,17 @@ const ShotList: React.FC<ShotListProps> = ({
   onShotSelect,
   isServeDisabled
 }) => {
-  // Debug log to see what shots we're getting
-  console.log('ShotList rendered with shots:', shots);
-  
   // Helper to get the selected hand if this shot is selected
   const getSelectedHand = (shotId: string): 'fh' | 'bh' | null => {
     if (!selectedShot) return null;
-    
-    console.log(`ShotList: Checking if shot with ID ${shotId} is selected. Current selected shot:`, selectedShot);
-    
     // Direct comparison with the shot ID in the ShotInfo object
     return selectedShot.shotId === shotId ? selectedShot.hand : null;
   };
 
-  // Create a handler that wraps onShotSelect to log what's happening
+  // Handler for shot selection
   const handleShotSelect = (shotId: string, hand: 'fh' | 'bh') => {
-    console.log(`ShotList: Shot selected with ID: ${shotId} and hand: ${hand}`);
-    
-    // Force shotId to be a string
-    const shotIdString = String(shotId);
-    
-    // Log the actual value being passed
-    console.log(`ShotList: Shot ID type: ${typeof shotIdString}, value: ${shotIdString}`);
-    
-    // Pass the ID and hand to the parent
-    onShotSelect(shotIdString, hand);
+    // Force shotId to be a string and pass to parent
+    onShotSelect(String(shotId), hand);
   };
 
   return (

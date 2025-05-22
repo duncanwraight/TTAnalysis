@@ -17,10 +17,7 @@ const ShotItem: React.FC<ShotItemProps> = ({
   selectedHand,
   onHandSelect
 }) => {
-  // Debug log to see what IDs we're working with
-  console.log(`ShotItem: Rendering shot with id=${id}, label=${label}, selectedHand=${selectedHand}`);
-  
-  // Double check ID type and convert to string if needed
+  // Convert ID to string if needed
   const idString = String(id);
   
   return (
@@ -34,12 +31,9 @@ const ShotItem: React.FC<ShotItemProps> = ({
     >
       <button
         className={`shot-hand fh-button ${selectedHand === 'fh' ? 'selected' : ''}`}
-        onClick={() => {
-          console.log(`ShotItem: Selected FH for shot ${label} with ID ${idString}`);
-          onHandSelect(idString, 'fh');
-        }}
+        onClick={() => onHandSelect(idString, 'fh')}
         disabled={isDisabled}
-        title={`Forehand - ID: ${idString}`}
+        title="Forehand"
         style={{
           backgroundColor: selectedHand === 'fh' ? '#1890ff' : '#f5f5f5',
           color: selectedHand === 'fh' ? 'white' : 'black',
@@ -51,19 +45,6 @@ const ShotItem: React.FC<ShotItemProps> = ({
       
       <span className="shot-label" style={{ position: 'relative' }}>
         {label}
-        <small style={{ 
-          display: 'block', 
-          fontSize: '8px', 
-          color: '#555',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: '100%',
-          background: '#f0f0f0',
-          padding: '2px',
-          borderRadius: '2px'
-        }}>
-          ID: {idString.substring(0, 8)}...
-        </small>
         
         {selectedHand && (
           <div style={{
@@ -85,12 +66,9 @@ const ShotItem: React.FC<ShotItemProps> = ({
       
       <button
         className={`shot-hand bh-button ${selectedHand === 'bh' ? 'selected' : ''}`}
-        onClick={() => {
-          console.log(`ShotItem: Selected BH for shot ${label} with ID ${idString}`);
-          onHandSelect(idString, 'bh');
-        }}
+        onClick={() => onHandSelect(idString, 'bh')}
         disabled={isDisabled}
-        title={`Backhand - ID: ${idString}`}
+        title="Backhand"
         style={{
           backgroundColor: selectedHand === 'bh' ? '#1890ff' : '#f5f5f5',
           color: selectedHand === 'bh' ? 'white' : 'black',
