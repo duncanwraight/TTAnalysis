@@ -15,17 +15,14 @@ const API_URL = '/api';
  * Accepts an optional token parameter to use instead of fetching from Supabase
  */
 async function directFetch<T>(endpoint: string, options: RequestInit = {}, token?: string): Promise<T> {
-  // Use provided token or get from Supabase if not provided
+  // Use provided token - we don't try to get it from Supabase as that seems to fail
   let authToken = token;
   
+  console.log('directFetch: Calling', endpoint, 'with token:', token ? `${token.substring(0, 10)}...` : 'undefined');
+  
   if (!authToken) {
-    // Fallback to get token from Supabase
-    const { data } = await supabase.auth.getSession();
-    authToken = data.session?.access_token;
-    
-    if (!authToken) {
-      throw new Error('Authentication required. Please log in again.');
-    }
+    console.error('directFetch: No authentication token provided for API call');
+    throw new Error('Authentication required. No token provided for API call.');
   }
 
   // Create headers with authentication
@@ -139,11 +136,13 @@ export const pointApi = {
     directFetch<Point[]>(`/points?set_id=${setId}`, {}, token),
 
   // Create a new point
-  createPoint: (point: Omit<Point, 'id' | 'created_at'>, token?: string) =>
-    directFetch<Point>('/points', {
+  createPoint: (point: Omit<Point, 'id' | 'created_at'>, token?: string) => {
+    console.log('pointApi.createPoint: Creating point with token:', token ? `${token.substring(0, 10)}...` : 'undefined');
+    return directFetch<Point>('/points', {
       method: 'POST',
       body: JSON.stringify(point),
-    }, token),
+    }, token);
+  },
 
   // Delete a point
   deletePoint: (id: string, token?: string) =>

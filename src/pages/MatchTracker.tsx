@@ -197,6 +197,7 @@ const MatchTracker = () => {
   
   // Reset point flow when a point is completed
   const resetPointFlow = () => {
+    console.log('MatchTracker: Resetting point flow');
     setSelectedWinner(null);
     setWinningShot(null);
     setOtherShot(null);
@@ -214,12 +215,14 @@ const MatchTracker = () => {
   
   // Handler for when the other shot is selected
   const handleOtherShotSelect = (shot: string) => {
-    // We don't need to set the state since we immediately record the point
-    // setOtherShot(shot);
+    console.log(`MatchTracker: Selected other shot: ${shot}, winningShot: ${winningShot}, selectedWinner: ${selectedWinner}`);
     
     // Always record the point immediately after other shot is selected
-    if (winningShot) {
-      recordPoint(selectedWinner!, winningShot, shot);
+    if (winningShot && selectedWinner) {
+      // Directly record the point without setting state first
+      recordPoint(selectedWinner, winningShot, shot);
+    } else {
+      console.error('Cannot record point: missing winning shot or selected winner');
     }
   };
   
@@ -235,16 +238,24 @@ const MatchTracker = () => {
   
   // Record a point with all the data collected
   const recordPoint = async (winner: 'player' | 'opponent', winningShot: string, otherShot: string) => {
+    console.log(`MatchTracker: Recording point - winner: ${winner}, winningShot: ${winningShot}, otherShot: ${otherShot}`);
+    
     if (!match) {
       console.error('Cannot record point: match is null');
+      resetPointFlow();
       return;
     }
     
-    // Ensure we have an auth token
-    if (!session?.access_token) {
+    // Ensure we have an auth token and store it in a variable to ensure it doesn't change
+    const authToken = session?.access_token;
+    if (!authToken) {
       console.error('No authentication token available for recording point');
+      alert('Authentication error: Please try again or refresh the page');
+      resetPointFlow();
       return;
     }
+    
+    console.log('Using authentication token for all API calls:', authToken.substring(0, 10) + '...');
     
     try {
       // Update local state first for immediate UI feedback
@@ -273,7 +284,7 @@ const MatchTracker = () => {
         };
         
         try {
-          currentSetData = await setApi.updateSet(matchState.currentSetId, setUpdateData);
+          currentSetData = await setApi.updateSet(matchState.currentSetId, setUpdateData, authToken);
         } catch (error) {
           console.error('Error updating set:', error);
           throw new Error(`Failed to update set: ${error.message}`);
@@ -282,7 +293,7 @@ const MatchTracker = () => {
         // Get sets for this match
         let sets;
         try {
-          sets = await setApi.getSetsByMatchId(match.id);
+          sets = await setApi.getSetsByMatchId(match.id, authToken);
         } catch (error) {
           console.error('Error fetching sets:', error);
           throw new Error(`Failed to fetch sets: ${error.message}`);
@@ -298,7 +309,7 @@ const MatchTracker = () => {
           };
           
           try {
-            currentSetData = await setApi.updateSet(existingSet.id, setUpdateData);
+            currentSetData = await setApi.updateSet(existingSet.id, setUpdateData, authToken);
           } catch (error) {
             console.error('Error updating existing set:', error);
             throw new Error(`Failed to update set: ${error.message}`);
@@ -314,7 +325,7 @@ const MatchTracker = () => {
           };
           
           try {
-            currentSetData = await setApi.createSet(newSetData);
+            currentSetData = await setApi.createSet(newSetData, authToken);
           } catch (error) {
             console.error('Error creating set:', error);
             throw new Error(`Failed to create set: ${error.message}`);
@@ -334,7 +345,10 @@ const MatchTracker = () => {
       
       let newPoint;
       try {
-        newPoint = await pointApi.createPoint(pointData);
+        // Explicitly pass the auth token to ensure authentication
+        console.log('MatchTracker: Creating point with token:', authToken.substring(0, 10) + '...');
+        newPoint = await pointApi.createPoint(pointData, authToken);
+        console.log('MatchTracker: Point created successfully:', newPoint);
       } catch (error) {
         console.error('Error creating point:', error);
         throw new Error(`Failed to create point: ${error.message}`);
@@ -355,7 +369,7 @@ const MatchTracker = () => {
         try {
           await matchApi.updateMatch(match.id, {
             match_score: `${playerSetsWon}-${opponentSetsWon}`
-          });
+          }, authToken);
         } catch (error) {
           console.error('Error updating match score:', error);
           // Continue execution even if match score update fails
@@ -374,7 +388,7 @@ const MatchTracker = () => {
               score: '0-0',
               player_score: 0,
               opponent_score: 0
-            });
+            }, authToken);
           } catch (error) {
             console.error('Error creating next set:', error);
             throw new Error(`Failed to create next set: ${error.message}`);
@@ -437,8 +451,12 @@ const MatchTracker = () => {
       
       // Reset the point flow
       resetPointFlow();
+      
+      console.log('MatchTracker: Point recorded successfully, flow reset');
     } catch (error) {
       console.error('Error recording point:', error);
+      alert('Failed to record point. Please try again.');
+      resetPointFlow();
     }
   };
   

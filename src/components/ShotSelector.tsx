@@ -102,6 +102,11 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>(lastSelectedCategory);
   const [shotCategories, setShotCategories] = useState<FormattedShotCategory[]>(fallbackShotCategories);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // Add debugging for component props
+  useEffect(() => {
+    console.log(`ShotSelector (${shotType}): rendered with selected=${selected}, disabled=${disabled}`);
+  }, [shotType, selected, disabled]);
 
   // Fetch shot categories and shots from the database using the API client
   useEffect(() => {
@@ -177,7 +182,11 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   const handleShotSelect = (shotId: string, shotName: string, hand: 'fh' | 'bh') => {
     if (!disabled) {
       // For backward compatibility, use the shot name in the hand ID
-      onSelect(getHandId(shotName, hand));
+      const handId = getHandId(shotName, hand);
+      console.log(`ShotSelector: Selected ${shotType} shot: ${handId} (token: ${session?.access_token ? 'Available' : 'Missing'})`);
+      
+      // Immediately call onSelect with the selected shot
+      onSelect(handId);
     }
   };
 
@@ -262,7 +271,10 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
                 <div key={shot.id} className={`shot-item ${isDisabled ? 'shot-item-disabled' : ''}`}>
                   <button
                     className={`shot-hand fh-button ${fhSelected ? 'selected' : ''} ${isDisabled ? 'disabled-button' : ''}`}
-                    onClick={() => handleShotSelect(shot.id, shot.name, 'fh')}
+                    onClick={() => {
+                      console.log(`ShotSelector: FH button clicked for ${shotType} shot: ${shot.name}`);
+                      handleShotSelect(shot.id, shot.name, 'fh');
+                    }}
                     disabled={disabled || isDisabled}
                     title="Forehand"
                     style={disabledStyle}
@@ -278,7 +290,10 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
                   
                   <button
                     className={`shot-hand bh-button ${bhSelected ? 'selected' : ''} ${isDisabled ? 'disabled-button' : ''}`}
-                    onClick={() => handleShotSelect(shot.id, shot.name, 'bh')}
+                    onClick={() => {
+                      console.log(`ShotSelector: BH button clicked for ${shotType} shot: ${shot.name}`);
+                      handleShotSelect(shot.id, shot.name, 'bh');
+                    }}
                     disabled={disabled || isDisabled}
                     title="Backhand"
                     style={disabledStyle}
