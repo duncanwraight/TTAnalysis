@@ -12,8 +12,26 @@ const Auth = () => {
   const [showLoginForm, setShowLoginForm] = useState(!loading);
 
 
-  // Redirect to home if already logged in
+  // Handle auth state and manual logout
   useEffect(() => {
+    // Check if we have a manual logout flag
+    const manualLogout = sessionStorage.getItem('manual_logout');
+    
+    if (manualLogout === 'true') {
+      // Clear the flag so it doesn't affect future navigation
+      sessionStorage.removeItem('manual_logout');
+      
+      // Extra safety: clear all Supabase-related localStorage items
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      return;
+    }
+    
+    // Normal auto-redirect behavior
     if (user && !loading) {
       navigate('/');
     }

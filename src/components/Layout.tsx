@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 type LayoutProps = {
@@ -8,13 +8,38 @@ type LayoutProps = {
 
 const Layout = ({ children }: LayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      // Redirect happens automatically via auth state change
+      // Clear ALL Supabase-related localStorage items
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Set flag to prevent auto-redirect from Auth page
+      sessionStorage.setItem('manual_logout', 'true');
+      
+      // Call signOut from AuthContext
+      try {
+        await signOut();
+      } catch (signOutError) {
+        // Continue with redirect even if signOut fails
+      }
+      
+      // Force a complete reload to /auth with cache clearing
+      window.location.href = '/auth?t=' + new Date().getTime();
     } catch (error) {
-      console.error('Error signing out:', error);
+      // Force clear ALL localStorage as a fallback
+      localStorage.clear();
+      
+      // Set flag to prevent auto-redirect
+      sessionStorage.setItem('manual_logout', 'true');
+      
+      // Redirect anyway
+      window.location.href = '/auth?t=' + new Date().getTime();
     }
   };
 
