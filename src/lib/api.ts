@@ -3,8 +3,8 @@
 import { Match, Set, Point } from '../types/database.types';
 import { supabase } from './supabase';
 
-// API URL from environment variables
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// API URL from environment variables - using relative URL for proxy
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Request timeout in milliseconds
 const REQUEST_TIMEOUT = 10000;

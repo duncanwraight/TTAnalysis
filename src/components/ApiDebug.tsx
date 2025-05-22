@@ -37,9 +37,9 @@ const ApiDebug: React.FC = () => {
     try {
       console.log('Starting auth test');
       
-      // Direct API health check
+      // Direct API health check using relative URL for proxy
       try {
-        const healthResult = await fetch('http://localhost:3001/api');
+        const healthResult = await fetch('/api');
         const healthStatus = healthResult.ok ? 'OK' : 'ERROR';
         console.log(`API health check: ${healthStatus}`);
       } catch (e) {
@@ -71,9 +71,9 @@ const ApiDebug: React.FC = () => {
       const timeout = setTimeout(() => controller.abort(), 5000);
       
       try {
-        // Test using our special auth test endpoint
+        // Test using our special auth test endpoint with relative URL for proxy
         console.log('Making test request to API auth test endpoint');
-        const response = await fetch('http://localhost:3001/api/test/auth', {
+        const response = await fetch('/api/test/auth', {
           headers: {
             'Authorization': `Bearer ${session.access_token}`
           },
@@ -299,6 +299,7 @@ const ApiDebug: React.FC = () => {
             borderRadius: '4px',
             cursor: isLoading ? 'wait' : 'pointer'
           }}
+          title="Test Create Match"
         >
           Test Create Match
         </button>

@@ -149,9 +149,9 @@ export const createMatch = (
     
     console.log('FORM: Got auth token, submitting form');
     
-    // Submit the form
+    // Submit the form - using relative URL for proxy
     submitFormPost(
-      'http://localhost:3001/api/matches',
+      '/api/matches',
       matchData,
       token,
       onSuccess,

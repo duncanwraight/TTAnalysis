@@ -62,9 +62,9 @@ export const createMatch = (
       onError(new Error('A network error occurred. Please check your connection.'));
     };
     
-    // Open and send the request
-    console.log('XHR: Opening connection to http://localhost:3001/api/matches');
-    xhr.open('POST', 'http://localhost:3001/api/matches', true);
+    // Open and send the request using relative URL for proxy
+    console.log('XHR: Opening connection to /api/matches');
+    xhr.open('POST', '/api/matches', true);
     
     // Set headers
     xhr.setRequestHeader('Content-Type', 'application/json');

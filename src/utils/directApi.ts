@@ -34,8 +34,8 @@ export const createMatch = async (
       throw new Error('Authentication required. Please log in again.');
     }
     
-    // Very simple fetch with minimal options
-    const response = await fetch('http://localhost:3001/api/matches', {
+    // Very simple fetch with minimal options using relative URL for proxy
+    const response = await fetch('/api/matches', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -106,8 +106,8 @@ export const createMatch = async (
   }, 5000);
   
   try {
-    // Test the match creation endpoint directly with a fixed URL
-    console.log('8. Preparing to send POST request to http://localhost:3001/api/matches');
+    // Test the match creation endpoint with relative URL for proxy
+    console.log('8. Preparing to send POST request to /api/matches');
     console.log('Request body:', JSON.stringify(matchData));
     console.log('Headers being sent:', {
       'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ export const createMatch = async (
     
     // Execute fetch and log that we've started
     const fetchStart = Date.now();
-    const response = await fetch('http://localhost:3001/api/matches', {
+    const response = await fetch('/api/matches', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

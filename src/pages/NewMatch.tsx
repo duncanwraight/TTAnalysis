@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { matchApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import '../styles/components/NewMatch.css';
-import ApiDebug from '../components/ApiDebug';
-import * as directApi from '../utils/directApi';
-import * as xhr from '../utils/xhr';
-import * as form from '../utils/form';
 
+/**
+ * NewMatch component for creating a new table tennis match
+ */
 const NewMatch = () => {
   const navigate = useNavigate();
   const { user, session } = useAuth();
@@ -24,14 +22,12 @@ const NewMatch = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Add global error handler to catch any unhandled promise rejections
+  // Error handler for unhandled promise rejections
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('UNHANDLED PROMISE REJECTION:', event.reason);
-      // This ensures we see any unhandled rejections
       if (isSubmitting) {
         setIsSubmitting(false);
-        setError('An unexpected error occurred. Check the console for details.');
+        setError('An unexpected error occurred. Please try again.');
       }
     };
 
@@ -50,6 +46,9 @@ const NewMatch = () => {
     }));
   };
   
+  /**
+   * Handle form submission to create a new match
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -59,10 +58,6 @@ const NewMatch = () => {
     try {
       setIsSubmitting(true);
       setError(null);
-      
-      console.log('Creating match with data:', formData);
-      console.log('User authentication status:', !!user, user?.id);
-      console.log('Session available:', !!session, session?.access_token ? 'token available' : 'no token');
       
       // Check if user is authenticated
       if (!user) {
@@ -86,61 +81,48 @@ const NewMatch = () => {
         notes: formData.notes,
         initial_server: formData.initial_server
       };
+
+      if (!session?.access_token) {
+        throw new Error('No authentication token available');
+      }
       
-      console.log('Using form submission for match creation as a last resort...');
-      
-      // Form submission approach with callbacks
-      form.createMatch(
-        matchData,
-        // Success callback
-        (newMatch) => {
-          console.log('Form Match creation completed successfully');
-          
-          if (!newMatch?.id) {
-            console.error('Match was created but no ID was returned!', newMatch);
-            setError('Match was created but no ID was returned');
-            setIsSubmitting(false);
-            return;
-          }
-          
-          console.log('Match created successfully, ID:', newMatch.id);
-          console.log('Navigating to:', `/matches/${newMatch.id}`);
-          
-          // Navigate to the match tracker with the new match ID
-          navigate(`/matches/${newMatch.id}`);
+      // Send API request to create match
+      const fetchResponse = await fetch('/api/matches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
-        // Error callback
-        (apiError) => {
-          console.error('Form error during match creation:', apiError);
-          setError(apiError.message || 'Error creating match');
-          setIsSubmitting(false);
-        }
-      );
+        body: JSON.stringify(matchData)
+      });
       
-      // Don't set isSubmitting to false here - do it in the callbacks
-      return; // Early return to prevent the finally block from executing
+      if (!fetchResponse.ok) {
+        const errorText = await fetchResponse.text();
+        throw new Error(`API error: ${fetchResponse.status} ${fetchResponse.statusText}`);
+      }
+      
+      const responseData = await fetchResponse.json();
+      
+      if (!responseData.id) {
+        throw new Error('No match ID returned');
+      }
+      
+      // Navigate to the match tracker with the new match ID
+      navigate(`/matches/${responseData.id}`);
     } catch (err) {
-      console.error('Error creating match:', err);
-      
-      // Show more detailed error message
+      // Handle error cases
       let errorMessage = 'Failed to create match. Please try again.';
       
       if (err instanceof Error) {
         errorMessage = err.message;
-        console.error('Error details:', {
-          name: err.name,
-          message: err.message,
-          stack: err.stack
-        });
       }
       
       if (errorMessage.includes('JWT') || errorMessage.includes('token') || errorMessage.includes('auth')) {
         errorMessage = 'Authentication error. Please log out and log in again.';
       }
       
-      // Special handling for timeout errors
       if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
-        errorMessage = 'Request timed out. Please check if the API server is running and try again.';
+        errorMessage = 'Request timed out. Please try again.';
       }
       
       setError(errorMessage);
@@ -148,7 +130,7 @@ const NewMatch = () => {
       setIsSubmitting(false);
     }
   };
-  
+
   return (
     <Layout>
       <div className="new-match-container">
@@ -159,9 +141,6 @@ const NewMatch = () => {
             {error}
           </div>
         )}
-        
-        {/* API debugging tool - remove this in production */}
-        <ApiDebug />
         
         <form onSubmit={handleSubmit} className="match-form">
           <div className="form-group">
