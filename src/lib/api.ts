@@ -69,38 +69,85 @@ export async function testApiConnection() {
  */
 export const matchApi = {
   // Get all matches
-  getAllMatches: (token?: string) => directFetch<Match[]>('/matches', {}, token),
+  getAllMatches: async () => {
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
 
   // Get a match by ID
-  getMatchById: (id: string, token?: string) => directFetch<Match>(`/matches/${id}`, {}, token),
+  getMatchById: async (id: string) => {
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
 
   // Get a match with all sets and points
-  getFullMatchById: (id: string, token?: string) => 
-    directFetch<{ match: Match; sets: Set[]; points: Point[] }>(`/matches/${id}/full`, {}, token),
+  getFullMatchById: async (id: string) => {
+    const [matchResult, setsResult, pointsResult] = await Promise.all([
+      supabase.from('matches').select('*').eq('id', id).single(),
+      supabase.from('sets').select('*').eq('match_id', id).order('set_number', { ascending: true }),
+      supabase.from('points').select('*').eq('match_id', id).order('point_number', { ascending: true })
+    ]);
+
+    if (matchResult.error) throw matchResult.error;
+    if (setsResult.error) throw setsResult.error;
+    if (pointsResult.error) throw pointsResult.error;
+
+    return {
+      match: matchResult.data,
+      sets: setsResult.data,
+      points: pointsResult.data
+    };
+  },
 
   // Create a new match
-  createMatch: (
-    match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>, 
-    token?: string
-  ): Promise<Match> => {
-    return directFetch<Match>('/matches', {
-      method: 'POST',
-      body: JSON.stringify(match),
-    }, token);
+  createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('matches')
+      .insert([{ ...match, user_id: userData.user.id }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   // Update a match
-  updateMatch: (id: string, match: Partial<Match>, token?: string) =>
-    directFetch<Match>(`/matches/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(match),
-    }, token),
-    
+  updateMatch: async (id: string, match: Partial<Match>) => {
+    const { data, error } = await supabase
+      .from('matches')
+      .update(match)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   // Delete a match
-  deleteMatch: (id: string, token?: string) =>
-    directFetch<{ message: string; id: string }>(`/matches/${id}`, {
-      method: 'DELETE',
-    }, token),
+  deleteMatch: async (id: string) => {
+    const { error } = await supabase
+      .from('matches')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { message: 'Match deleted successfully', id };
+  }
 };
 
 /**
@@ -108,22 +155,41 @@ export const matchApi = {
  */
 export const setApi = {
   // Get all sets for a match
-  getSetsByMatchId: (matchId: string, token?: string) => 
-    directFetch<Set[]>(`/sets?match_id=${matchId}`, {}, token),
+  getSetsByMatchId: async (matchId: string) => {
+    const { data, error } = await supabase
+      .from('sets')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('set_number', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
 
   // Create a new set
-  createSet: (set: Omit<Set, 'id' | 'created_at' | 'updated_at'>, token?: string) =>
-    directFetch<Set>('/sets', {
-      method: 'POST',
-      body: JSON.stringify(set),
-    }, token),
+  createSet: async (set: Omit<Set, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('sets')
+      .insert([set])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
 
   // Update a set
-  updateSet: (id: string, set: Partial<Set>, token?: string) =>
-    directFetch<Set>(`/sets/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(set),
-    }, token),
+  updateSet: async (id: string, set: Partial<Set>) => {
+    const { data, error } = await supabase
+      .from('sets')
+      .update(set)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 };
 
 /**
@@ -131,22 +197,39 @@ export const setApi = {
  */
 export const pointApi = {
   // Get all points for a set
-  getPointsBySetId: (setId: string, token?: string) => 
-    directFetch<Point[]>(`/points?set_id=${setId}`, {}, token),
+  getPointsBySetId: async (setId: string) => {
+    const { data, error } = await supabase
+      .from('points')
+      .select('*')
+      .eq('set_id', setId)
+      .order('point_number', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
 
   // Create a new point
-  createPoint: (point: Omit<Point, 'id' | 'created_at'>, token?: string) => {
-    return directFetch<Point>('/points', {
-      method: 'POST',
-      body: JSON.stringify(point),
-    }, token);
+  createPoint: async (point: Omit<Point, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase
+      .from('points')
+      .insert([point])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   // Delete a point
-  deletePoint: (id: string, token?: string) =>
-    directFetch<{ message: string }>(`/points/${id}`, {
-      method: 'DELETE',
-    }, token),
+  deletePoint: async (id: string) => {
+    const { error } = await supabase
+      .from('points')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { message: 'Point deleted successfully' };
+  }
 };
 
 /**
@@ -154,15 +237,31 @@ export const pointApi = {
  */
 export const shotApi = {
   // Get all shot categories
-  getCategories: (token?: string) => directFetch<any[]>('/shots/categories', {}, token),
-  
+  getCategories: async () => {
+    const { data, error } = await supabase
+      .from('shot_categories')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
+
   // Get all shots
-  getShots: (token?: string) => directFetch<any[]>('/shots', {}, token),
+  getShots: async () => {
+    const { data, error } = await supabase
+      .from('shots')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  }
 };
 
 export default {
   match: matchApi,
   set: setApi,
   point: pointApi,
-  shot: shotApi,
+  shot: shotApi
 };

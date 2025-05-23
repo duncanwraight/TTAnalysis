@@ -8,6 +8,7 @@ import MatchAnalysis from './pages/MatchAnalysis';
 import Auth from './pages/Auth';
 import AdminPanel from './pages/AdminPanel';
 import Debug from './pages/Debug';
+import SupabaseTest from './pages/SupabaseTest';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './index.css';
@@ -75,6 +76,9 @@ function App() {
           
           {/* Debug page without protection */}
           <Route path="/debug" element={<Debug />} />
+          
+          {/* Supabase test page without protection */}
+          <Route path="/supabase-test" element={<SupabaseTest />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

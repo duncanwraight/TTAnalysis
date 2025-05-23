@@ -12,7 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.7",
+    "@supabase/supabase-js": "^2.49.8",
     "@types/pg": "^8.15.2",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
