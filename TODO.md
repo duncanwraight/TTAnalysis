@@ -26,7 +26,7 @@
 - [x] Update application to fetch shots from database
 - [ ] Add admin interface for managing shots and categories
 - [x] Update point recording to use shot IDs instead of names
-- [ ] Add shot statistics visualization based on database queries
+- [x] Add shot statistics visualization based on database queries
 
 ## UI Improvements
 - [x] Fix point history panel
@@ -35,10 +35,10 @@
 - [ ] Update text and make consistent styles across interfaces
 
 ## Analysis & Visualizations
-- [ ] Create performance analytics dashboard
-- [ ] Implement "shot success rate" visualizations
-- [ ] Add match statistics summary view
-- [ ] Create visualization for "points lost by shot type"
+- [x] Create performance analytics dashboard
+- [x] Implement "shot success rate" visualizations
+- [x] Add match statistics summary view
+- [x] Create visualization for "points lost by shot type"
 
 ## Deployment
 - [ ] Prepare for hosting with PostgreSQL backend

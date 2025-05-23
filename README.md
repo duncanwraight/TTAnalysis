@@ -20,7 +20,7 @@ npm install
 
 # Alternative: Start components individually
 # 1. Start only the Express API server
-./start-api.sh  # or npm run server
+npm run server
 
 # 2. Start only the frontend (without Supabase or API)
 npm run dev

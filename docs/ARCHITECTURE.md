@@ -95,7 +95,7 @@ Key functionality:
 ## Future Architecture Improvements
 
 1. **Custom Hooks**: Extract common logic into reusable hooks
-2. **Supabase Integration**: Full backend integration with proper data synchronization
-3. **Error Handling**: Comprehensive error boundaries and error states
-4. **Testing Strategy**: Component and integration tests
-5. **Performance Optimization**: Memoization and lazy loading
+2. **Error Handling**: Comprehensive error boundaries and error states
+3. **Testing Strategy**: Component and integration tests
+4. **Performance Optimization**: Memoization and lazy loading
+5. **Admin Interface**: Shot and category management features
