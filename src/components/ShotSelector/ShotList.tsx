@@ -1,16 +1,11 @@
 import React from 'react';
 import ShotItem from './ShotItem';
+import { ShotInfo } from '../../types/database.types';
 
 type ShotType = {
   id: string;
   label: string;
   name?: string;
-};
-
-// Shot info type for passing between components
-type ShotInfo = {
-  shotId: string; // This should be the database UUID
-  hand: 'fh' | 'bh';
 };
 
 type ShotListProps = {

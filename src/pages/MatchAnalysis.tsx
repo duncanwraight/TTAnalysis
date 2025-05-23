@@ -69,14 +69,14 @@ const MatchAnalysis = () => {
     return data.data;
   };
 
-  const matchSummary = analysisData?.matchSummary?.data?.[0];
-  const effectiveShots = renderDataOrError(analysisData?.mostEffectiveShots, 'Most Effective Shots');
-  const costlyShots = renderDataOrError(analysisData?.mostCostlyShots, 'Most Costly Shots');
-  const shotDistribution = renderDataOrError(analysisData?.shotDistribution, 'Shot Distribution');
-  const setBreakdown = renderDataOrError(analysisData?.setBreakdown, 'Set Breakdown');
-  const categoryBreakdown = renderDataOrError(analysisData?.categoryBreakdown, 'Category Breakdown');
-  const tacticalInsights = renderDataOrError(analysisData?.tacticalInsights, 'Tactical Insights');
-  const handAnalysis = renderDataOrError(analysisData?.handAnalysis, 'Hand Analysis');
+  const matchSummary = analysisData?.matchSummary;
+  const effectiveShots = renderDataOrError(analysisData?.mostEffectiveShots);
+  const costlyShots = renderDataOrError(analysisData?.mostCostlyShots);
+  const shotDistribution = renderDataOrError(analysisData?.shotDistribution);
+  const setBreakdown = renderDataOrError(analysisData?.setBreakdown);
+  const categoryBreakdown = renderDataOrError(analysisData?.categoryBreakdown);
+  const tacticalInsights = renderDataOrError(analysisData?.tacticalInsights);
+  const handAnalysis = renderDataOrError(analysisData?.handAnalysis);
   
   return (
     <Layout>

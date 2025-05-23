@@ -1,5 +1,5 @@
 import React from 'react';
-import { Point, Set } from '../types/database.types';
+import { Point, MatchSet } from '../types/database.types';
 import '../styles/components/PointHistory.css';
 
 type PointHistoryProps = {
@@ -7,7 +7,7 @@ type PointHistoryProps = {
   currentSet: number;
   playerName?: string;
   opponentName?: string;
-  sets?: Set[]; // Optional array of sets for database implementation
+  sets?: MatchSet[]; // Optional array of sets for database implementation
   currentSetId?: string; // Optional current set ID for database implementation
 };
 
@@ -96,7 +96,7 @@ const PointHistory: React.FC<PointHistoryProps> = ({
               height: `${Math.min(point.streak * 4 + 16, 40)}px`,
               width: `${Math.min(point.streak * 2 + 8, 20)}px`
             }}
-            title={`Point ${index + 1}: ${point.winner === 'player' ? playerName : opponentName} won with ${point.winning_shot}`}
+            title={`Point ${index + 1}: ${point.winner === 'player' ? playerName : opponentName} won with shot ID ${point.winning_shot_id}`}
           />
         ))}
       </div>

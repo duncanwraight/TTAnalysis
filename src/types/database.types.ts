@@ -29,7 +29,7 @@ export type Match = {
   updated_at: string;
 };
 
-export type Set = {
+export type MatchSet = {
   id: string;
   match_id: string;
   set_number: number;
@@ -44,14 +44,21 @@ export type Set = {
 export type Point = {
   id: string;
   set_id: string;
+  match_id: string; // Added match_id as required by database schema
   point_number: number;
   winner: 'player' | 'opponent';
-  winning_shot_id?: string; // UUID of the shot from shots table
+  winning_shot_id: string; // Required by database schema
   winning_hand?: 'fh' | 'bh';
-  other_shot_id?: string;   // UUID of the shot from shots table
+  other_shot_id: string;   // Required by database schema
   other_hand?: 'fh' | 'bh';
   notes?: string;
   created_at: string;
+};
+
+/* Shot Information Type for UI */
+export type ShotInfo = {
+  shotId: string; // Database UUID
+  hand: 'fh' | 'bh';
 };
 
 /* Shot Classification Types */

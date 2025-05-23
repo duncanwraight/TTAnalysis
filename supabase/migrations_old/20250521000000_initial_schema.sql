@@ -70,12 +70,13 @@ CREATE TABLE IF NOT EXISTS public.sets (
 CREATE TABLE IF NOT EXISTS public.points (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     set_id UUID NOT NULL REFERENCES public.sets(id) ON DELETE CASCADE,
+    match_id UUID NOT NULL REFERENCES public.matches(id) ON DELETE CASCADE,
     point_number INTEGER NOT NULL,
     winner VARCHAR(10) NOT NULL CHECK (winner IN ('player', 'opponent')),
-    winning_shot_id UUID REFERENCES public.shots(id),
-    winning_hand VARCHAR(10) CHECK (winning_hand IN ('fh', 'bh')),
-    other_shot_id UUID REFERENCES public.shots(id),
-    other_hand VARCHAR(10) CHECK (other_hand IN ('fh', 'bh')),
+    winning_shot_id UUID NOT NULL REFERENCES public.shots(id),
+    winning_hand VARCHAR(2) CHECK (winning_hand IN ('fh', 'bh')),
+    other_shot_id UUID NOT NULL REFERENCES public.shots(id),
+    other_hand VARCHAR(2) CHECK (other_hand IN ('fh', 'bh')),
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(set_id, point_number)
@@ -214,10 +215,24 @@ CREATE POLICY "Users can delete points from own sets"
   ON public.points FOR DELETE 
   USING ((SELECT user_id FROM public.matches WHERE id = (SELECT match_id FROM public.sets WHERE id = set_id)) = auth.uid());
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_shots_category_id ON public.shots(category_id);
-CREATE INDEX IF NOT EXISTS idx_matches_user_id ON public.matches(user_id);
-CREATE INDEX IF NOT EXISTS idx_sets_match_id ON public.sets(match_id);
-CREATE INDEX IF NOT EXISTS idx_points_set_id ON public.points(set_id);
-CREATE INDEX IF NOT EXISTS idx_points_winning_shot_id ON public.points(winning_shot_id);
-CREATE INDEX IF NOT EXISTS idx_points_other_shot_id ON public.points(other_shot_id);
+-- Create indexes for better query performance
+CREATE INDEX idx_points_match_id ON public.points(match_id);
+CREATE INDEX idx_points_set_id ON public.points(set_id);
+CREATE INDEX idx_sets_match_id ON public.sets(match_id);
+
+-- Create policies
+CREATE POLICY "Users can only see their own matches"
+    ON public.matches FOR ALL
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can only see sets from their matches"
+    ON public.sets FOR ALL
+    USING (match_id IN (
+        SELECT id FROM public.matches WHERE user_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can only see points from their matches"
+    ON public.points FOR ALL
+    USING (match_id IN (
+        SELECT id FROM public.matches WHERE user_id = auth.uid()
+    ));

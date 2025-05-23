@@ -1,67 +1,16 @@
 /**
  * API client for interacting with the database
- * Uses direct fetch approach for reliable network requests
- * Accepts session token to ensure consistent authentication
+ * Uses Supabase client directly
  */
 
-import { Match, Set, Point } from '../types/database.types';
+import { Match, MatchSet, Point } from '../types/database.types';
 import { supabase } from './supabase';
+import { PostgrestError } from '@supabase/supabase-js';
 
-// Base API URL - relative URL for proxy
-const API_URL = '/api';
-
-/**
- * Direct fetch implementation for all API requests
- * Accepts an optional token parameter to use instead of fetching from Supabase
- */
-async function directFetch<T>(endpoint: string, options: RequestInit = {}, token?: string): Promise<T> {
-  // Use provided token - we don't try to get it from Supabase as that seems to fail
-  let authToken = token;
-  
-  
-  if (!authToken) {
-    console.error('directFetch: No authentication token provided for API call');
-    throw new Error('Authentication required. No token provided for API call.');
-  }
-
-  // Create headers with authentication
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
-    ...options.headers,
-  };
-
-  // Make the request - simplified with no AbortController or timeout
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    headers,
-    ...options,
-  });
-
-  // Handle error responses
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
-  }
-
-  // Parse JSON response
-  const responseData = await response.json();
-  return responseData;
-}
-
-/**
- * Test API connectivity
- */
-export async function testApiConnection() {
-  try {
-    const response = await fetch(`${API_URL}`);
-    if (!response.ok) {
-      return { success: false, error: `API server returned ${response.status} ${response.statusText}` };
-    }
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+// Type guard for PostgrestError
+function isPostgrestError(error: unknown): error is PostgrestError {
+  const e = error as { code?: string; message?: string };
+  return error !== null && typeof error === 'object' && typeof e.code === 'string' && typeof e.message === 'string';
 }
 
 /**
@@ -105,21 +54,120 @@ export const matchApi = {
 
     return {
       match: matchResult.data,
-      sets: setsResult.data,
+      sets: setsResult.data as MatchSet[],
       points: pointsResult.data
     };
   },
 
+  // Get match analysis
+  getAnalysis: async (id: string) => {
+    const [
+      matchSummary,
+      mostEffectiveShots,
+      mostCostlyShots,
+      shotDistribution,
+      handAnalysis,
+      setBreakdown,
+      tacticalInsights
+    ] = await Promise.all([
+      // Match Summary
+      supabase.from('match_summary')
+        .select('*')
+        .eq('match_id', id)
+        .single(),
+
+      // Most Effective Shots
+      supabase.from('most_effective_shots')
+        .select('*')
+        .eq('match_id', id)
+        .order('success_rate', { ascending: false }),
+
+      // Most Costly Shots
+      supabase.from('most_costly_shots')
+        .select('*')
+        .eq('match_id', id)
+        .order('success_rate', { ascending: true }),
+
+      // Shot Distribution
+      supabase.from('shot_distribution')
+        .select('*')
+        .eq('match_id', id)
+        .order('total_shots', { ascending: false }),
+
+      // Hand Analysis
+      supabase.from('hand_analysis')
+        .select('*')
+        .eq('match_id', id),
+
+      // Set Breakdown
+      supabase.from('set_breakdown')
+        .select('*')
+        .eq('match_id', id)
+        .order('set_number', { ascending: true }),
+
+      // Tactical Insights
+      supabase.from('tactical_insights')
+        .select('*')
+        .eq('match_id', id)
+        .order('win_percentage', { ascending: false })
+    ]);
+
+    // Check for errors
+    const results = [
+      { name: 'Match Summary', result: matchSummary },
+      { name: 'Most Effective Shots', result: mostEffectiveShots },
+      { name: 'Most Costly Shots', result: mostCostlyShots },
+      { name: 'Shot Distribution', result: shotDistribution },
+      { name: 'Hand Analysis', result: handAnalysis },
+      { name: 'Set Breakdown', result: setBreakdown },
+      { name: 'Tactical Insights', result: tacticalInsights }
+    ];
+
+    for (const { name, result } of results) {
+      if (result.error) {
+        if (isPostgrestError(result.error)) {
+          throw new Error(`${name} query failed: ${result.error.message}`);
+        }
+        throw new Error(`${name} query failed with unknown error`);
+      }
+    }
+
+    return {
+      matchSummary: matchSummary.data,
+      mostEffectiveShots: mostEffectiveShots.data,
+      mostCostlyShots: mostCostlyShots.data,
+      shotDistribution: shotDistribution.data,
+      handAnalysis: handAnalysis.data,
+      setBreakdown: setBreakdown.data,
+      tacticalInsights: tacticalInsights.data
+    };
+  },
+
   // Create a new match
-  createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) throw new Error('User not authenticated');
+  createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>, userId?: string) => {
+    console.log('createMatch: Starting, match data:', match);
+    
+    let user_id = userId;
+    
+    if (!user_id) {
+      console.log('createMatch: Getting user from auth...');
+      const { data: userData } = await supabase.auth.getUser();
+      console.log('createMatch: User data:', userData);
+      
+      if (!userData.user) throw new Error('User not authenticated');
+      user_id = userData.user.id;
+    }
+
+    const insertData = { ...match, user_id };
+    console.log('createMatch: Inserting data:', insertData);
 
     const { data, error } = await supabase
       .from('matches')
-      .insert([{ ...match, user_id: userData.user.id }])
+      .insert([insertData])
       .select()
       .single();
+
+    console.log('createMatch: Insert result - data:', data, 'error:', error);
 
     if (error) throw error;
     return data;
@@ -167,7 +215,7 @@ export const setApi = {
   },
 
   // Create a new set
-  createSet: async (set: Omit<Set, 'id' | 'created_at' | 'updated_at'>) => {
+  createSet: async (set: Omit<MatchSet, 'id' | 'created_at' | 'updated_at'>) => {
     const { data, error } = await supabase
       .from('sets')
       .insert([set])
@@ -179,7 +227,7 @@ export const setApi = {
   },
 
   // Update a set
-  updateSet: async (id: string, set: Partial<Set>) => {
+  updateSet: async (id: string, set: Partial<MatchSet>) => {
     const { data, error } = await supabase
       .from('sets')
       .update(set)

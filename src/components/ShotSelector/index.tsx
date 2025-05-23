@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ShotCategory from './ShotCategory';
 import ShotList from './ShotList';
-import { ShotCategory as ShotCategoryType } from './types';
 import { useShotData, ShotCategory as DbShotCategory, Shot } from '../../lib/shotsApi';
+import { ShotInfo } from '../../types/database.types';
 import '../../styles/components/ShotSelector.css';
 
 /* String Formatting Helper */
@@ -12,12 +12,6 @@ const formatCategoryName = (name: string): string => {
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-};
-
-/* Shot Information Type Definition */
-type ShotInfo = {
-  shotId: string; // This should be the database UUID
-  hand: 'fh' | 'bh';
 };
 
 type ShotSelectorProps = {

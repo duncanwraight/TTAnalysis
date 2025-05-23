@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Match, Point } from '../types/database.types';
+import { Match, Point, MatchSet, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 
 type SetScore = {
@@ -13,7 +13,7 @@ type MatchState = {
   points: Point[];
   isMatchComplete: boolean;
   // Adding an array of database sets for mapping set_number to set_id
-  dbSets: Set[];
+  dbSets: MatchSet[];
   // Track the current set's ID
   currentSetId: string | null;
 };
@@ -72,12 +72,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     currentSetId: null
   });
   
-  /* Shot Information Type Definition */
-  type ShotInfo = {
-    shotId: string; // This should be the database UUID
-    hand: 'fh' | 'bh';
-  };
-
   // State for the point recording flow
   const [selectedWinner, setSelectedWinner] = useState<'player' | 'opponent' | null>(null);
   const [winningShot, setWinningShot] = useState<ShotInfo | null>(null);
@@ -135,12 +129,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
           // Find the current set ID
           const currentSetId = sets.length > 0 ? sets[sets.length - 1].id : null;
           
-            sets, 
-            points, 
-            currentSet, 
-            currentSetId
-          });
-          
           setMatchState({
             currentSet,
             sets: matchSets,
@@ -160,7 +148,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
               
               // Create match in database
               const newMatch = await api.match.createMatch({
-                user_id: parsedMatch.user_id || '00000000-0000-0000-0000-000000000001',
                 opponent_name: parsedMatch.opponent_name || 'Opponent',
                 date: parsedMatch.date || new Date().toISOString().split('T')[0],
                 match_score: parsedMatch.match_score || '0-0',
@@ -178,8 +165,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
               }
             } else {
               // Create a default match
-              const defaultMatch: Omit<Match, 'id' | 'created_at' | 'updated_at'> = {
-                user_id: '00000000-0000-0000-0000-000000000001', // Use our test user ID
+              const defaultMatch: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
                 opponent_name: 'Opponent',
                 date: new Date().toISOString().split('T')[0],
                 match_score: '0-0',
@@ -293,12 +279,10 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         throw error;
       }
       
-      // Create point in database
-        winningShot.shotId, otherShot.shotId);
-      
       // Use the new ShotInfo format
       const newPoint = await api.point.createPoint({
         set_id: currentSetData.id,
+        match_id: match.id,
         point_number: pointNumber,
         winner,
         winning_shot_id: winningShot.shotId,

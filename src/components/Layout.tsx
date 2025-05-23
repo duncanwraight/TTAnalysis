@@ -8,7 +8,7 @@ type LayoutProps = {
 
 const Layout = ({ children }: LayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Unused
 
   const handleSignOut = async () => {
     try {

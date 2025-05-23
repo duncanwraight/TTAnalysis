@@ -1,14 +1,12 @@
 # TTAnalysis Project TODOs
 
-## Authentication (Self-Hosted Supabase Auth)
+## Authentication (Supabase Auth)
 - [x] Setup Supabase CLI for local development
 - [x] Initialize local Supabase project connected to PostgreSQL database
 - [x] Test connection between Supabase Auth and local database
 - [x] Create Auth UI components (login, signup, password reset)
 - [x] Implement auth state management with React context
 - [x] Create protected routes in frontend
-- [x] Implement JWT verification middleware in Express server
-- [x] Update API endpoints to use authenticated user_id
 - [x] Set up database access controls (Row Level Security)
 - [x] Associate matches with authenticated users
 - [x] Make logout button functional
@@ -41,10 +39,8 @@
 - [x] Create visualization for "points lost by shot type"
 
 ## Deployment
-- [ ] Prepare for hosting with PostgreSQL backend
-- [ ] Set up Supabase hosting (final step)
-- [ ] Configure deployment pipelines
-- [ ] Implement environment variable management for production
+- [ ] Prepare for hosting with Supabase
+- [ ] Set up Supabase hosting
 
 ## Other Improvements
 - [ ] Mobile responsive design refinements

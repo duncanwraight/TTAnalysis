@@ -85,8 +85,8 @@ const NewMatch = () => {
       };
       
       // Send API request to create match using our API hook
-      // No need to pass the session token - it's handled by the hook
-      const newMatch = await api.match.createMatch(matchData);
+      // Pass user ID from context to avoid hanging auth call
+      const newMatch = await api.match.createMatch(matchData, user.id);
       
       if (!newMatch.id) {
         throw new Error('No match ID returned');
@@ -120,6 +120,12 @@ const NewMatch = () => {
     <Layout>
       <div className="new-match-container">
         <h2>New Match</h2>
+        
+        {!user && (
+          <div className="error-message">
+            You must be logged in to create a match. Please <a href="/auth">sign in</a> first.
+          </div>
+        )}
         
         {error && (
           <div className="error-message">

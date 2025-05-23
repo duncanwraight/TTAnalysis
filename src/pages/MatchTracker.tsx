@@ -5,7 +5,7 @@ import PlayerPanel from '../components/PlayerPanel';
 import ShotSelector from '../components/ShotSelector/index';
 import ScoreBoard from '../components/ScoreBoard';
 import PointHistory from '../components/PointHistory';
-import { Match, Set, Point } from '../types/database.types';
+import { Match, MatchSet, Point, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 
@@ -23,7 +23,7 @@ type MatchState = {
   points: Point[];
   isMatchComplete: boolean;
   // Adding an array of database sets for mapping set_number to set_id
-  dbSets: Set[];
+  dbSets: MatchSet[];
   // Track the current set's ID
   currentSetId: string | null;
 };
@@ -45,12 +45,6 @@ const MatchTracker = () => {
     dbSets: [],
     currentSetId: null
   });
-  
-  /* Shot Information Type Definition */
-  type ShotInfo = {
-    shotId: string | null; // Database UUID or null for "no data"
-    hand: 'fh' | 'bh' | null; // Hand or null for "no data"
-  };
   
   /* Point Recording State */
   const [selectedWinner, setSelectedWinner] = useState<'player' | 'opponent' | null>(null);
@@ -143,7 +137,7 @@ const MatchTracker = () => {
             date: new Date().toISOString().split('T')[0],
             match_score: '0-0',
             notes: '',
-            initial_server: 'player'
+            initial_server: 'player' as 'player' | 'opponent'
           };
           
           // Try to get data from localStorage for backward compatibility
@@ -166,10 +160,10 @@ const MatchTracker = () => {
           try {
             const newMatch = await api.match.createMatch(defaultMatch);
             setMatch(newMatch);
-            setInitialServer(defaultMatch.initial_server as 'player' | 'opponent');
+            setInitialServer(defaultMatch.initial_server);
           } catch (createError) {
             console.error('Error creating match:', createError);
-            setError(`Failed to create match: ${createError.message || 'Unknown error'}`);
+            setError(`Failed to create match: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
             throw createError;
           }
         }
@@ -177,7 +171,7 @@ const MatchTracker = () => {
         setLoading(false);
       } catch (error) {
         console.error('Error loading match data:', error);
-        setError(`Failed to load match: ${error.message || 'Unknown error'}`);
+        setError(`Failed to load match: ${error instanceof Error ? error instanceof Error ? error.message : "Unknown error" : 'Unknown error'}`);
         setLoading(false);
       }
     };
@@ -266,7 +260,7 @@ const MatchTracker = () => {
           currentSetData = await api.set.updateSet(matchState.currentSetId, setUpdateData);
         } catch (error) {
           console.error('Error updating set:', error);
-          throw new Error(`Failed to update set: ${error.message}`);
+          throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
       } else {
         // Get sets for this match
@@ -275,7 +269,7 @@ const MatchTracker = () => {
           sets = await api.set.getSetsByMatchId(match.id);
         } catch (error) {
           console.error('Error fetching sets:', error);
-          throw new Error(`Failed to fetch sets: ${error.message}`);
+          throw new Error(`Failed to fetch sets: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
         const existingSet = sets.find(s => s.set_number === matchState.currentSet);
         
@@ -291,7 +285,7 @@ const MatchTracker = () => {
             currentSetData = await api.set.updateSet(existingSet.id, setUpdateData);
           } catch (error) {
             console.error('Error updating existing set:', error);
-            throw new Error(`Failed to update set: ${error.message}`);
+            throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
         } else {
           // Create new set in database
@@ -307,7 +301,7 @@ const MatchTracker = () => {
             currentSetData = await api.set.createSet(newSetData);
           } catch (error) {
             console.error('Error creating set:', error);
-            throw new Error(`Failed to create set: ${error.message}`);
+            throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
         }
       }
@@ -316,6 +310,7 @@ const MatchTracker = () => {
       // Use direct shot IDs and hands from the ShotInfo objects
       const pointData = {
         set_id: currentSetData.id,
+        match_id: match.id,
         point_number: pointNumber,
         winner,
         winning_shot_id: winningShot.shotId,
@@ -333,7 +328,7 @@ const MatchTracker = () => {
         newPoint = await api.point.createPoint(pointData);
       } catch (error) {
         console.error('Error creating point:', error);
-        throw new Error(`Failed to create point: ${error.message}`);
+        throw new Error(`Failed to create point: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
       
       // Check if current set is complete
@@ -373,7 +368,7 @@ const MatchTracker = () => {
             });
           } catch (error) {
             console.error('Error creating next set:', error);
-            throw new Error(`Failed to create next set: ${error.message}`);
+            throw new Error(`Failed to create next set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
           
           setMatchState({
@@ -476,7 +471,7 @@ const MatchTracker = () => {
         await api.point.deletePoint(lastPoint.id);
       } catch (error) {
         console.error('Error deleting point:', error);
-        throw new Error(`Failed to delete point: ${error.message}`);
+        throw new Error(`Failed to delete point: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
       
       // Find the set this point belongs to
@@ -541,7 +536,7 @@ const MatchTracker = () => {
             });
           } catch (error) {
             console.error('Error updating set after deleting point:', error);
-            throw new Error(`Failed to update set: ${error.message}`);
+            throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
           
           // Update the matching set in dbSets
@@ -697,7 +692,7 @@ const MatchTracker = () => {
                 currentSet={matchState.currentSet}
                 opponentName={match?.opponent_name}
                 sets={matchState.dbSets}
-                currentSetId={matchState.currentSetId}
+                currentSetId={matchState.currentSetId || undefined}
               />
             </div>
           )}
@@ -798,7 +793,7 @@ const MatchTracker = () => {
                         if (index < matchState.currentSet) {
                           const isWin = set.playerScore > set.opponentScore;
                           const isLoss = set.playerScore < set.opponentScore;
-                          const isTie = set.playerScore === set.opponentScore;
+                          // const isTie = set.playerScore === set.opponentScore;
                           
                           const bgColor = isWin ? '#d1fae5' : isLoss ? '#fee2e2' : '#f3f4f6';
                           const borderColor = isWin ? '#10b981' : isLoss ? '#ef4444' : '#d1d5db';
@@ -892,7 +887,7 @@ const MatchTracker = () => {
                       currentSet={matchState.currentSet}
                       opponentName={match?.opponent_name}
                       sets={matchState.dbSets}
-                      currentSetId={matchState.currentSetId}
+                      currentSetId={matchState.currentSetId || undefined}
                     />
                   ) : (
                     <div className="point-history-title">Point History</div>
@@ -1040,7 +1035,7 @@ const MatchTracker = () => {
                   });
                 } catch (error) {
                   console.error('[MatchTracker] Error creating set:', error);
-                  throw new Error(`Failed to create set: ${error.message}`);
+                  throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
                 }
                 
                 setMatchState({
