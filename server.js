@@ -479,14 +479,27 @@ app.get('/api/matches/:id/analysis', async (req, res) => {
       return res.status(404).json({ error: 'Match not found or access denied' });
     }
 
-    // Get all points for this match
+    // Get all points with detailed shot and category information
     const pointsResult = await pool.query(`
-      SELECT p.winner, p.winning_shot_id, p.other_shot_id, s.display_name as winning_shot_name, o.display_name as other_shot_name
+      SELECT 
+        p.winner, 
+        p.winning_shot_id, 
+        p.other_shot_id,
+        p.winning_hand,
+        p.other_hand,
+        s.display_name as winning_shot_name, 
+        o.display_name as other_shot_name,
+        sc_w.name as winning_shot_category,
+        sc_o.name as other_shot_category,
+        st.set_number
       FROM points p
       JOIN sets st ON p.set_id = st.id
       LEFT JOIN shots s ON p.winning_shot_id = s.id
       LEFT JOIN shots o ON p.other_shot_id = o.id
+      LEFT JOIN shot_categories sc_w ON s.category_id = sc_w.id
+      LEFT JOIN shot_categories sc_o ON o.category_id = sc_o.id
       WHERE st.match_id = $1
+      ORDER BY st.set_number, p.point_number
     `, [id]);
     
     const allPoints = pointsResult.rows;
@@ -495,35 +508,212 @@ app.get('/api/matches/:id/analysis', async (req, res) => {
       return res.json({
         mostEffectiveShots: { error: 'No data' },
         mostCostlyShots: { error: 'No data' },
+        shotDistribution: { error: 'No data' },
+        setBreakdown: { error: 'No data' },
+        categoryBreakdown: { error: 'No data' },
+        tacticalInsights: { error: 'No data' },
+        handAnalysis: { error: 'No data' },
         matchSummary: { error: 'No data' }
       });
     }
 
-    // Most effective shots (player wins)
+    // 1. Most effective shots (player wins with win percentage)
+    const playerWinPoints = allPoints.filter(p => p.winner === 'player');
+    const totalPlayerWins = playerWinPoints.length;
+    
     const effectiveCounts = {};
-    allPoints
-      .filter(p => p.winner === 'player' && p.winning_shot_name)
+    playerWinPoints
+      .filter(p => p.winning_shot_name)
       .forEach(p => {
         effectiveCounts[p.winning_shot_name] = (effectiveCounts[p.winning_shot_name] || 0) + 1;
       });
     
     const mostEffectiveShots = Object.keys(effectiveCounts).length > 0 
-      ? { data: Object.entries(effectiveCounts).map(([name, wins]) => ({ name, wins })).sort((a, b) => b.wins - a.wins) }
+      ? { data: Object.entries(effectiveCounts)
+          .map(([name, wins]) => ({ 
+            name, 
+            wins, 
+            win_percentage: totalPlayerWins > 0 ? Math.round((wins / totalPlayerWins) * 100) : 0
+          }))
+          .sort((a, b) => b.wins - a.wins) }
       : { error: 'No data' };
     
-    // Most costly shots (player loses)
+    // 2. Most costly shots (player loses)
+    const playerLossPoints = allPoints.filter(p => p.winner === 'opponent');
+    const totalPlayerLosses = playerLossPoints.length;
+    
     const costlyCounts = {};
-    allPoints
-      .filter(p => p.winner === 'opponent' && p.other_shot_name)
+    playerLossPoints
+      .filter(p => p.other_shot_name)
       .forEach(p => {
         costlyCounts[p.other_shot_name] = (costlyCounts[p.other_shot_name] || 0) + 1;
       });
     
     const mostCostlyShots = Object.keys(costlyCounts).length > 0 
-      ? { data: Object.entries(costlyCounts).map(([name, losses]) => ({ name, losses })).sort((a, b) => b.losses - a.losses) }
+      ? { data: Object.entries(costlyCounts)
+          .map(([name, losses]) => ({ 
+            name, 
+            losses, 
+            loss_percentage: totalPlayerLosses > 0 ? Math.round((losses / totalPlayerLosses) * 100) : 0
+          }))
+          .sort((a, b) => b.losses - a.losses) }
       : { error: 'No data' };
 
-    // Match summary
+    // 3. Shot distribution (all shots played by user)
+    const userShots = [];
+    allPoints.forEach(p => {
+      if (p.winner === 'player' && p.winning_shot_name) {
+        userShots.push({ name: p.winning_shot_name, result: 'win' });
+      }
+      if (p.winner === 'opponent' && p.other_shot_name) {
+        userShots.push({ name: p.other_shot_name, result: 'loss' });
+      }
+    });
+    
+    const shotDistCounts = {};
+    userShots.forEach(shot => {
+      if (!shotDistCounts[shot.name]) {
+        shotDistCounts[shot.name] = { total: 0, wins: 0, losses: 0 };
+      }
+      shotDistCounts[shot.name].total++;
+      if (shot.result === 'win') shotDistCounts[shot.name].wins++;
+      if (shot.result === 'loss') shotDistCounts[shot.name].losses++;
+    });
+    
+    const shotDistribution = Object.keys(shotDistCounts).length > 0
+      ? { data: Object.entries(shotDistCounts)
+          .map(([name, stats]) => ({
+            name,
+            total_shots: stats.total,
+            percentage_of_total: userShots.length > 0 ? Math.round((stats.total / userShots.length) * 100) : 0,
+            success_rate: stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0
+          }))
+          .sort((a, b) => b.total_shots - a.total_shots) }
+      : { error: 'No data' };
+
+    // 4. Set breakdown (how winning shots changed between sets)
+    const setBreakdownData = {};
+    playerWinPoints.forEach(p => {
+      if (p.winning_shot_name) {
+        const setNum = p.set_number;
+        if (!setBreakdownData[setNum]) setBreakdownData[setNum] = {};
+        setBreakdownData[setNum][p.winning_shot_name] = (setBreakdownData[setNum][p.winning_shot_name] || 0) + 1;
+      }
+    });
+    
+    const setBreakdown = Object.keys(setBreakdownData).length > 0
+      ? { data: Object.entries(setBreakdownData)
+          .flatMap(([setNum, shots]) => 
+            Object.entries(shots).map(([shotName, wins]) => ({
+              set_number: parseInt(setNum),
+              shot_name: shotName,
+              wins_in_set: wins
+            }))
+          )
+          .sort((a, b) => a.set_number - b.set_number || b.wins_in_set - a.wins_in_set) }
+      : { error: 'No data' };
+
+    // 5. Category breakdown (performance by shot category)
+    const categoryStats = {};
+    userShots.forEach(shot => {
+      // Find category for this shot
+      const point = allPoints.find(p => 
+        (p.winner === 'player' && p.winning_shot_name === shot.name) ||
+        (p.winner === 'opponent' && p.other_shot_name === shot.name)
+      );
+      
+      let category;
+      if (point?.winner === 'player' && point.winning_shot_name === shot.name) {
+        category = point.winning_shot_category;
+      } else if (point?.winner === 'opponent' && point.other_shot_name === shot.name) {
+        category = point.other_shot_category;
+      }
+      
+      if (category) {
+        if (!categoryStats[category]) {
+          categoryStats[category] = { total: 0, wins: 0, losses: 0 };
+        }
+        categoryStats[category].total++;
+        if (shot.result === 'win') categoryStats[category].wins++;
+        if (shot.result === 'loss') categoryStats[category].losses++;
+      }
+    });
+    
+    const categoryBreakdown = Object.keys(categoryStats).length > 0
+      ? { data: Object.entries(categoryStats)
+          .map(([category, stats]) => ({
+            category,
+            total_shots: stats.total,
+            percentage_of_total: userShots.length > 0 ? Math.round((stats.total / userShots.length) * 100) : 0,
+            wins: stats.wins,
+            losses: stats.losses,
+            success_rate: stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0
+          }))
+          .sort((a, b) => b.total_shots - a.total_shots) }
+      : { error: 'No data' };
+
+    // 6. Tactical insights (performance against opponent shot types)
+    const opponentShotStats = {};
+    allPoints.forEach(p => {
+      let opponentShot;
+      if (p.winner === 'player' && p.other_shot_name) {
+        opponentShot = p.other_shot_name;
+        if (!opponentShotStats[opponentShot]) {
+          opponentShotStats[opponentShot] = { encounters: 0, wins: 0, losses: 0 };
+        }
+        opponentShotStats[opponentShot].encounters++;
+        opponentShotStats[opponentShot].wins++;
+      } else if (p.winner === 'opponent' && p.winning_shot_name) {
+        opponentShot = p.winning_shot_name;
+        if (!opponentShotStats[opponentShot]) {
+          opponentShotStats[opponentShot] = { encounters: 0, wins: 0, losses: 0 };
+        }
+        opponentShotStats[opponentShot].encounters++;
+        opponentShotStats[opponentShot].losses++;
+      }
+    });
+    
+    const tacticalInsights = Object.keys(opponentShotStats).length > 0
+      ? { data: Object.entries(opponentShotStats)
+          .filter(([_, stats]) => stats.encounters >= 2) // Only show patterns with 2+ encounters
+          .map(([opponentShot, stats]) => ({
+            opponent_shot: opponentShot,
+            total_encounters: stats.encounters,
+            wins: stats.wins,
+            losses: stats.losses,
+            win_percentage: stats.encounters > 0 ? Math.round((stats.wins / stats.encounters) * 100) : 0
+          }))
+          .sort((a, b) => b.total_encounters - a.total_encounters) }
+      : { error: 'No data' };
+
+    // 7. Hand analysis (forehand vs backhand performance)
+    const handStats = { fh: { total: 0, wins: 0, losses: 0 }, bh: { total: 0, wins: 0, losses: 0 } };
+    
+    allPoints.forEach(p => {
+      if (p.winner === 'player' && p.winning_hand && (p.winning_hand === 'fh' || p.winning_hand === 'bh')) {
+        handStats[p.winning_hand].total++;
+        handStats[p.winning_hand].wins++;
+      }
+      if (p.winner === 'opponent' && p.other_hand && (p.other_hand === 'fh' || p.other_hand === 'bh')) {
+        handStats[p.other_hand].total++;
+        handStats[p.other_hand].losses++;
+      }
+    });
+    
+    const handAnalysis = (handStats.fh.total > 0 || handStats.bh.total > 0)
+      ? { data: ['fh', 'bh']
+          .filter(hand => handStats[hand].total > 0)
+          .map(hand => ({
+            hand,
+            total_shots: handStats[hand].total,
+            wins: handStats[hand].wins,
+            losses: handStats[hand].losses,
+            success_rate: handStats[hand].total > 0 ? Math.round((handStats[hand].wins / handStats[hand].total) * 100) : 0
+          }))
+          .sort((a, b) => b.total_shots - a.total_shots) }
+      : { error: 'No data' };
+
+    // 8. Match summary
     const matchResult = await pool.query(
       'SELECT opponent_name, date, match_score FROM matches WHERE id = $1',
       [id]
@@ -548,6 +738,11 @@ app.get('/api/matches/:id/analysis', async (req, res) => {
     res.json({
       mostEffectiveShots,
       mostCostlyShots,
+      shotDistribution,
+      setBreakdown,
+      categoryBreakdown,
+      tacticalInsights,
+      handAnalysis,
       matchSummary
     });
   } catch (error) {

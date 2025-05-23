@@ -71,6 +71,11 @@ const MatchAnalysis = () => {
   const matchSummary = analysisData?.matchSummary?.data?.[0];
   const effectiveShots = renderDataOrError(analysisData?.mostEffectiveShots, 'Most Effective Shots');
   const costlyShots = renderDataOrError(analysisData?.mostCostlyShots, 'Most Costly Shots');
+  const shotDistribution = renderDataOrError(analysisData?.shotDistribution, 'Shot Distribution');
+  const setBreakdown = renderDataOrError(analysisData?.setBreakdown, 'Set Breakdown');
+  const categoryBreakdown = renderDataOrError(analysisData?.categoryBreakdown, 'Category Breakdown');
+  const tacticalInsights = renderDataOrError(analysisData?.tacticalInsights, 'Tactical Insights');
+  const handAnalysis = renderDataOrError(analysisData?.handAnalysis, 'Hand Analysis');
   
   return (
     <Layout>
@@ -105,7 +110,7 @@ const MatchAnalysis = () => {
             <h3>Most Effective Shots</h3>
             {Array.isArray(effectiveShots) ? (
               effectiveShots.slice(0, 3).map((shot: any, index: number) => (
-                <p key={index}>{shot.name}: {shot.wins} wins</p>
+                <p key={index}>{shot.name}: {shot.wins} wins ({shot.win_percentage}%)</p>
               ))
             ) : (
               <p>{effectiveShots}</p>
@@ -116,10 +121,87 @@ const MatchAnalysis = () => {
             <h3>Most Costly Shots</h3>
             {Array.isArray(costlyShots) ? (
               costlyShots.slice(0, 3).map((shot: any, index: number) => (
-                <p key={index}>{shot.name}: {shot.losses} losses</p>
+                <p key={index}>{shot.name}: {shot.losses} losses ({shot.loss_percentage}%)</p>
               ))
             ) : (
               <p>{costlyShots}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="analysis-sections">
+          <div className="analysis-section">
+            <h3>Shot Distribution</h3>
+            {Array.isArray(shotDistribution) ? (
+              <div className="shot-list">
+                {shotDistribution.slice(0, 5).map((shot: any, index: number) => (
+                  <p key={index}>
+                    {shot.name}: {shot.total_shots} shots ({shot.percentage_of_total}%, {shot.success_rate}% success)
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p>{shotDistribution}</p>
+            )}
+          </div>
+
+          <div className="analysis-section">
+            <h3>Category Performance</h3>
+            {Array.isArray(categoryBreakdown) ? (
+              <div className="category-list">
+                {categoryBreakdown.map((category: any, index: number) => (
+                  <p key={index}>
+                    {category.category}: {category.total_shots} shots ({category.percentage_of_total}%, {category.success_rate}% success)
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p>{categoryBreakdown}</p>
+            )}
+          </div>
+
+          <div className="analysis-section">
+            <h3>Hand Analysis</h3>
+            {Array.isArray(handAnalysis) ? (
+              <div className="hand-stats">
+                {handAnalysis.map((hand: any, index: number) => (
+                  <p key={index}>
+                    {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}: {hand.total_shots} shots ({hand.success_rate}% success)
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p>{handAnalysis}</p>
+            )}
+          </div>
+
+          <div className="analysis-section">
+            <h3>Tactical Insights</h3>
+            {Array.isArray(tacticalInsights) ? (
+              <div className="tactical-list">
+                {tacticalInsights.slice(0, 5).map((insight: any, index: number) => (
+                  <p key={index}>
+                    vs {insight.opponent_shot}: {insight.wins}W-{insight.losses}L ({insight.win_percentage}% win rate)
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p>{tacticalInsights}</p>
+            )}
+          </div>
+
+          <div className="analysis-section">
+            <h3>Set-by-Set Breakdown</h3>
+            {Array.isArray(setBreakdown) ? (
+              <div className="set-breakdown">
+                {setBreakdown.slice(0, 8).map((item: any, index: number) => (
+                  <p key={index}>
+                    Set {item.set_number}: {item.shot_name} ({item.wins_in_set} wins)
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p>{setBreakdown}</p>
             )}
           </div>
         </div>
