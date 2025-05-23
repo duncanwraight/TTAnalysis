@@ -464,6 +464,98 @@ app.delete('/api/matches/:id', async (req, res) => {
   }
 });
 
+// Match analysis endpoint
+app.get('/api/matches/:id/analysis', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verify the match belongs to the authenticated user
+    const matchCheck = await pool.query(
+      'SELECT id FROM matches WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
+    
+    if (matchCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Match not found or access denied' });
+    }
+
+    // Get all points for this match
+    const pointsResult = await pool.query(`
+      SELECT p.winner, p.winning_shot_id, p.other_shot_id, s.display_name as winning_shot_name, o.display_name as other_shot_name
+      FROM points p
+      JOIN sets st ON p.set_id = st.id
+      LEFT JOIN shots s ON p.winning_shot_id = s.id
+      LEFT JOIN shots o ON p.other_shot_id = o.id
+      WHERE st.match_id = $1
+    `, [id]);
+    
+    const allPoints = pointsResult.rows;
+    
+    if (allPoints.length === 0) {
+      return res.json({
+        mostEffectiveShots: { error: 'No data' },
+        mostCostlyShots: { error: 'No data' },
+        matchSummary: { error: 'No data' }
+      });
+    }
+
+    // Most effective shots (player wins)
+    const effectiveCounts = {};
+    allPoints
+      .filter(p => p.winner === 'player' && p.winning_shot_name)
+      .forEach(p => {
+        effectiveCounts[p.winning_shot_name] = (effectiveCounts[p.winning_shot_name] || 0) + 1;
+      });
+    
+    const mostEffectiveShots = Object.keys(effectiveCounts).length > 0 
+      ? { data: Object.entries(effectiveCounts).map(([name, wins]) => ({ name, wins })).sort((a, b) => b.wins - a.wins) }
+      : { error: 'No data' };
+    
+    // Most costly shots (player loses)
+    const costlyCounts = {};
+    allPoints
+      .filter(p => p.winner === 'opponent' && p.other_shot_name)
+      .forEach(p => {
+        costlyCounts[p.other_shot_name] = (costlyCounts[p.other_shot_name] || 0) + 1;
+      });
+    
+    const mostCostlyShots = Object.keys(costlyCounts).length > 0 
+      ? { data: Object.entries(costlyCounts).map(([name, losses]) => ({ name, losses })).sort((a, b) => b.losses - a.losses) }
+      : { error: 'No data' };
+
+    // Match summary
+    const matchResult = await pool.query(
+      'SELECT opponent_name, date, match_score FROM matches WHERE id = $1',
+      [id]
+    );
+    
+    const matchData = matchResult.rows[0];
+    const pointsWon = allPoints.filter(p => p.winner === 'player').length;
+    const pointsLost = allPoints.filter(p => p.winner === 'opponent').length;
+    
+    const matchSummary = { 
+      data: [{
+        opponent_name: matchData.opponent_name,
+        date: matchData.date,
+        match_score: matchData.match_score,
+        total_points: allPoints.length,
+        points_won: pointsWon,
+        points_lost: pointsLost,
+        points_win_percentage: allPoints.length > 0 ? Math.round((pointsWon / allPoints.length) * 100) : 0
+      }]
+    };
+    
+    res.json({
+      mostEffectiveShots,
+      mostCostlyShots,
+      matchSummary
+    });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Sets
 app.get('/api/sets', async (req, res) => {
   try {

@@ -102,6 +102,10 @@ export function useApi() {
       directFetch<{ message: string; id: string }>(`/matches/${id}`, {
         method: 'DELETE',
       }),
+
+    // Get match analysis
+    getAnalysis: (id: string) =>
+      directFetch<any>(`/matches/${id}/analysis`),
   };
 
   /**
