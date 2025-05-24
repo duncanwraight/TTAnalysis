@@ -22,10 +22,12 @@ const MatchAnalysis = () => {
       }
 
       try {
+        console.log('🚀 Fetching analysis for match:', id);
         const data = await api.match.getAnalysis(id);
+        console.log('📈 Received analysis data:', data);
         setAnalysisData(data);
       } catch (err) {
-        console.error('Error fetching analysis:', err);
+        console.error('❌ Error fetching analysis:', err);
         setError('Failed to load analysis data');
       } finally {
         setLoading(false);
@@ -63,10 +65,11 @@ const MatchAnalysis = () => {
   }
 
   const renderDataOrError = (data: any) => {
+    console.log('🔍 renderDataOrError called with:', data);
     if (!data) return <p>No data available</p>;
     if (data.error) return <p>{data.error}</p>;
-    if (!data.data || data.data.length === 0) return <p>No data</p>;
-    return data.data;
+    if (!Array.isArray(data) || data.length === 0) return <p>No data</p>;
+    return data;
   };
 
   const matchSummary = analysisData?.matchSummary;

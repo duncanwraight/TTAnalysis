@@ -61,6 +61,8 @@ export const matchApi = {
 
   // Get match analysis
   getAnalysis: async (id: string) => {
+    console.log('🔍 Starting analysis for match ID:', id);
+    
     const [
       matchSummary,
       mostEffectiveShots,
@@ -68,6 +70,7 @@ export const matchApi = {
       shotDistribution,
       handAnalysis,
       setBreakdown,
+      categoryBreakdown,
       tacticalInsights
     ] = await Promise.all([
       // Match Summary
@@ -105,6 +108,12 @@ export const matchApi = {
         .eq('match_id', id)
         .order('set_number', { ascending: true }),
 
+      // Category Breakdown
+      supabase.from('category_breakdown')
+        .select('*')
+        .eq('match_id', id)
+        .order('total_shots', { ascending: false }),
+
       // Tactical Insights
       supabase.from('tactical_insights')
         .select('*')
@@ -112,7 +121,7 @@ export const matchApi = {
         .order('win_percentage', { ascending: false })
     ]);
 
-    // Check for errors
+    // Check for errors and log results
     const results = [
       { name: 'Match Summary', result: matchSummary },
       { name: 'Most Effective Shots', result: mostEffectiveShots },
@@ -120,27 +129,39 @@ export const matchApi = {
       { name: 'Shot Distribution', result: shotDistribution },
       { name: 'Hand Analysis', result: handAnalysis },
       { name: 'Set Breakdown', result: setBreakdown },
+      { name: 'Category Breakdown', result: categoryBreakdown },
       { name: 'Tactical Insights', result: tacticalInsights }
     ];
 
+    console.log('📊 Analysis query results:');
     for (const { name, result } of results) {
       if (result.error) {
+        console.error(`❌ ${name} error:`, result.error);
         if (isPostgrestError(result.error)) {
           throw new Error(`${name} query failed: ${result.error.message}`);
         }
         throw new Error(`${name} query failed with unknown error`);
+      } else {
+        console.log(`✅ ${name}:`, result.data ? `${result.data.length || 1} records` : 'null/undefined');
+        if (result.data) {
+          console.log(`   Sample data:`, result.data);
+        }
       }
     }
 
-    return {
+    const finalResult = {
       matchSummary: matchSummary.data,
       mostEffectiveShots: mostEffectiveShots.data,
       mostCostlyShots: mostCostlyShots.data,
       shotDistribution: shotDistribution.data,
       handAnalysis: handAnalysis.data,
       setBreakdown: setBreakdown.data,
+      categoryBreakdown: categoryBreakdown.data,
       tacticalInsights: tacticalInsights.data
     };
+    
+    console.log('🎯 Final analysis result:', finalResult);
+    return finalResult;
   },
 
   // Create a new match
