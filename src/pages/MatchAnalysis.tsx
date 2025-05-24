@@ -134,7 +134,7 @@ const MatchAnalysis = () => {
                 </div>
               ))
             ) : (
-              <p>{effectiveShots}</p>
+              <div>{effectiveShots}</div>
             )}
           </div>
           
@@ -148,7 +148,7 @@ const MatchAnalysis = () => {
                 </div>
               ))
             ) : (
-              <p>{costlyShots}</p>
+              <div>{costlyShots}</div>
             )}
           </div>
         </div>
@@ -205,7 +205,7 @@ const MatchAnalysis = () => {
               </table>
             </div>
           ) : (
-            <p>No shot data available</p>
+            <div>No shot data available</div>
           )}
         </div>
 
@@ -226,7 +226,7 @@ const MatchAnalysis = () => {
                 </div>
               </div>
             ) : (
-              <p>{shotDistribution}</p>
+              <div>{shotDistribution}</div>
             )}
           </div>
 
@@ -252,7 +252,7 @@ const MatchAnalysis = () => {
                 </div>
               </div>
             ) : (
-              <p>{categoryBreakdown}</p>
+              <div>{categoryBreakdown}</div>
             )}
           </div>
 
@@ -283,7 +283,7 @@ const MatchAnalysis = () => {
                 </div>
               </div>
             ) : (
-              <p>{handAnalysis}</p>
+              <div>{handAnalysis}</div>
             )}
           </div>
 
@@ -304,7 +304,7 @@ const MatchAnalysis = () => {
                 ))}
               </div>
             ) : (
-              <p>{tacticalInsights}</p>
+              <div>{tacticalInsights}</div>
             )}
           </div>
 
@@ -349,7 +349,7 @@ const MatchAnalysis = () => {
                 })()}
               </div>
             ) : (
-              <p>{setBreakdown}</p>
+              <div>{setBreakdown}</div>
             )}
           </div>
         </div>

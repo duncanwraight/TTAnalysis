@@ -145,29 +145,21 @@ export const matchApi = {
 
   // Create a new match
   createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>, userId?: string) => {
-    console.log('createMatch: Starting, match data:', match);
-    
     let user_id = userId;
     
     if (!user_id) {
-      console.log('createMatch: Getting user from auth...');
       const { data: userData } = await supabase.auth.getUser();
-      console.log('createMatch: User data:', userData);
-      
       if (!userData.user) throw new Error('User not authenticated');
       user_id = userData.user.id;
     }
 
     const insertData = { ...match, user_id };
-    console.log('createMatch: Inserting data:', insertData);
 
     const { data, error } = await supabase
       .from('matches')
       .insert([insertData])
       .select()
       .single();
-
-    console.log('createMatch: Insert result - data:', data, 'error:', error);
 
     if (error) throw error;
     return data;

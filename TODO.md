@@ -38,10 +38,14 @@
 - [x] Add match statistics summary view
 - [x] Create visualization for "points lost by shot type"
 
+## Bug Fixes
+- [ ] Fix Match Analysis queries showing No Data
+- [ ] Fix Shot Selection tabs displaying Shots instead of Categories
+
 ## Deployment
-- [ ] Prepare for hosting with Supabase
-- [ ] Set up Supabase hosting
+- [x] Refactor application to use Supabase Postgres API instead of Express
+- [ ] Set up Vercel or Netifly for frontend deployment
+- [ ] Create GitHub Actions workflow for CI/CD
 
 ## Other Improvements
 - [ ] Mobile responsive design refinements
-- [ ] Add offline mode with sync when connection restored
