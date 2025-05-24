@@ -27,7 +27,6 @@ const Login = ({ onToggleView }: LoginProps) => {
       await signIn(email, password);
       navigate('/');
     } catch (err) {
-      console.error('Login error:', err);
       setError((err as Error).message);
     } finally {
       setLoading(false);

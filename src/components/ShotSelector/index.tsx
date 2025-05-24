@@ -65,7 +65,6 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
         }
         setLoading(false);
       } catch (err) {
-        console.error('Error loading shot data:', err);
         setError('Failed to load shots');
         setLoading(false);
       }

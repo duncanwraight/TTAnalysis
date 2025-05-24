@@ -74,7 +74,6 @@ export const useShotData = () => {
         shots: shots || []
       };
     } catch (error) {
-      console.error('Error in fetchShotsWithCategories:', error);
       
       // Fallback to empty arrays
       return {

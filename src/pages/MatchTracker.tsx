@@ -67,7 +67,6 @@ const MatchTracker = () => {
         
         if (!id) {
           const errorMsg = 'No match ID provided';
-          console.error(errorMsg);
           setError(errorMsg);
           setLoading(false);
           return;
@@ -76,7 +75,6 @@ const MatchTracker = () => {
         // Check user authentication
         if (!user) {
           const errorMsg = 'User not authenticated, cannot load match';
-          console.error(errorMsg);
           setError(errorMsg);
           setLoading(false);
           return;
@@ -125,7 +123,6 @@ const MatchTracker = () => {
           
         } catch (err) {
           // Match doesn't exist in database or couldn't be loaded
-          console.error('Error loading match:', err);
           
           // Create a default match
           const defaultMatch = {
@@ -149,7 +146,6 @@ const MatchTracker = () => {
               defaultMatch.initial_server = parsedMatch.initial_server || defaultMatch.initial_server;
             }
           } catch (e) {
-            console.error('Error reading from localStorage:', e);
           }
           
           // Create the match in database using the API hook
@@ -158,7 +154,6 @@ const MatchTracker = () => {
             setMatch(newMatch);
             setInitialServer(defaultMatch.initial_server);
           } catch (createError) {
-            console.error('Error creating match:', createError);
             setError(`Failed to create match: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
             throw createError;
           }
@@ -166,7 +161,6 @@ const MatchTracker = () => {
         
         setLoading(false);
       } catch (error) {
-        console.error('Error loading match data:', error);
         setError(`Failed to load match: ${error instanceof Error ? error instanceof Error ? error.message : "Unknown error" : 'Unknown error'}`);
         setLoading(false);
       }
@@ -219,7 +213,6 @@ const MatchTracker = () => {
   // Record a point with all the data collected
   const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
     if (!match) {
-      console.error('Cannot record point: match is null');
       resetPointFlow();
       return;
     }
@@ -255,7 +248,6 @@ const MatchTracker = () => {
         try {
           currentSetData = await api.set.updateSet(matchState.currentSetId, setUpdateData);
         } catch (error) {
-          console.error('Error updating set:', error);
           throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
       } else {
@@ -264,7 +256,6 @@ const MatchTracker = () => {
         try {
           sets = await api.set.getSetsByMatchId(match.id);
         } catch (error) {
-          console.error('Error fetching sets:', error);
           throw new Error(`Failed to fetch sets: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
         const existingSet = sets.find(s => s.set_number === matchState.currentSet);
@@ -280,7 +271,6 @@ const MatchTracker = () => {
           try {
             currentSetData = await api.set.updateSet(existingSet.id, setUpdateData);
           } catch (error) {
-            console.error('Error updating existing set:', error);
             throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
         } else {
@@ -296,7 +286,6 @@ const MatchTracker = () => {
           try {
             currentSetData = await api.set.createSet(newSetData);
           } catch (error) {
-            console.error('Error creating set:', error);
             throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
         }
@@ -323,7 +312,6 @@ const MatchTracker = () => {
         // Creating point with API hook (automatic token handling)
         newPoint = await api.point.createPoint(pointData);
       } catch (error) {
-        console.error('Error creating point:', error);
         throw new Error(`Failed to create point: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
       
@@ -344,7 +332,6 @@ const MatchTracker = () => {
             match_score: `${playerSetsWon}-${opponentSetsWon}`
           });
         } catch (error) {
-          console.error('Error updating match score:', error);
           // Continue execution even if match score update fails
         }
         
@@ -363,7 +350,6 @@ const MatchTracker = () => {
               opponent_score: 0
             });
           } catch (error) {
-            console.error('Error creating next set:', error);
             throw new Error(`Failed to create next set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
           
@@ -426,7 +412,6 @@ const MatchTracker = () => {
       resetPointFlow();
       
     } catch (error) {
-      console.error('Error recording point:', error);
       alert('Failed to record point. Please try again.');
       resetPointFlow();
     }
@@ -435,7 +420,6 @@ const MatchTracker = () => {
   // Undo the last recorded point
   const undoLastPoint = async () => {
     if (!match || matchState.points.length === 0) {
-      console.error('Cannot undo: match is null or no points');
       return; // Nothing to undo
     }
     
@@ -449,7 +433,6 @@ const MatchTracker = () => {
       });
       
       if (matchPoints.length === 0) {
-        console.error('No points to undo for this match');
         return;
       }
       
@@ -466,7 +449,6 @@ const MatchTracker = () => {
       try {
         await api.point.deletePoint(lastPoint.id);
       } catch (error) {
-        console.error('Error deleting point:', error);
         throw new Error(`Failed to delete point: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
       
@@ -474,7 +456,6 @@ const MatchTracker = () => {
       const setData = matchState.dbSets.find(set => set.id === lastPoint.set_id);
       
       if (!setData) {
-        console.error('Set not found for point:', lastPoint.id);
         return;
       }
       
@@ -531,7 +512,6 @@ const MatchTracker = () => {
               opponent_score: updatedSets[setIndex].opponentScore
             });
           } catch (error) {
-            console.error('Error updating set after deleting point:', error);
             throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
           }
           
@@ -563,7 +543,6 @@ const MatchTracker = () => {
       // Disable undo if no more points to undo
       setCanUndo(matchState.points.length > 1);
     } catch (error) {
-      console.error('Error undoing point:', error);
     }
   };
   
@@ -1011,7 +990,6 @@ const MatchTracker = () => {
             onClick={async () => {
               // Force next set (manual override)
               if (!match) {
-                console.error('[MatchTracker] Cannot advance to next set: match is null');
                 return;
               }
               
@@ -1030,7 +1008,6 @@ const MatchTracker = () => {
                     opponent_score: 0
                   });
                 } catch (error) {
-                  console.error('[MatchTracker] Error creating set:', error);
                   throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
                 }
                 
@@ -1043,7 +1020,6 @@ const MatchTracker = () => {
                   currentSetId: newSet.id
                 });
               } catch (error) {
-                console.error('[MatchTracker] Error advancing to next set:', error);
               }
             }}
           >

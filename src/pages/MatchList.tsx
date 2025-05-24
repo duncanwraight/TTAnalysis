@@ -19,13 +19,6 @@ const MatchList = () => {
       const data = await api.match.getAllMatches();
       setMatches(data);
     } catch (err) {
-      console.error('❌ [MatchList] Failed to fetch matches:', err);
-      console.error('❌ [MatchList] Error details:', {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined,
-        type: typeof err,
-        err
-      });
       setError('Failed to load matches. Please try again later.');
     } finally {
       setLoading(false);
@@ -44,7 +37,6 @@ const MatchList = () => {
         // Refresh the match list after deletion
         fetchMatches();
       } catch (err) {
-        console.error('Failed to delete match:', err);
         alert('Failed to delete match. Please try again.');
       } finally {
         setIsDeleting(false);

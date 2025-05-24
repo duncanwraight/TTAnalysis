@@ -93,7 +93,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       try {
         // Try to fetch match data from the API
         const matchData = await api.match.getFullMatchById(matchId).catch((err) => {
-          console.error('[MatchContext] Error fetching match data:', err);
           return null;
         });
         
@@ -178,13 +177,11 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
               setInitialServer('player');
             }
           } catch (error) {
-            console.error('[MatchContext] Error creating match:', error);
           }
         }
         
         setLoading(false);
       } catch (error) {
-        console.error('[MatchContext] Error loading match data:', error);
         setLoading(false);
       }
     };
@@ -232,7 +229,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
   /* Point Recording and Scoring Logic */
   const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
     if (!match) {
-      console.error('[MatchContext] Cannot record point: match is null');
       return;
     }
     
@@ -275,7 +271,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
           });
         }
       } catch (error) {
-        console.error('[MatchContext] Error getting/creating set:', error);
         throw error;
       }
       
@@ -358,7 +353,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       // Reset the point flow
       resetPointFlow();
     } catch (error) {
-      console.error('[MatchContext] Error recording point:', error);
     }
   };
 
@@ -385,7 +379,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
   /* Point Undo Functionality */
   const undoLastPoint = async () => {
     if (!match || matchState.points.length === 0) {
-      console.error('[MatchContext] Cannot undo: match is null or no points');
       return; // Nothing to undo
     }
     
@@ -407,7 +400,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
       const setData = sets.find(s => s.id === lastPoint.set_id);
       
       if (!setData) {
-        console.error('[MatchContext] Set not found for point:', lastPoint);
         return;
       }
       
@@ -469,7 +461,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         setCanUndo(false);
       }
     } catch (error) {
-      console.error('[MatchContext] Error undoing point:', error);
     }
   };
 
@@ -498,7 +489,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
   /* Set Management */
   const advanceToNextSet = async () => {
     if (!match) {
-      console.error('[MatchContext] Cannot advance to next set: match is null');
       return;
     }
     
@@ -524,7 +514,6 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         currentSetId: newSet.id
       });
     } catch (error) {
-      console.error('[MatchContext] Error advancing to next set:', error);
     }
   };
 

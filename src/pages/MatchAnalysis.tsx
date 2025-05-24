@@ -34,7 +34,6 @@ const MatchAnalysis = () => {
         const data = await api.match.getAnalysis(id);
         setAnalysisData(data);
       } catch (err) {
-        console.error('❌ Error fetching analysis:', err);
         setError('Failed to load analysis data');
       } finally {
         setLoading(false);

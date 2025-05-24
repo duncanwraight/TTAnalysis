@@ -15,7 +15,6 @@ const Debug: React.FC = () => {
         const sessionResult = await supabase.auth.getSession();
         setSessionData(sessionResult.data);
       } catch (err) {
-        console.error('Error checking session:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);

@@ -31,7 +31,6 @@ const AdminPanel = () => {
         
         setUsers(usersData || []);
       } catch (err) {
-        console.error('Error fetching users:', err);
         setError('Failed to load users');
       } finally {
         setLoading(false);
@@ -55,7 +54,6 @@ const AdminPanel = () => {
         user.id === userId ? {...user, is_admin: !currentStatus} : user
       ));
     } catch (err) {
-      console.error('Error updating admin status:', err);
       setError('Failed to update admin status');
     }
   };
