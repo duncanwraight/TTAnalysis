@@ -39,8 +39,10 @@
 - [x] Create visualization for "points lost by shot type"
 
 ## Bug Fixes
-- [ ] Fix Match Analysis queries showing No Data
-- [ ] Fix Shot Selection tabs displaying Shots instead of Categories
+- [x] Fix Match Analysis queries showing No Data
+- [x] Fix Shot Selection tabs displaying Shots instead of Categories
+- [x] Fix most/least effective shots panels not displaying data in Match Analysis
+- [x] Fix forehand/backhand columns not rendering in Shot Breakdown table
 
 ## Deployment
 - [x] Refactor application to use Supabase Postgres API instead of Express

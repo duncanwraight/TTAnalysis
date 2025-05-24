@@ -4,6 +4,15 @@ import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import '../styles/components/MatchAnalysis.css';
 
+const formatText = (text: string): string => {
+  if (!text) return text;
+  return text
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 const MatchAnalysis = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -22,9 +31,7 @@ const MatchAnalysis = () => {
       }
 
       try {
-        console.log('🚀 Fetching analysis for match:', id);
         const data = await api.match.getAnalysis(id);
-        console.log('📈 Received analysis data:', data);
         setAnalysisData(data);
       } catch (err) {
         console.error('❌ Error fetching analysis:', err);
@@ -64,22 +71,15 @@ const MatchAnalysis = () => {
     );
   }
 
-  const renderDataOrError = (data: any) => {
-    console.log('🔍 renderDataOrError called with:', data);
-    if (!data) return <p>No data available</p>;
-    if (data.error) return <p>{data.error}</p>;
-    if (!Array.isArray(data) || data.length === 0) return <p>No data</p>;
-    return data;
-  };
-
   const matchSummary = analysisData?.matchSummary;
-  const effectiveShots = renderDataOrError(analysisData?.mostEffectiveShots);
-  const costlyShots = renderDataOrError(analysisData?.mostCostlyShots);
-  const shotDistribution = renderDataOrError(analysisData?.shotDistribution);
-  const setBreakdown = renderDataOrError(analysisData?.setBreakdown);
-  const categoryBreakdown = renderDataOrError(analysisData?.categoryBreakdown);
-  const tacticalInsights = renderDataOrError(analysisData?.tacticalInsights);
-  const handAnalysis = renderDataOrError(analysisData?.handAnalysis);
+  const effectiveShots = analysisData?.mostEffectiveShots || [];
+  const costlyShots = analysisData?.mostCostlyShots || [];
+  const shotDistribution = analysisData?.shotDistribution || [];
+  const setBreakdown = analysisData?.setBreakdown || [];
+  const categoryBreakdown = analysisData?.categoryBreakdown || [];
+  const tacticalInsights = analysisData?.tacticalInsights || [];
+  const handAnalysis = analysisData?.handAnalysis || [];
+  const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
   
   return (
     <Layout>
@@ -129,29 +129,29 @@ const MatchAnalysis = () => {
         <div className="headline-metrics">
           <div className="metric-box effective">
             <h4>Most Effective Shots</h4>
-            {Array.isArray(effectiveShots) ? (
+            {effectiveShots.length > 0 ? (
               effectiveShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
-                  <span className="shot-name">{shot.name}</span>
+                  <span className="shot-name">{formatText(shot.name)}</span>
                   <span className="metric-value">{shot.wins} wins ({shot.win_percentage}%)</span>
                 </div>
               ))
             ) : (
-              <div>{effectiveShots}</div>
+              <div>No data</div>
             )}
           </div>
           
           <div className="metric-box costly">
             <h4>Most Costly Shots</h4>
-            {Array.isArray(costlyShots) ? (
+            {costlyShots.length > 0 ? (
               costlyShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
-                  <span className="shot-name">{shot.name}</span>
+                  <span className="shot-name">{formatText(shot.name)}</span>
                   <span className="metric-value">{shot.losses} losses ({shot.loss_percentage}%)</span>
                 </div>
               ))
             ) : (
-              <div>{costlyShots}</div>
+              <div>No data</div>
             )}
           </div>
         </div>
@@ -159,7 +159,7 @@ const MatchAnalysis = () => {
         {/* Shot Analysis Table */}
         <div className="shot-analysis-table">
           <h3>Shot Breakdown</h3>
-          {Array.isArray(shotDistribution) && Array.isArray(handAnalysis) ? (
+          {shotDistribution.length > 0 ? (
             <div className="table-container">
               <table className="analysis-table">
                 <thead>
@@ -178,29 +178,19 @@ const MatchAnalysis = () => {
                     const won = Math.round(shot.total_shots * shot.success_rate / 100);
                     const lost = shot.total_shots - won;
                     
-                    // Get hand data if available
-                    const fhData = Array.isArray(handAnalysis) ? handAnalysis.find((h: any) => h.hand === 'fh') : null;
-                    const bhData = Array.isArray(handAnalysis) ? handAnalysis.find((h: any) => h.hand === 'bh') : null;
-                    
-                    // For now, show proportional distribution based on overall hand usage
-                    const totalHandShots = fhData && bhData ? fhData.total_shots + bhData.total_shots : 0;
-                    const fhProportion = fhData && totalHandShots > 0 ? fhData.total_shots / totalHandShots : 0.5;
-                    const bhProportion = bhData && totalHandShots > 0 ? bhData.total_shots / totalHandShots : 0.5;
-                    
-                    const estimatedFhWins = Math.round(won * fhProportion);
-                    const estimatedBhWins = Math.round(won * bhProportion);
-                    const estimatedFhTotal = Math.round(shot.total_shots * fhProportion);
-                    const estimatedBhTotal = Math.round(shot.total_shots * bhProportion);
+                    // Get hand-specific data for this shot
+                    const fhData = shotHandAnalysis.find((h: any) => h.shot_name === shot.name && h.hand === 'fh');
+                    const bhData = shotHandAnalysis.find((h: any) => h.shot_name === shot.name && h.hand === 'bh');
                     
                     return (
                       <tr key={index}>
-                        <td className="shot-name">{shot.name}</td>
+                        <td className="shot-name">{formatText(shot.name)}</td>
                         <td>{shot.total_shots}</td>
                         <td className="won">{won}</td>
                         <td className="lost">{lost}</td>
                         <td className="percentage">{shot.success_rate}%</td>
-                        <td>{totalHandShots > 0 ? `${estimatedFhWins}/${estimatedFhTotal}` : 'N/A'}</td>
-                        <td>{totalHandShots > 0 ? `${estimatedBhWins}/${estimatedBhTotal}` : 'N/A'}</td>
+                        <td>{fhData ? `${fhData.wins}/${fhData.total_shots}` : 'N/A'}</td>
+                        <td>{bhData ? `${bhData.wins}/${bhData.total_shots}` : 'N/A'}</td>
                       </tr>
                     );
                   })}
@@ -215,33 +205,33 @@ const MatchAnalysis = () => {
         <div className="analysis-sections">
           <div className="analysis-section chart-section">
             <h3>Shot Distribution</h3>
-            {Array.isArray(shotDistribution) ? (
+            {shotDistribution.length > 0 ? (
               <div className="chart-container">
                 <div className="pie-chart-placeholder">
                   <div className="chart-legend">
                     {shotDistribution.slice(0, 5).map((shot: any, index: number) => (
                       <div key={index} className="legend-item">
                         <div className={`legend-color color-${index}`}></div>
-                        <span>{shot.name}: {shot.percentage_of_total}%</span>
+                        <span>{formatText(shot.name)}: {shot.percentage_of_total}%</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
             ) : (
-              <div>{shotDistribution}</div>
+              <div>No data</div>
             )}
           </div>
 
           <div className="analysis-section chart-section">
             <h3>Category Performance</h3>
-            {Array.isArray(categoryBreakdown) ? (
+            {categoryBreakdown.length > 0 ? (
               <div className="chart-container">
                 <div className="bar-chart-placeholder">
                   <div className="category-bars">
                     {categoryBreakdown.map((category: any, index: number) => (
                       <div key={index} className="bar-item">
-                        <div className="bar-label">{category.category}</div>
+                        <div className="bar-label">{formatText(category.category)}</div>
                         <div className="bar-container">
                           <div 
                             className="bar-fill" 
@@ -255,13 +245,13 @@ const MatchAnalysis = () => {
                 </div>
               </div>
             ) : (
-              <div>{categoryBreakdown}</div>
+              <div>No data</div>
             )}
           </div>
 
           <div className="analysis-section chart-section">
             <h3>Hand Analysis</h3>
-            {Array.isArray(handAnalysis) ? (
+            {handAnalysis.length > 0 ? (
               <div className="chart-container">
                 <div className="hand-comparison">
                   {handAnalysis.map((hand: any, index: number) => (
@@ -286,17 +276,17 @@ const MatchAnalysis = () => {
                 </div>
               </div>
             ) : (
-              <div>{handAnalysis}</div>
+              <div>No data</div>
             )}
           </div>
 
           <div className="analysis-section">
             <h3>Tactical Insights</h3>
-            {Array.isArray(tacticalInsights) ? (
+            {tacticalInsights.length > 0 ? (
               <div className="tactical-list">
                 {tacticalInsights.slice(0, 5).map((insight: any, index: number) => (
                   <div key={index} className="tactical-item">
-                    <div className="tactical-matchup">vs {insight.opponent_shot}</div>
+                    <div className="tactical-matchup">vs {formatText(insight.opponent_shot)}</div>
                     <div className="tactical-record">
                       <span className="wins">{insight.wins}W</span>
                       <span className="separator">-</span>
@@ -307,13 +297,13 @@ const MatchAnalysis = () => {
                 ))}
               </div>
             ) : (
-              <div>{tacticalInsights}</div>
+              <div>No data</div>
             )}
           </div>
 
           <div className="analysis-section">
             <h3>Set-by-Set Breakdown</h3>
-            {Array.isArray(setBreakdown) ? (
+            {setBreakdown.length > 0 ? (
               <div className="set-breakdown">
                 {(() => {
                   const setData = setBreakdown.reduce((acc: any, item: any) => {
@@ -337,12 +327,12 @@ const MatchAnalysis = () => {
                         <div className="set-stats">
                           <div className="best-shot">
                             <span className="label">Most successful:</span>
-                            <span className="value">{mostSuccessful.shot_name} ({mostSuccessful.wins_in_set} wins)</span>
+                            <span className="value">{formatText(mostSuccessful.shot_name)} ({mostSuccessful.wins_in_set} wins)</span>
                           </div>
                           {mostSuccessful.shot_name !== leastSuccessful.shot_name && (
                             <div className="worst-shot">
                               <span className="label">Least successful:</span>
-                              <span className="value">{leastSuccessful.shot_name} ({leastSuccessful.wins_in_set} wins)</span>
+                              <span className="value">{formatText(leastSuccessful.shot_name)} ({leastSuccessful.wins_in_set} wins)</span>
                             </div>
                           )}
                         </div>
@@ -352,7 +342,7 @@ const MatchAnalysis = () => {
                 })()}
               </div>
             ) : (
-              <div>{setBreakdown}</div>
+              <div>No data</div>
             )}
           </div>
         </div>

@@ -334,12 +334,29 @@ GROUP BY m.id, w_sh.name, o_sh.name
 HAVING COUNT(*) >= 3
 ORDER BY win_percentage DESC;
 
+CREATE OR REPLACE VIEW shot_hand_analysis AS
+SELECT 
+  m.id AS match_id,
+  sh.name AS shot_name,
+  p.winning_hand AS hand,
+  COUNT(*) AS total_shots,
+  SUM(CASE WHEN p.winner = 'player' THEN 1 ELSE 0 END) AS wins,
+  SUM(CASE WHEN p.winner = 'opponent' THEN 1 ELSE 0 END) AS losses,
+  ROUND(100.0 * SUM(CASE WHEN p.winner = 'player' THEN 1 ELSE 0 END) / COUNT(*), 1) AS success_rate
+FROM matches m
+JOIN sets s ON s.match_id = m.id
+JOIN points p ON p.set_id = s.id
+JOIN shots sh ON sh.id = p.winning_shot_id
+WHERE p.winning_hand IS NOT NULL
+GROUP BY m.id, sh.name, p.winning_hand;
+
 -- Grant access to views for authenticated users
 ALTER VIEW match_summary OWNER TO postgres;
 ALTER VIEW shot_distribution OWNER TO postgres;
 ALTER VIEW most_effective_shots OWNER TO postgres;
 ALTER VIEW most_costly_shots OWNER TO postgres;
 ALTER VIEW hand_analysis OWNER TO postgres;
+ALTER VIEW shot_hand_analysis OWNER TO postgres;
 ALTER VIEW set_breakdown OWNER TO postgres;
 ALTER VIEW tactical_insights OWNER TO postgres;
 ALTER VIEW category_breakdown OWNER TO postgres;
@@ -349,6 +366,7 @@ GRANT SELECT ON shot_distribution TO authenticated;
 GRANT SELECT ON most_effective_shots TO authenticated;
 GRANT SELECT ON most_costly_shots TO authenticated;
 GRANT SELECT ON hand_analysis TO authenticated;
+GRANT SELECT ON shot_hand_analysis TO authenticated;
 GRANT SELECT ON set_breakdown TO authenticated;
 GRANT SELECT ON tactical_insights TO authenticated;
 GRANT SELECT ON category_breakdown TO authenticated;
@@ -358,6 +376,7 @@ GRANT SELECT ON shot_distribution TO anon;
 GRANT SELECT ON most_effective_shots TO anon;
 GRANT SELECT ON most_costly_shots TO anon;
 GRANT SELECT ON hand_analysis TO anon;
+GRANT SELECT ON shot_hand_analysis TO anon;
 GRANT SELECT ON set_breakdown TO anon;
 GRANT SELECT ON tactical_insights TO anon;
 GRANT SELECT ON category_breakdown TO anon;

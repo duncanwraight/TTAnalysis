@@ -61,7 +61,6 @@ export const matchApi = {
 
   // Get match analysis
   getAnalysis: async (id: string) => {
-    console.log('🔍 Starting analysis for match ID:', id);
     
     const [
       matchSummary,
@@ -69,6 +68,7 @@ export const matchApi = {
       mostCostlyShots,
       shotDistribution,
       handAnalysis,
+      shotHandAnalysis,
       setBreakdown,
       categoryBreakdown,
       tacticalInsights
@@ -102,6 +102,11 @@ export const matchApi = {
         .select('*')
         .eq('match_id', id),
 
+      // Shot Hand Analysis
+      supabase.from('shot_hand_analysis')
+        .select('*')
+        .eq('match_id', id),
+
       // Set Breakdown
       supabase.from('set_breakdown')
         .select('*')
@@ -128,12 +133,12 @@ export const matchApi = {
       { name: 'Most Costly Shots', result: mostCostlyShots },
       { name: 'Shot Distribution', result: shotDistribution },
       { name: 'Hand Analysis', result: handAnalysis },
+      { name: 'Shot Hand Analysis', result: shotHandAnalysis },
       { name: 'Set Breakdown', result: setBreakdown },
       { name: 'Category Breakdown', result: categoryBreakdown },
       { name: 'Tactical Insights', result: tacticalInsights }
     ];
 
-    console.log('📊 Analysis query results:');
     for (const { name, result } of results) {
       if (result.error) {
         console.error(`❌ ${name} error:`, result.error);
@@ -142,9 +147,7 @@ export const matchApi = {
         }
         throw new Error(`${name} query failed with unknown error`);
       } else {
-        console.log(`✅ ${name}:`, result.data ? `${result.data.length || 1} records` : 'null/undefined');
         if (result.data) {
-          console.log(`   Sample data:`, result.data);
         }
       }
     }
@@ -155,12 +158,12 @@ export const matchApi = {
       mostCostlyShots: mostCostlyShots.data,
       shotDistribution: shotDistribution.data,
       handAnalysis: handAnalysis.data,
+      shotHandAnalysis: shotHandAnalysis.data,
       setBreakdown: setBreakdown.data,
       categoryBreakdown: categoryBreakdown.data,
       tacticalInsights: tacticalInsights.data
     };
     
-    console.log('🎯 Final analysis result:', finalResult);
     return finalResult;
   },
 

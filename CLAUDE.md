@@ -24,6 +24,9 @@ npm run server
 # Start both API and frontend servers
 npm run dev:all
 
+# Reset database and apply latest migrations
+supabase db reset
+
 # Build for production
 npm run build
 
