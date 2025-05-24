@@ -13,16 +13,27 @@ const MatchList = () => {
 
   const fetchMatches = async () => {
     try {
+      console.log('🔍 [MatchList] Starting fetchMatches...');
       setLoading(true);
       setError(null);
       
+      console.log('🔍 [MatchList] Calling api.match.getAllMatches()...');
       const data = await api.match.getAllMatches();
+      console.log('🔍 [MatchList] Received data:', data);
       setMatches(data);
+      console.log('✅ [MatchList] Successfully set matches state');
     } catch (err) {
-      console.error('Failed to fetch matches:', err);
+      console.error('❌ [MatchList] Failed to fetch matches:', err);
+      console.error('❌ [MatchList] Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        type: typeof err,
+        err
+      });
       setError('Failed to load matches. Please try again later.');
     } finally {
       setLoading(false);
+      console.log('🔍 [MatchList] fetchMatches completed');
     }
   };
   

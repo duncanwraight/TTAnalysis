@@ -64,6 +64,12 @@ const Layout = ({ children }: LayoutProps) => {
       </main>
       <footer className="app-footer">
         <p>&copy; {new Date().getFullYear()} TT Analysis</p>
+        {import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA && (
+          <p style={{ fontSize: '0.8em', opacity: 0.7 }}>
+            Build: {import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)} 
+            {import.meta.env.VITE_VERCEL_GIT_COMMIT_REF && ` (${import.meta.env.VITE_VERCEL_GIT_COMMIT_REF})`}
+          </p>
+        )}
       </footer>
     </div>
   );

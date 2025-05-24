@@ -19,13 +19,33 @@ function isPostgrestError(error: unknown): error is PostgrestError {
 export const matchApi = {
   // Get all matches
   getAllMatches: async () => {
-    const { data, error } = await supabase
-      .from('matches')
-      .select('*')
-      .order('date', { ascending: false });
+    console.log('🔍 [API] Starting getAllMatches...');
+    console.log('🔍 [API] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+    console.log('🔍 [API] Supabase client configured with:', {
+      url: import.meta.env.VITE_SUPABASE_URL,
+      hasKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY
+    });
     
-    if (error) throw error;
-    return data;
+    try {
+      console.log('🔍 [API] Making Supabase query to matches table...');
+      const { data, error } = await supabase
+        .from('matches')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      console.log('🔍 [API] Supabase response:', { data, error });
+      
+      if (error) {
+        console.error('❌ [API] Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('✅ [API] Successfully fetched matches:', data?.length || 0, 'matches');
+      return data;
+    } catch (err) {
+      console.error('❌ [API] Exception in getAllMatches:', err);
+      throw err;
+    }
   },
 
   // Get a match by ID
@@ -169,24 +189,50 @@ export const matchApi = {
 
   // Create a new match
   createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>, userId?: string) => {
+    console.log('🔍 [API] Starting createMatch...');
+    console.log('🔍 [API] Match data:', match);
+    console.log('🔍 [API] Provided userId:', userId);
+    
     let user_id = userId;
     
     if (!user_id) {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-      user_id = userData.user.id;
+      console.log('🔍 [API] No userId provided, getting from auth...');
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        console.log('🔍 [API] Auth response:', userData);
+        if (!userData.user) throw new Error('User not authenticated');
+        user_id = userData.user.id;
+        console.log('🔍 [API] Got user_id from auth:', user_id);
+      } catch (authError) {
+        console.error('❌ [API] Auth error:', authError);
+        throw authError;
+      }
     }
 
     const insertData = { ...match, user_id };
+    console.log('🔍 [API] Final insert data:', insertData);
 
-    const { data, error } = await supabase
-      .from('matches')
-      .insert([insertData])
-      .select()
-      .single();
+    try {
+      console.log('🔍 [API] Making Supabase insert to matches table...');
+      const { data, error } = await supabase
+        .from('matches')
+        .insert([insertData])
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
+      console.log('🔍 [API] Supabase insert response:', { data, error });
+
+      if (error) {
+        console.error('❌ [API] Supabase insert error:', error);
+        throw error;
+      }
+      
+      console.log('✅ [API] Successfully created match:', data);
+      return data;
+    } catch (err) {
+      console.error('❌ [API] Exception in createMatch:', err);
+      throw err;
+    }
   },
 
   // Update a match
