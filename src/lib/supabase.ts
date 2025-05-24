@@ -45,8 +45,8 @@ export const supabase = createClient(
 console.log('✅ [Supabase] Client created successfully');
 
 // Test the connection
-supabase.from('matches').select('count').limit(1).then(result => {
+supabase.from('matches').select('count').limit(1).then((result) => {
   console.log('🔍 [Supabase] Connection test result:', result);
-}).catch(err => {
+}).catch((err: unknown) => {
   console.error('❌ [Supabase] Connection test failed:', err);
 });
