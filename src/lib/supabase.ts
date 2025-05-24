@@ -44,6 +44,24 @@ export const supabase = createClient(
 
 console.log('✅ [Supabase] Client created successfully');
 
+// Force session invalidation on new deployments
+const currentVersion = import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA || 'dev';
+const storedVersion = localStorage.getItem('app_version');
+
+if (storedVersion && storedVersion !== currentVersion) {
+  console.log('🔄 [Auth] New deployment detected, clearing sessions...');
+  // Clear all auth-related localStorage
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+      localStorage.removeItem(key);
+    }
+  });
+  // Clear session storage as well
+  sessionStorage.clear();
+  console.log('✅ [Auth] Sessions cleared for new deployment');
+}
+localStorage.setItem('app_version', currentVersion);
+
 // Test the connection
 (async () => {
   try {

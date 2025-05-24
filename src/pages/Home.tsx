@@ -9,8 +9,6 @@ const Home = () => {
   return (
     <Layout>
       <div className="home-container">
-        <h2>Welcome to Table Tennis Analysis</h2>
-        
         <div className="instructions">
           <h3>How to Use This App</h3>
           <ol>
