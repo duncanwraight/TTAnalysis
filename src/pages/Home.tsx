@@ -24,10 +24,6 @@ const Home = () => {
             </li>
             <li><strong>Analyze your performance</strong> - Review statistics to improve your game</li>
           </ol>
-          
-          <div className="tip">
-            <strong>💡 Tip:</strong> Use this app while watching recordings of your matches for the most accurate analysis.
-          </div>
         </div>
         
         {loading ? (
