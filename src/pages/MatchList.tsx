@@ -3,10 +3,8 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import type { Match } from '../types/database.types';
 import { useApi } from '../lib/useApi';
-import { useAuth } from '../context/AuthContext';
 
 const MatchList = () => {
-  // const { session } = useAuth(); // Unused
   const api = useApi();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);

@@ -67,7 +67,7 @@ const PointHistory: React.FC<PointHistoryProps> = ({
 
   /* Streak Calculation for Visualization */
   let currentStreak = { player: 0, opponent: 0 };
-  const pointsWithStreaks = currentSetPoints.map((point, index) => {
+  const pointsWithStreaks = currentSetPoints.map((point) => {
     // Reset opposite player's streak
     if (point.winner === 'player') {
       currentStreak.opponent = 0;

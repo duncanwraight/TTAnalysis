@@ -12,7 +12,6 @@ type ShotItemProps = {
 const ShotItem: React.FC<ShotItemProps> = ({
   id,
   label,
-  name,
   isDisabled,
   selectedHand,
   onHandSelect

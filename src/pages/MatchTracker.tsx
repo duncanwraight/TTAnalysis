@@ -9,10 +9,6 @@ import { Match, MatchSet, Point, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 
-type SetScore = {
-  player: number;
-  opponent: number;
-};
 
 type MatchState = {
   currentSet: number;

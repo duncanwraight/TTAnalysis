@@ -26,7 +26,7 @@ const NewMatch = () => {
   
   // Error handler for unhandled promise rejections
   useEffect(() => {
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+    const handleUnhandledRejection = () => {
       if (isSubmitting) {
         setIsSubmitting(false);
         setError('An unexpected error occurred. Please try again.');

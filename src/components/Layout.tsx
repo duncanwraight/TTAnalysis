@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 type LayoutProps = {
@@ -8,7 +8,6 @@ type LayoutProps = {
 
 const Layout = ({ children }: LayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
-  // const navigate = useNavigate(); // Unused
 
   const handleSignOut = async () => {
     try {

@@ -13,9 +13,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
   currentSet,
   playerScore,
   opponentScore,
-  opponentName,
-  currentServer,
-  sets = []
+  currentServer
 }) => {
   return (
     <div className="score-board">
