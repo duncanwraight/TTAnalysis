@@ -32,8 +32,8 @@ export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY,
   {
     auth: {
-      autoRefreshToken: false,
-      persistSession: false,
+      autoRefreshToken: true,
+      persistSession: true,
       detectSessionInUrl: false
     },
     db: {
