@@ -10,7 +10,27 @@ const Home = () => {
     <Layout>
       <div className="home-container">
         <h2>Welcome to Table Tennis Analysis</h2>
-        <p>Track and analyze your table tennis matches to improve your game.</p>
+        
+        <div className="instructions">
+          <h3>How to Use This App</h3>
+          <ol>
+            <li><strong>Record your match</strong> - Film your table tennis match for later analysis</li>
+            <li><strong>Create a new match</strong> - Enter opponent details and start tracking</li>
+            <li><strong>Watch point by point</strong> - Play back your recording and analyze each point</li>
+            <li><strong>Record the winning shot</strong> - Select the shot type that won the point</li>
+            <li><strong>Record the other shot</strong> - Choose either:
+              <ul>
+                <li>The shot <em>before</em> the winner (if opponent didn't respond)</li>
+                <li>The shot <em>after</em> the winner (if opponent's return failed)</li>
+              </ul>
+            </li>
+            <li><strong>Analyze your performance</strong> - Review statistics to improve your game</li>
+          </ol>
+          
+          <div className="tip">
+            <strong>💡 Tip:</strong> Use this app while watching recordings of your matches for the most accurate analysis.
+          </div>
+        </div>
         
         {loading ? (
           <div className="loading">Loading...</div>

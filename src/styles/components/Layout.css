@@ -68,3 +68,63 @@
   align-items: center;
   min-height: 200px;
 }
+
+/* Home page styles */
+.home-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.instructions {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 2rem;
+  margin: 2rem 0;
+  border-left: 4px solid #3498db;
+}
+
+.instructions h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.instructions ol {
+  line-height: 1.6;
+  padding-left: 1.5rem;
+}
+
+.instructions li {
+  margin-bottom: 0.8rem;
+}
+
+.instructions ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.instructions ul li {
+  margin-bottom: 0.4rem;
+}
+
+.tip {
+  background: #e8f4fd;
+  border: 1px solid #bee5eb;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  color: #0c5460;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.auth-prompt {
+  text-align: center;
+  margin-top: 2rem;
+}
