@@ -92,7 +92,7 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
     const loadMatchData = async () => {
       try {
         // Try to fetch match data from the API
-        const matchData = await api.match.getFullMatchById(matchId).catch((err) => {
+        const matchData = await api.match.getFullMatchById(matchId).catch(() => {
           return null;
         });
         
