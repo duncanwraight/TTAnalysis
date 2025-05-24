@@ -1,5 +1,5 @@
 -- TTAnalysis Complete Database Schema
--- Single migration with all tables, views, and policies
+-- Single migration with all tables, views, policies, and correct shot categories/shots
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -300,6 +300,22 @@ JOIN points p ON p.set_id = s.id
 JOIN shots sh ON sh.id = p.winning_shot_id
 GROUP BY m.id, s.set_number, sh.name;
 
+CREATE OR REPLACE VIEW category_breakdown AS
+SELECT 
+  m.id AS match_id,
+  sc.name AS category,
+  COUNT(*) AS total_shots,
+  SUM(CASE WHEN p.winner = 'player' THEN 1 ELSE 0 END) AS wins,
+  SUM(CASE WHEN p.winner = 'opponent' THEN 1 ELSE 0 END) AS losses,
+  ROUND(100.0 * SUM(CASE WHEN p.winner = 'player' THEN 1 ELSE 0 END) / COUNT(*), 1) AS success_rate
+FROM matches m
+JOIN sets s ON s.match_id = m.id
+JOIN points p ON p.set_id = s.id
+JOIN shots sh ON sh.id = p.winning_shot_id
+JOIN shot_categories sc ON sc.id = sh.category_id
+GROUP BY m.id, sc.name, sc.display_order
+ORDER BY sc.display_order;
+
 CREATE OR REPLACE VIEW tactical_insights AS
 SELECT 
   m.id AS match_id,
@@ -318,76 +334,67 @@ GROUP BY m.id, w_sh.name, o_sh.name
 HAVING COUNT(*) >= 3
 ORDER BY win_percentage DESC;
 
--- Insert shot categories
+-- Grant access to views for authenticated users
+ALTER VIEW match_summary OWNER TO postgres;
+ALTER VIEW shot_distribution OWNER TO postgres;
+ALTER VIEW most_effective_shots OWNER TO postgres;
+ALTER VIEW most_costly_shots OWNER TO postgres;
+ALTER VIEW hand_analysis OWNER TO postgres;
+ALTER VIEW set_breakdown OWNER TO postgres;
+ALTER VIEW tactical_insights OWNER TO postgres;
+ALTER VIEW category_breakdown OWNER TO postgres;
+
+GRANT SELECT ON match_summary TO authenticated;
+GRANT SELECT ON shot_distribution TO authenticated;
+GRANT SELECT ON most_effective_shots TO authenticated;
+GRANT SELECT ON most_costly_shots TO authenticated;
+GRANT SELECT ON hand_analysis TO authenticated;
+GRANT SELECT ON set_breakdown TO authenticated;
+GRANT SELECT ON tactical_insights TO authenticated;
+GRANT SELECT ON category_breakdown TO authenticated;
+
+GRANT SELECT ON match_summary TO anon;
+GRANT SELECT ON shot_distribution TO anon;
+GRANT SELECT ON most_effective_shots TO anon;
+GRANT SELECT ON most_costly_shots TO anon;
+GRANT SELECT ON hand_analysis TO anon;
+GRANT SELECT ON set_breakdown TO anon;
+GRANT SELECT ON tactical_insights TO anon;
+GRANT SELECT ON category_breakdown TO anon;
+
+-- Insert correct shot categories
 INSERT INTO public.shot_categories (name, display_order) VALUES
 ('serve', 1),
-('return', 2),
-('drive', 3),
-('push', 4),
-('flick', 5),
-('loop', 6),
-('smash', 7),
-('drop', 8),
-('lob', 9),
-('block', 10),
-('chop', 11),
-('counter', 12)
+('around_the_net', 2),
+('pips', 3),
+('attacks', 4),
+('defence', 5)
 ON CONFLICT (name) DO NOTHING;
 
--- Insert shots
+-- Insert correct shots for each category
 INSERT INTO public.shots (category_id, name, display_name, description, display_order) VALUES
--- Serve shots
-((SELECT id FROM public.shot_categories WHERE name = 'serve'), 'short_serve', 'Short Serve', 'Short serve to the net', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'serve'), 'long_serve', 'Long Serve', 'Long serve to the baseline', 2),
-((SELECT id FROM public.shot_categories WHERE name = 'serve'), 'sidespin_serve', 'Sidespin Serve', 'Serve with sidespin', 3),
-((SELECT id FROM public.shot_categories WHERE name = 'serve'), 'topspin_serve', 'Topspin Serve', 'Serve with topspin', 4),
-((SELECT id FROM public.shot_categories WHERE name = 'serve'), 'backspin_serve', 'Backspin Serve', 'Serve with backspin', 5),
+-- Serve category
+((SELECT id FROM public.shot_categories WHERE name = 'serve'), 'serve', 'Serve', 'Basic serve', 1),
+((SELECT id FROM public.shot_categories WHERE name = 'serve'), 'serve_receive', 'Serve receive', 'Return of serve', 2),
 
--- Return shots
-((SELECT id FROM public.shot_categories WHERE name = 'return'), 'push_return', 'Push Return', 'Push return of serve', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'return'), 'flick_return', 'Flick Return', 'Aggressive flick return', 2),
-((SELECT id FROM public.shot_categories WHERE name = 'return'), 'loop_return', 'Loop Return', 'Topspin loop return', 3),
-((SELECT id FROM public.shot_categories WHERE name = 'return'), 'drop_return', 'Drop Return', 'Short drop return', 4),
+-- Around the net category
+((SELECT id FROM public.shot_categories WHERE name = 'around_the_net'), 'push', 'Push', 'Pushing stroke', 1),
+((SELECT id FROM public.shot_categories WHERE name = 'around_the_net'), 'flick', 'Flick', 'Quick aggressive stroke', 2),
 
--- Drive shots
-((SELECT id FROM public.shot_categories WHERE name = 'drive'), 'forehand_drive', 'Forehand Drive', 'Flat forehand drive', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'drive'), 'backhand_drive', 'Backhand Drive', 'Flat backhand drive', 2),
+-- Pips category
+((SELECT id FROM public.shot_categories WHERE name = 'pips'), 'bump', 'Bump', 'Pips bump shot', 1),
+((SELECT id FROM public.shot_categories WHERE name = 'pips'), 'sideswipe', 'Sideswipe', 'Pips sideswipe', 2),
+((SELECT id FROM public.shot_categories WHERE name = 'pips'), 'attack', 'Attack', 'Pips attack', 3),
 
--- Push shots
-((SELECT id FROM public.shot_categories WHERE name = 'push'), 'forehand_push', 'Forehand Push', 'Backspin forehand push', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'push'), 'backhand_push', 'Backhand Push', 'Backspin backhand push', 2),
+-- Attacks category
+((SELECT id FROM public.shot_categories WHERE name = 'attacks'), 'flat_hit', 'Flat-hit', 'Direct flat attack', 1),
+((SELECT id FROM public.shot_categories WHERE name = 'attacks'), 'loop', 'Loop', 'Topspin loop', 2),
+((SELECT id FROM public.shot_categories WHERE name = 'attacks'), 'smash', 'Smash', 'Powerful smash', 3),
+((SELECT id FROM public.shot_categories WHERE name = 'attacks'), 'counter_loop', 'Counter-loop', 'Counter topspin', 4),
 
--- Flick shots
-((SELECT id FROM public.shot_categories WHERE name = 'flick'), 'forehand_flick', 'Forehand Flick', 'Quick forehand flick', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'flick'), 'backhand_flick', 'Backhand Flick', 'Quick backhand flick', 2),
-
--- Loop shots
-((SELECT id FROM public.shot_categories WHERE name = 'loop'), 'forehand_loop', 'Forehand Loop', 'Topspin forehand loop', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'loop'), 'backhand_loop', 'Backhand Loop', 'Topspin backhand loop', 2),
-((SELECT id FROM public.shot_categories WHERE name = 'loop'), 'loop_kill', 'Loop Kill', 'Aggressive topspin finish', 3),
-
--- Smash shots
-((SELECT id FROM public.shot_categories WHERE name = 'smash'), 'forehand_smash', 'Forehand Smash', 'Overhead forehand smash', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'smash'), 'backhand_smash', 'Backhand Smash', 'Overhead backhand smash', 2),
-
--- Drop shots
-((SELECT id FROM public.shot_categories WHERE name = 'drop'), 'drop_shot', 'Drop Shot', 'Short drop shot', 1),
-
--- Lob shots
-((SELECT id FROM public.shot_categories WHERE name = 'lob'), 'defensive_lob', 'Defensive Lob', 'High defensive lob', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'lob'), 'attacking_lob', 'Attacking Lob', 'Lower attacking lob', 2),
-
--- Block shots
-((SELECT id FROM public.shot_categories WHERE name = 'block'), 'forehand_block', 'Forehand Block', 'Passive forehand block', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'block'), 'backhand_block', 'Backhand Block', 'Passive backhand block', 2),
-((SELECT id FROM public.shot_categories WHERE name = 'block'), 'active_block', 'Active Block', 'Aggressive block with angle', 3),
-
--- Chop shots
-((SELECT id FROM public.shot_categories WHERE name = 'chop'), 'forehand_chop', 'Forehand Chop', 'Heavy backspin chop', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'chop'), 'backhand_chop', 'Backhand Chop', 'Heavy backspin chop', 2),
-
--- Counter shots
-((SELECT id FROM public.shot_categories WHERE name = 'counter'), 'counter_drive', 'Counter Drive', 'Fast counter drive', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'counter'), 'counter_loop', 'Counter Loop', 'Topspin counter loop', 2)
+-- Defence category
+((SELECT id FROM public.shot_categories WHERE name = 'defence'), 'chop', 'Chop', 'Defensive chop', 1),
+((SELECT id FROM public.shot_categories WHERE name = 'defence'), 'fish', 'Fish', 'Defensive fish shot', 2),
+((SELECT id FROM public.shot_categories WHERE name = 'defence'), 'lob', 'Lob', 'Defensive lob', 3)
 
 ON CONFLICT (category_id, name) DO NOTHING;
