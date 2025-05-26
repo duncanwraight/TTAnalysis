@@ -29,30 +29,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setLoading(false);
-        
-        // Check admin status when session changes
-        if (session?.user) {
-          try {
-            const { data: userData } = await supabase
-              .from('profiles')
-              .select('is_admin')
-              .eq('id', session.user.id)
-              .single();
-            setIsAdmin(userData?.is_admin || false);
-          } catch {
-            setIsAdmin(false);
-          }
-        } else {
-          setIsAdmin(false);
-        }
       }
     );
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check admin status when user changes
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (session?.user) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
+          setIsAdmin(data?.is_admin || false);
+        } catch {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [session?.user]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
