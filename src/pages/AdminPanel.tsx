@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import '../styles/components/AdminPanel.css';
 
 const AdminPanel = () => {
   const { isAdmin } = useAuth();
@@ -67,6 +68,15 @@ const AdminPanel = () => {
       <h1>Admin Panel</h1>
       
       {error && <div className="error-message">{error}</div>}
+      
+      <div className="admin-navigation">
+        <h2>Admin Functions</h2>
+        <div className="admin-links">
+          <Link to="/admin/shots">
+            <Button>Manage Shots</Button>
+          </Link>
+        </div>
+      </div>
       
       <div className="users-management">
         <h2>Users Management</h2>

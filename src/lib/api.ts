@@ -316,6 +316,90 @@ export const shotApi = {
 
     if (error) throw error;
     return data;
+  },
+
+  // Create a new shot category
+  createCategory: async (category: { name: string; display_order: number }) => {
+    const { data, error } = await supabase
+      .from('shot_categories')
+      .insert([category])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Update a shot category
+  updateCategory: async (id: string, category: { name?: string; display_order?: number }) => {
+    const { data, error } = await supabase
+      .from('shot_categories')
+      .update(category)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Delete a shot category
+  deleteCategory: async (id: string) => {
+    const { error } = await supabase
+      .from('shot_categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { message: 'Category deleted successfully', id };
+  },
+
+  // Create a new shot
+  createShot: async (shot: { 
+    category_id: string; 
+    name: string; 
+    display_name: string; 
+    description?: string; 
+    display_order: number 
+  }) => {
+    const { data, error } = await supabase
+      .from('shots')
+      .insert([shot])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Update a shot
+  updateShot: async (id: string, shot: { 
+    category_id?: string; 
+    name?: string; 
+    display_name?: string; 
+    description?: string; 
+    display_order?: number 
+  }) => {
+    const { data, error } = await supabase
+      .from('shots')
+      .update(shot)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Delete a shot
+  deleteShot: async (id: string) => {
+    const { error } = await supabase
+      .from('shots')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { message: 'Shot deleted successfully', id };
   }
 };
 

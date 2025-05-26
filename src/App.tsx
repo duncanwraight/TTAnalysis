@@ -7,6 +7,7 @@ import MatchTracker from './pages/MatchTracker';
 import MatchAnalysis from './pages/MatchAnalysis';
 import Auth from './pages/Auth';
 import AdminPanel from './pages/AdminPanel';
+import AdminShots from './pages/AdminShots';
 import Debug from './pages/Debug';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -63,12 +64,20 @@ function App() {
             } 
           />
           
-          {/* Admin route requiring admin status */}
+          {/* Admin routes requiring admin status */}
           <Route 
             path="/admin" 
             element={
               <ProtectedRoute requireAdmin={true}>
                 <AdminPanel />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/shots" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminShots />
               </ProtectedRoute>
             } 
           />
