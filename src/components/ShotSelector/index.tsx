@@ -183,8 +183,8 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     if (shotName === 'serve') {
       // Can only use 'serve' shot if this player IS the server
       return !playerIsServer; // Disable if the player is not the server
-    } else if (shotName.includes('receive')) {
-      // Can only use 'serve_receive' shot if this player is NOT the server
+    } else if (shotName.includes('service_fault')) {
+      // Can only use 'service_fault' shot if this player is NOT the server
       return playerIsServer; // Disable if the player is the server
     }
     
