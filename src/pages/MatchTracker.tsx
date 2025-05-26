@@ -572,16 +572,35 @@ const MatchTracker = () => {
   // Calculate who is currently serving
   const getCurrentServer = (): 'player' | 'opponent' => {
     const totalPoints = getTotalPoints();
-    // In table tennis, service changes every 2 points
-    const serverChangeCount = Math.floor(totalPoints / 2);
+    const currentSetIndex = matchState.currentSet - 1;
+    const currentSet = matchState.sets[currentSetIndex];
     
-    // First server is determined by the match settings (initial server)
-    // Return the opposite of initial server if server has changed
-    const currentServer = serverChangeCount % 2 === 0 ? 
+    // Determine the initial server for this set
+    // The initial server alternates each set
+    const setInitialServer = (matchState.currentSet % 2 === 1) ? 
       initialServer : 
       (initialServer === 'player' ? 'opponent' : 'player');
     
-    return currentServer;
+    // Check if we're in deuce (both players at 10+ points)
+    const isInDeuce = currentSet.playerScore >= 10 && currentSet.opponentScore >= 10;
+    
+    if (isInDeuce) {
+      // In deuce, service changes every 1 point
+      const serverChangeCount = totalPoints - 20; // Points since deuce started
+      const currentServer = serverChangeCount % 2 === 0 ? 
+        setInitialServer : 
+        (setInitialServer === 'player' ? 'opponent' : 'player');
+      
+      return currentServer;
+    } else {
+      // Normal play: service changes every 2 points
+      const serverChangeCount = Math.floor(totalPoints / 2);
+      const currentServer = serverChangeCount % 2 === 0 ? 
+        setInitialServer : 
+        (setInitialServer === 'player' ? 'opponent' : 'player');
+      
+      return currentServer;
+    }
   };
   
   if (loading) {
