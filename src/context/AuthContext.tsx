@@ -40,9 +40,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check admin status when user changes
   useEffect(() => {
-    // TODO: Implement proper admin check when profiles table exists
-    // For now, set admin to false to prevent hanging on non-existent table
-    setIsAdmin(false);
+    const checkAdminStatus = async () => {
+      if (!session?.user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        // Check if user has a profile and is admin
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+          return;
+        }
+
+        setIsAdmin(data?.is_admin || false);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
   }, [session?.user]);
 
   const signIn = async (email: string, password: string) => {
