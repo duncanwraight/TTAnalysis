@@ -95,11 +95,37 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     // Create a shot info object with the shot ID and hand
     const shotInfo: ShotInfo = {
       shotId: shot.id, // Make sure we use the ID from the database object
-      hand: hand
+      hand: hand,
+      isLucky: false,
+      isServiceFault: false
     };
     
     // Pass the shot info object to the parent component
     onSelect(shotInfo);
+  };
+
+  // Handle lucky shot toggle
+  const handleLuckyToggle = () => {
+    if (!selected) return;
+    
+    const updatedShot: ShotInfo = {
+      ...selected,
+      isLucky: !selected.isLucky
+    };
+    
+    onSelect(updatedShot);
+  };
+
+  // Handle service fault toggle
+  const handleServiceFaultToggle = () => {
+    if (!selected) return;
+    
+    const updatedShot: ShotInfo = {
+      ...selected,
+      isServiceFault: !selected.isServiceFault
+    };
+    
+    onSelect(updatedShot);
   };
 
   // Find the current category
@@ -227,6 +253,32 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
         onShotSelect={handleShotSelect}
         isServeDisabled={isServeDisabled}
       />
+      
+      {selected && shotType === 'winning' && (
+        <div className="shot-modifiers">
+          <div className="modifier-checkboxes">
+            <label className="modifier-checkbox">
+              <input
+                type="checkbox"
+                checked={selected.isLucky || false}
+                onChange={handleLuckyToggle}
+                disabled={disabled}
+              />
+              <span className="checkbox-label">Lucky shot (hit net/edge)</span>
+            </label>
+            
+            <label className="modifier-checkbox">
+              <input
+                type="checkbox"
+                checked={selected.isServiceFault || false}
+                onChange={handleServiceFaultToggle}
+                disabled={disabled}
+              />
+              <span className="checkbox-label">Service fault</span>
+            </label>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

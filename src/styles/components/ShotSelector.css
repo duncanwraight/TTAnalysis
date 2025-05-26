@@ -229,3 +229,53 @@ button[disabled],
   color: var(--light-text-color);
   font-style: italic;
 }
+
+/* Shot Modifiers Styling */
+.shot-modifiers {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: rgba(37, 99, 235, 0.05);
+  border-radius: 0.375rem;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.modifier-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modifier-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.modifier-checkbox input[type="checkbox"] {
+  margin-right: 0.5rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+.checkbox-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.modifier-checkbox:hover .checkbox-label {
+  color: var(--primary-color);
+}
+
+.modifier-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modifier-checkbox input[type="checkbox"]:disabled + .checkbox-label {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

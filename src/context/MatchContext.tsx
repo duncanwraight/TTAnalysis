@@ -284,7 +284,9 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         winning_hand: winningShot.hand,
         other_shot_id: otherShot.shotId,
         other_hand: otherShot.hand,
-        notes: ''
+        notes: '',
+        is_lucky_shot: winningShot.isLucky || false,
+        is_service_fault: winningShot.isServiceFault || false
       });
       
       // Check if current set is complete
