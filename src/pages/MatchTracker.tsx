@@ -953,21 +953,14 @@ const MatchTracker = () => {
                 Back
               </button>
               
-              {/* No Data button */}
+              {/* No Data button - skip point without recording */}
               <button
                 className="btn outline-btn no-data-btn"
                 onClick={() => {
-                  // Create a point without shot data by passing null values
-                  // The server will handle this appropriately
-                  const noDataShot: ShotInfo = {
-                    shotId: null as any, // Using null for the shotId
-                    hand: null as any // Using null for the hand
-                  };
-                  
-                  // Record the point without shot data
-                  recordPoint(selectedWinner!, noDataShot, noDataShot);
+                  // Skip this point without recording anything
+                  resetPointFlow();
                 }}
-                title="Record point without shot data"
+                title="Skip this point without recording data"
               >
                 No Data
               </button>
@@ -984,6 +977,83 @@ const MatchTracker = () => {
               ↩️ Undo
             </button>
           )}
+          
+          <button 
+            className="btn outline-btn"
+            onClick={async () => {
+              // End current set - award to player with highest score
+              if (!match) {
+                return;
+              }
+              
+              const currentSetIndex = matchState.currentSet - 1;
+              const currentSet = matchState.sets[currentSetIndex];
+              
+              // Check if there's a clear winner
+              if (currentSet.playerScore === currentSet.opponentScore) {
+                alert("Cannot end set - scores are tied!");
+                return;
+              }
+              
+              try {
+                // Update the current set in database to mark it as complete
+                if (matchState.currentSetId) {
+                  await api.set.updateSet(matchState.currentSetId, {
+                    score: `${currentSet.playerScore}-${currentSet.opponentScore}`,
+                    player_score: currentSet.playerScore,
+                    opponent_score: currentSet.opponentScore
+                  });
+                }
+                
+                // Check if match is over (best of 5)
+                const bestOf = 5;
+                const playerSetsWon = matchState.sets.filter(set => set.playerScore > set.opponentScore).length + 
+                  (currentSet.playerScore > currentSet.opponentScore ? 1 : 0);
+                const opponentSetsWon = matchState.sets.filter(set => set.opponentScore > set.playerScore).length + 
+                  (currentSet.opponentScore > currentSet.playerScore ? 1 : 0);
+                const isMatchComplete = playerSetsWon > bestOf / 2 || opponentSetsWon > bestOf / 2;
+                
+                // Update match score in database
+                await api.match.updateMatch(match.id, {
+                  match_score: `${playerSetsWon}-${opponentSetsWon}`
+                });
+                
+                if (!isMatchComplete) {
+                  // Start next set
+                  const updatedSets = [...matchState.sets];
+                  updatedSets.push({ playerScore: 0, opponentScore: 0 });
+                  
+                  // Create a new set in the database
+                  const newSet = await api.set.createSet({
+                    match_id: match.id,
+                    set_number: matchState.currentSet + 1,
+                    score: '0-0',
+                    player_score: 0,
+                    opponent_score: 0
+                  });
+                  
+                  setMatchState({
+                    currentSet: matchState.currentSet + 1,
+                    sets: updatedSets,
+                    points: matchState.points,
+                    isMatchComplete: false,
+                    dbSets: [...matchState.dbSets, newSet],
+                    currentSetId: newSet.id
+                  });
+                } else {
+                  // Match is complete
+                  setMatchState({
+                    ...matchState,
+                    isMatchComplete: true
+                  });
+                }
+              } catch (error) {
+                alert(`Failed to end set: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              }
+            }}
+          >
+            End Set
+          </button>
           
           <button 
             className="btn outline-btn"
