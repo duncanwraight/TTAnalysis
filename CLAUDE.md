@@ -35,6 +35,9 @@ npm run lint
 
 # Preview the production build
 npm run preview
+
+# Promote a user to admin (requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env)
+npm run promote-admin user@example.com
 ```
 
 The `start-dev.sh` script handles:
