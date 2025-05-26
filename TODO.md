@@ -46,8 +46,7 @@
 
 ## Deployment
 - [x] Refactor application to use Supabase Postgres API instead of Express
-- [ ] Set up Vercel or Netifly for frontend deployment
-- [ ] Create GitHub Actions workflow for CI/CD
+- [x] Set up Vercel or Netifly for frontend deployment
 
 ## Other Improvements
 - [ ] Mobile responsive design refinements
