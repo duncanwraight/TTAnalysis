@@ -53,7 +53,6 @@ export type Point = {
   other_hand?: 'fh' | 'bh';
   notes?: string;
   is_lucky_shot?: boolean; // Tracks whether the winning shot was lucky (e.g., hit net or edge)
-  is_service_fault?: boolean; // Tracks whether the point was won due to a service fault
   created_at: string;
 };
 
@@ -62,7 +61,6 @@ export type ShotInfo = {
   shotId: string; // Database UUID
   hand: 'fh' | 'bh';
   isLucky?: boolean; // Whether this shot was lucky (hit net/edge)
-  isServiceFault?: boolean; // Whether this point was won due to service fault
 };
 
 /* Shot Classification Types */

@@ -96,8 +96,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     const shotInfo: ShotInfo = {
       shotId: shot.id, // Make sure we use the ID from the database object
       hand: hand,
-      isLucky: false,
-      isServiceFault: false
+      isLucky: false
     };
     
     // Pass the shot info object to the parent component
@@ -111,18 +110,6 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     const updatedShot: ShotInfo = {
       ...selected,
       isLucky: !selected.isLucky
-    };
-    
-    onSelect(updatedShot);
-  };
-
-  // Handle service fault toggle
-  const handleServiceFaultToggle = () => {
-    if (!selected) return;
-    
-    const updatedShot: ShotInfo = {
-      ...selected,
-      isServiceFault: !selected.isServiceFault
     };
     
     onSelect(updatedShot);
@@ -265,16 +252,6 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
                 disabled={disabled}
               />
               <span className="checkbox-label">Lucky shot (hit net/edge)</span>
-            </label>
-            
-            <label className="modifier-checkbox">
-              <input
-                type="checkbox"
-                checked={selected.isServiceFault || false}
-                onChange={handleServiceFaultToggle}
-                disabled={disabled}
-              />
-              <span className="checkbox-label">Service fault</span>
             </label>
           </div>
         </div>
