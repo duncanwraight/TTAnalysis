@@ -9,52 +9,56 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
   const { user, loading, isAdmin } = useAuth();
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [showContent, setShowContent] = useState(!loading && !!user);
   
-  // Reduce timeout to 1.5 seconds for faster responsiveness
+  // Debug log
+  
+  // Force exit from loading state after 3 seconds
   useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setLoadingTimeout(true);
-      }, 1500);
-      
-      return () => clearTimeout(timer);
-    } else {
-      setLoadingTimeout(false);
+    // Skip timer if already loaded
+    if (!loading) {
+      if (user) {
+        setShowContent(true);
+      }
+      return;
     }
-  }, [loading]);
+    
+    const timer = setTimeout(() => {
+      // If we're still loading after timeout, we'll make a decision based on current state
+      if (user) {
+        setShowContent(true);
+      } else {
+        // If still no user after timeout, redirect to auth
+        setShowContent(false);
+      }
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, [loading, user]);
 
-  // Immediate redirect if not authenticated and not loading
+  // When not in loading state, handle redirect if not authenticated
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Immediate redirect if loading has timed out and no user
-  if (loadingTimeout && !user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Immediate redirect if not admin but admin required
-  if (!loading && user && requireAdmin && !isAdmin) {
+  // When not in loading state, handle redirect if not admin but admin required
+  if (!loading && requireAdmin && !isAdmin) {
     return <Navigate to="/" replace />;
   }
 
-  // Show content if user exists and loading is complete (or if we have a user despite loading)
-  if (user && (!loading || !loadingTimeout)) {
+  // Show content if either:
+  // 1. We're not loading and user is authenticated
+  // 2. We've forced exit from loading state after timeout and user is authenticated
+  if (showContent) {
     return <>{children}</>;
   }
 
-  // Show loading only while actually loading and within timeout
-  if (loading && !loadingTimeout) {
-    return (
-      <div className="loading-container">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  // Fallback redirect to auth
-  return <Navigate to="/auth" replace />;
+  // Otherwise show loading
+  return (
+    <div className="loading-container">
+      <p>Loading...</p>
+    </div>
+  );
 };
 
 export default ProtectedRoute;

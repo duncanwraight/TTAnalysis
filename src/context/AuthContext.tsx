@@ -11,7 +11,6 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   isAdmin: boolean;
-  handleAuthError: (error: unknown) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,14 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setSession(session);
         setLoading(false);
-        
-        // Handle session events
-        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          setIsAdmin(false);
-        }
         
         // Check admin status when session changes
         if (session?.user) {
@@ -57,24 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Periodic session validation (every 5 minutes)
-    const sessionCheck = setInterval(async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-          setSession(null);
-          setIsAdmin(false);
-        }
-      } catch {
-        setSession(null);
-        setIsAdmin(false);
-      }
-    }, 5 * 60 * 1000);
-
-    return () => {
-      subscription.unsubscribe();
-      clearInterval(sessionCheck);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -99,26 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const handleAuthError = (error: unknown) => {
-    if (error) {
-      const err = error as { message?: string; status?: number; code?: string };
-      const errorMessage = err.message || '';
-      const isAuthError = 
-        errorMessage.includes('JWT') ||
-        errorMessage.includes('token') ||
-        errorMessage.includes('expired') ||
-        errorMessage.includes('invalid') ||
-        errorMessage.includes('unauthorized') ||
-        err.status === 401 ||
-        err.code === 'UNAUTHORIZED';
-      
-      if (isAuthError) {
-        signOut().catch(() => {});
-        window.location.href = '/auth';
-      }
-    }
-  };
-
   const value = {
     user: session?.user ?? null,
     session,
@@ -128,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     isAdmin,
-    handleAuthError,
   };
 
   return (

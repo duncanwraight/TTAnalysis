@@ -63,8 +63,7 @@ const NewMatch = () => {
       
       // Check if user is authenticated
       if (!user) {
-        window.location.href = '/auth';
-        return;
+        throw new Error('Authentication error: You must be logged in to create a match');
       }
       
       // Validate required fields
