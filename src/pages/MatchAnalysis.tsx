@@ -155,6 +155,39 @@ const MatchAnalysis = () => {
   const handAnalysis = analysisData?.handAnalysis || [];
   const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
   
+  // Determine if player won the match based on match score
+  const determineMatchWinner = (matchScore: string): boolean => {
+    if (!matchScore) return false;
+    
+    // Parse score format like "3-1" or "1-3"
+    const scoreParts = matchScore.split('-').map(s => parseInt(s.trim()));
+    if (scoreParts.length !== 2) return false;
+    
+    const [playerSets, opponentSets] = scoreParts;
+    return playerSets > opponentSets;
+  };
+  
+  const playerWon = matchSummary ? determineMatchWinner(matchSummary.match_score) : false;
+  
+  // Calculate opponent's most effective shots from shotDistribution data
+  const opponentEffectiveShots = shotDistribution
+    .filter((shot: any) => shot.opponent_total >= 3) // Minimum 3 uses for relevance
+    .map((shot: any) => {
+      const opponentWins = shot.lost_against; // When opponent wins with this shot
+      const opponentLosses = shot.won_against; // When opponent loses with this shot
+      const opponentTotal = shot.opponent_total;
+      const successRate = opponentTotal > 0 ? ((opponentWins / opponentTotal) * 100).toFixed(1) : 0;
+      
+      return {
+        name: shot.name,
+        wins: opponentWins,
+        losses: opponentLosses,
+        total_shots: opponentTotal,
+        success_rate: parseFloat(successRate)
+      };
+    })
+    .sort((a: any, b: any) => b.success_rate - a.success_rate);
+  
   // Create shot+hand breakdown data for player
   const createPlayerShotHandBreakdown = () => {
     const breakdown: any[] = [];
@@ -315,7 +348,7 @@ const MatchAnalysis = () => {
           <h3>Match Summary</h3>
           {matchSummary ? (
             <div className="summary-grid">
-              <div className="summary-item">
+              <div className={`summary-item ${playerWon ? 'win' : 'loss'}`}>
                 <span className="label">Final Score:</span>
                 <span className="value">{matchSummary.match_score}</span>
               </div>
@@ -344,7 +377,7 @@ const MatchAnalysis = () => {
         {/* Headline Metrics */}
         <div className="headline-metrics">
           <div className="metric-box effective">
-            <h4>Most Effective Shots</h4>
+            <h4>Your Most Effective</h4>
             {effectiveShots.length > 0 ? (
               effectiveShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
@@ -358,12 +391,26 @@ const MatchAnalysis = () => {
           </div>
           
           <div className="metric-box costly">
-            <h4>Most Costly Shots</h4>
+            <h4>Your Most Costly</h4>
             {costlyShots.length > 0 ? (
               costlyShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
                   <span className="shot-name">{formatText(shot.name)}</span>
                   <span className="metric-value">{shot.losses} losses ({(100 - shot.success_rate).toFixed(1)}%)</span>
+                </div>
+              ))
+            ) : (
+              <div>No data</div>
+            )}
+          </div>
+          
+          <div className="metric-box opponent-effective">
+            <h4>Opponent Most Effective</h4>
+            {opponentEffectiveShots.length > 0 ? (
+              opponentEffectiveShots.slice(0, 3).map((shot: any, index: number) => (
+                <div key={index} className="metric-item">
+                  <span className="shot-name">{formatText(shot.name)}</span>
+                  <span className="metric-value">{shot.wins} wins ({shot.success_rate}%)</span>
                 </div>
               ))
             ) : (
