@@ -144,12 +144,14 @@ const MatchAnalysis = () => {
   const handAnalysis = analysisData?.handAnalysis || [];
   const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
   
-  // Create shot+hand breakdown data
-  const createShotHandBreakdown = () => {
+  // Create shot+hand breakdown data for player
+  const createPlayerShotHandBreakdown = () => {
     const breakdown: any[] = [];
     
     shotDistribution.forEach((shot: any) => {
-      const shotHandData = shotHandAnalysis.filter((s: any) => s.shot_name === shot.name);
+      const shotHandData = shotHandAnalysis.filter((s: any) => 
+        s.shot_name === shot.name && s.player_type === 'player'
+      );
       
       // If we have hand data for this shot, create separate rows for each hand
       if (shotHandData.length > 0) {
@@ -179,8 +181,52 @@ const MatchAnalysis = () => {
     
     return breakdown;
   };
+
+  // Create shot+hand breakdown data for opponent
+  const createOpponentShotHandBreakdown = () => {
+    const breakdown: any[] = [];
+    
+    shotDistribution.forEach((shot: any) => {
+      const shotHandData = shotHandAnalysis.filter((s: any) => 
+        s.shot_name === shot.name && s.player_type === 'opponent'
+      );
+      
+      // If we have hand data for this shot, create separate rows for each hand
+      if (shotHandData.length > 0) {
+        shotHandData.forEach((handData: any) => {
+          const handLabel = handData.hand === 'fh' ? 'FH' : 'BH';
+          breakdown.push({
+            ...shot,
+            hand: handLabel,
+            hand_wins: handData.wins,
+            hand_losses: handData.losses,
+            hand_total: handData.total_shots,
+            hand_success_rate: handData.success_rate,
+            // For opponent table, we track their wins/losses from their perspective
+            opponent_wins: handData.wins,
+            opponent_losses: handData.losses
+          });
+        });
+      } else {
+        // If no hand data, show the shot without hand breakdown
+        breakdown.push({
+          ...shot,
+          hand: '-',
+          hand_wins: 0,
+          hand_losses: 0,
+          hand_total: 0,
+          hand_success_rate: 0,
+          opponent_wins: 0,
+          opponent_losses: 0
+        });
+      }
+    });
+    
+    return breakdown;
+  };
   
-  const shotHandBreakdown = createShotHandBreakdown();
+  const shotHandBreakdown = createPlayerShotHandBreakdown();
+  const opponentShotHandBreakdown = createOpponentShotHandBreakdown();
   
   const analysisContent = (
     <div className="match-analysis-container" ref={contentRef}>
@@ -274,9 +320,9 @@ const MatchAnalysis = () => {
                       <tr>
                         <th>Category</th>
                         <th>Shot</th>
+                        <th>Hand</th>
                         <th>Won with</th>
                         <th>Lost with</th>
-                        <th>Hand</th>
                         <th>Win %</th>
                       </tr>
                     </thead>
@@ -288,9 +334,9 @@ const MatchAnalysis = () => {
                           <tr key={index}>
                             <td className="category-name">{formatText(shot.category)}</td>
                             <td className="shot-name">{formatText(shot.name)}</td>
+                            <td className="hand-breakdown">{shot.hand}</td>
                             <td className="won-with">{shot.hand_wins}</td>
                             <td className="lost-with">{shot.hand_losses}</td>
-                            <td className="hand-breakdown">{shot.hand}</td>
                             <td className="percentage">{shot.hand_success_rate}%</td>
                           </tr>
                         ))}
@@ -307,30 +353,25 @@ const MatchAnalysis = () => {
                       <tr>
                         <th>Category</th>
                         <th>Shot</th>
+                        <th>Hand</th>
                         <th>Won against</th>
                         <th>Lost against</th>
-                        <th>Hand</th>
                         <th>Win %</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {shotDistribution
-                        .filter((shot: any) => shot.won_against > 0 || shot.lost_against > 0)
-                        .map((shot: any, index: number) => {
-                          const opponentWinRate = shot.won_against + shot.lost_against > 0 
-                            ? ((shot.won_against / (shot.won_against + shot.lost_against)) * 100).toFixed(1)
-                            : '0.0';
-                          return (
-                            <tr key={index}>
-                              <td className="category-name">{formatText(shot.category)}</td>
-                              <td className="shot-name">{formatText(shot.name)}</td>
-                              <td className="won-against">{shot.won_against}</td>
-                              <td className="lost-against">{shot.lost_against}</td>
-                              <td className="hand-breakdown">-</td>
-                              <td className="percentage">{opponentWinRate}%</td>
-                            </tr>
-                          );
-                        })}
+                      {opponentShotHandBreakdown
+                        .filter((shot: any) => shot.hand_total > 0) // Only show rows with hand data
+                        .map((shot: any, index: number) => (
+                          <tr key={index}>
+                            <td className="category-name">{formatText(shot.category)}</td>
+                            <td className="shot-name">{formatText(shot.name)}</td>
+                            <td className="hand-breakdown">{shot.hand}</td>
+                            <td className="won-against">{shot.hand_wins}</td>
+                            <td className="lost-against">{shot.hand_losses}</td>
+                            <td className="percentage">{shot.hand_success_rate}%</td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
