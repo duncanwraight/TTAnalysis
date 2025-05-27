@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
+import html2pdf from 'html2pdf.js';
 import '../styles/components/MatchAnalysis.css';
 
 const formatText = (text: string): string => {
@@ -17,10 +18,12 @@ const MatchAnalysis = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const api = useApi();
+  const contentRef = useRef<HTMLDivElement>(null);
   
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -42,6 +45,37 @@ const MatchAnalysis = () => {
 
     fetchAnalysis();
   }, [id, api]);
+
+  const exportToPDF = async () => {
+    if (!contentRef.current || !analysisData?.matchSummary) return;
+    
+    setIsExporting(true);
+    
+    try {
+      const element = contentRef.current;
+      const opt = {
+        margin: 0.5,
+        filename: `match-analysis-${analysisData.matchSummary.opponent_name}-${new Date(analysisData.matchSummary.date).toLocaleDateString().replace(/\//g, '-')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'in', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        }
+      };
+      
+      await html2pdf().from(element).set(opt).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
   
   if (loading) {
     return (
@@ -78,11 +112,10 @@ const MatchAnalysis = () => {
   const categoryBreakdown = analysisData?.categoryBreakdown || [];
   const tacticalInsights = analysisData?.tacticalInsights || [];
   const handAnalysis = analysisData?.handAnalysis || [];
-  const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
   
   return (
     <Layout>
-      <div className="match-analysis-container">
+      <div className="match-analysis-container" ref={contentRef}>
         <div className="analysis-header">
           <h1>Match Analysis</h1>
           {matchSummary && (
@@ -401,6 +434,13 @@ const MatchAnalysis = () => {
         </div>
         
         <div className="analysis-actions">
+          <button
+            className="btn primary-btn"
+            onClick={exportToPDF}
+            disabled={isExporting}
+          >
+            {isExporting ? 'Exporting PDF...' : 'Export to PDF'}
+          </button>
           <button
             className="btn secondary-btn"
             onClick={() => navigate('/matches')}
