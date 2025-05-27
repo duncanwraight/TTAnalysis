@@ -468,17 +468,19 @@ const MatchAnalysis = () => {
             {handAnalysis.length > 0 ? (
               <div className="hand-analysis-container">
                 <div className="hand-analysis-player">
-                  <h4>Your Hand Performance</h4>
+                  <h4>Player</h4>
                   <div className="hand-stats">
                     {handAnalysis
                       .filter((hand: any) => hand.player_type === 'player')
                       .map((hand: any, index: number) => (
-                        <div key={index} className="hand-stat-item">
-                          <div className="hand-name">{hand.hand === 'fh' ? 'Forehand' : 'Backhand'}</div>
-                          <div className="hand-metrics">
+                        <div key={index} className="hand-stat-row">
+                          <div className="hand-info">
+                            <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
                             <span className="success-rate">{hand.success_rate}%</span>
-                            <span className="shot-count">{hand.wins}W - {hand.losses}L</span>
-                            <span className="total-shots">({hand.total_shots} total)</span>
+                          </div>
+                          <div className="hand-details">
+                            <span className="record">{hand.wins}W - {hand.losses}L</span>
+                            <span className="total">({hand.total_shots} total)</span>
                           </div>
                         </div>
                       ))}
@@ -486,17 +488,19 @@ const MatchAnalysis = () => {
                 </div>
                 
                 <div className="hand-analysis-opponent">
-                  <h4>Opponent Hand Performance</h4>
+                  <h4>Opponent</h4>
                   <div className="hand-stats">
                     {handAnalysis
                       .filter((hand: any) => hand.player_type === 'opponent')
                       .map((hand: any, index: number) => (
-                        <div key={index} className="hand-stat-item">
-                          <div className="hand-name">{hand.hand === 'fh' ? 'Forehand' : 'Backhand'}</div>
-                          <div className="hand-metrics">
+                        <div key={index} className="hand-stat-row">
+                          <div className="hand-info">
+                            <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
                             <span className="success-rate">{hand.success_rate}%</span>
-                            <span className="shot-count">{hand.wins}W - {hand.losses}L</span>
-                            <span className="total-shots">({hand.total_shots} total)</span>
+                          </div>
+                          <div className="hand-details">
+                            <span className="record">{hand.wins}W - {hand.losses}L</span>
+                            <span className="total">({hand.total_shots} total)</span>
                           </div>
                         </div>
                       ))}
