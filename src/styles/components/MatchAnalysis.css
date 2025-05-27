@@ -235,6 +235,31 @@
   color: var(--secondary-color);
 }
 
+/* Analysis Rows */
+.analysis-row {
+  display: grid;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.analysis-row-three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.analysis-row-two {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 1024px) {
+  .analysis-row-three {
+    grid-template-columns: 1fr;
+  }
+  
+  .analysis-row-two {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Analysis Sections */
 .analysis-sections {
   display: grid;
