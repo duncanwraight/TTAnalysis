@@ -176,7 +176,7 @@ const MatchAnalysis = () => {
       const opponentWins = shot.lost_against; // When opponent wins with this shot
       const opponentLosses = shot.won_against; // When opponent loses with this shot
       const opponentTotal = shot.opponent_total;
-      const successRate = opponentTotal > 0 ? ((opponentWins / opponentTotal) * 100).toFixed(1) : 0;
+      const successRate = opponentTotal > 0 ? ((opponentWins / opponentTotal) * 100).toFixed(1) : '0.0';
       
       return {
         name: shot.name,
