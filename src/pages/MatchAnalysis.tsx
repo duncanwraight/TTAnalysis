@@ -161,7 +161,7 @@ const MatchAnalysis = () => {
     
     shotDistribution.forEach((shot: any) => {
       const shotHandData = shotHandAnalysis.filter((s: any) => 
-        s.shot_name === shot.name && s.player_type === 'player'
+        s.shot_id === shot.shot_id && s.player_type === 'player'
       );
       
       // If we have hand data for this shot, create separate rows for each hand
@@ -199,7 +199,7 @@ const MatchAnalysis = () => {
     
     shotDistribution.forEach((shot: any) => {
       const shotHandData = shotHandAnalysis.filter((s: any) => 
-        s.shot_name === shot.name && s.player_type === 'opponent'
+        s.shot_id === shot.shot_id && s.player_type === 'opponent'
       );
       
       // If we have hand data for this shot, create separate rows for each hand
