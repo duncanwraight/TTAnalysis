@@ -462,16 +462,18 @@ const MatchTracker = () => {
       // Copy current state
       const updatedSets = [...matchState.sets];
       
-      // If we're in a new set and there are no remaining points in this set,
-      // we need to go back to the previous set
+      // Check if we're undoing a point that completed a set
+      // This happens when:
+      // 1. The point being undone is from a previous set, AND
+      // 2. The current set has no other points (meaning it was just created)
       const remainingPointsInCurrentSet = matchState.points
         .filter(p => p.id !== lastPoint.id)
         .filter(p => p.set_id === matchState.currentSetId)
         .length;
       
-      const isCurrentlyInNewSet = setData.set_number < matchState.currentSet;
+      const isUndoingSetCompletingPoint = setData.set_number < matchState.currentSet && remainingPointsInCurrentSet === 0;
       
-      if (isCurrentlyInNewSet && remainingPointsInCurrentSet === 0) {
+      if (isUndoingSetCompletingPoint) {
         // We're undoing a point that completed a set, go back to previous set
         updatedSets.pop(); // Remove the current empty set
         
