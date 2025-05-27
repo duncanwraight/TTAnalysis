@@ -441,9 +441,11 @@ const MatchAnalysis = () => {
                       {sortedPlayerData.map((shot: any, index: number) => (
                         <tr key={index}>
                           <td className="category-shot-hand">
-                            <div className="category-name">{formatText(shot.category)}</div>
-                            <div className="shot-name">{formatText(shot.name)}</div>
-                            <div className="hand-breakdown">{shot.hand}</div>
+                            <span className="category-name">{formatText(shot.category)}</span>
+                            <span className="separator"> - </span>
+                            <span className="shot-name">{formatText(shot.name)}</span>
+                            <span className="separator"> - </span>
+                            <span className="hand-breakdown">{shot.hand}</span>
                           </td>
                           <td className="won-with">{shot.hand_wins}</td>
                           <td className="lost-with">{shot.hand_losses}</td>
@@ -519,9 +521,11 @@ const MatchAnalysis = () => {
                       {sortedOpponentData.map((shot: any, index: number) => (
                         <tr key={index}>
                           <td className="category-shot-hand">
-                            <div className="category-name">{formatText(shot.category)}</div>
-                            <div className="shot-name">{formatText(shot.name)}</div>
-                            <div className="hand-breakdown">{shot.hand}</div>
+                            <span className="category-name">{formatText(shot.category)}</span>
+                            <span className="separator"> - </span>
+                            <span className="shot-name">{formatText(shot.name)}</span>
+                            <span className="separator"> - </span>
+                            <span className="hand-breakdown">{shot.hand}</span>
                           </td>
                           <td className="won-against">{shot.hand_wins}</td>
                           <td className="lost-against">{shot.hand_losses}</td>
