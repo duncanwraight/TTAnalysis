@@ -1044,22 +1044,32 @@ const MatchTracker = () => {
                   const updatedSets = [...matchState.sets];
                   updatedSets.push({ playerScore: 0, opponentScore: 0 });
                   
-                  // Create a new set in the database
-                  const newSet = await api.set.createSet({
-                    match_id: match.id,
-                    set_number: matchState.currentSet + 1,
-                    score: '0-0',
-                    player_score: 0,
-                    opponent_score: 0
-                  });
+                  // Check if next set already exists in database
+                  const nextSetNumber = matchState.currentSet + 1;
+                  let newSet = matchState.dbSets.find(set => set.set_number === nextSetNumber);
                   
+                  if (!newSet) {
+                    // Create a new set in the database only if it doesn't exist
+                    newSet = await api.set.createSet({
+                      match_id: match.id,
+                      set_number: nextSetNumber,
+                      score: '0-0',
+                      player_score: 0,
+                      opponent_score: 0
+                    });
+                  }
+                  
+                  const updatedDbSets = matchState.dbSets.find(set => set.set_number === nextSetNumber) 
+                    ? matchState.dbSets 
+                    : [...matchState.dbSets, newSet!];
+                    
                   setMatchState({
                     currentSet: matchState.currentSet + 1,
                     sets: updatedSets,
                     points: matchState.points,
                     isMatchComplete: false,
-                    dbSets: [...matchState.dbSets, newSet],
-                    currentSetId: newSet.id
+                    dbSets: updatedDbSets,
+                    currentSetId: newSet!.id
                   });
                 } else {
                   // Match is complete
@@ -1088,27 +1098,36 @@ const MatchTracker = () => {
                 const updatedSets = [...matchState.sets];
                 updatedSets.push({ playerScore: 0, opponentScore: 0 });
                 
-                // Create a new set in the database
-                let newSet;
-                try {
-                  newSet = await api.set.createSet({
-                    match_id: match.id,
-                    set_number: matchState.currentSet + 1,
-                    score: '0-0',
-                    player_score: 0,
-                    opponent_score: 0
-                  });
-                } catch (error) {
-                  throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
+                // Check if next set already exists in database
+                const nextSetNumber = matchState.currentSet + 1;
+                let newSet = matchState.dbSets.find(set => set.set_number === nextSetNumber);
+                
+                if (!newSet) {
+                  // Create a new set in the database only if it doesn't exist
+                  try {
+                    newSet = await api.set.createSet({
+                      match_id: match.id,
+                      set_number: nextSetNumber,
+                      score: '0-0',
+                      player_score: 0,
+                      opponent_score: 0
+                    });
+                  } catch (error) {
+                    throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
+                  }
                 }
                 
+                const updatedDbSets = matchState.dbSets.find(set => set.set_number === nextSetNumber) 
+                  ? matchState.dbSets 
+                  : [...matchState.dbSets, newSet!];
+                  
                 setMatchState({
                   currentSet: matchState.currentSet + 1,
                   sets: updatedSets,
                   points: matchState.points,
                   isMatchComplete: false,
-                  dbSets: [...matchState.dbSets, newSet],
-                  currentSetId: newSet.id
+                  dbSets: updatedDbSets,
+                  currentSetId: newSet!.id
                 });
               } catch (error) {
               }
