@@ -38,6 +38,30 @@
 - [x] Add match statistics summary view
 - [x] Create visualization for "points lost by shot type"
 
+## Match Analysis Page Improvements
+
+### Most effective / most costly shot panels
+- [ ] Fix empty percentages (e.g. "25 losses (%)")
+- [ ] Order panels by highest to lowest (e.g. serve at 18 wins should be above block at 11 wins)
+
+### Shot breakdown table
+- [ ] Remove total column
+- [ ] Change "won / lost" to "Won with", "Lost with", "Won against", "Lost against"
+- [ ] Fix "Win %" to only be percentage of "Won with" vs "Lost with"
+- [ ] Add category column because shots have same names across different categories
+
+### Shot distribution
+- [ ] Split into two columns with our shot distribution and opponent's shot distribution
+
+### Category performance
+- [ ] Investigate incorrect data showing 100% performance in categories where points were lost
+
+### Hand analysis
+- [ ] Split into ours and opponent's hand analysis
+
+### Tactical insights
+- [ ] Fix duplicate "vs Loop" entries with different W/L scores
+
 ## Bug Fixes
 - [x] Fix Match Analysis queries showing No Data
 - [x] Fix Shot Selection tabs displaying Shots instead of Categories

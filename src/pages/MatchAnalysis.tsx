@@ -132,7 +132,7 @@ const MatchAnalysis = () => {
               effectiveShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
                   <span className="shot-name">{formatText(shot.name)}</span>
-                  <span className="metric-value">{shot.wins} wins ({shot.win_percentage}%)</span>
+                  <span className="metric-value">{shot.wins} wins ({shot.success_rate}%)</span>
                 </div>
               ))
             ) : (
@@ -146,7 +146,7 @@ const MatchAnalysis = () => {
               costlyShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
                   <span className="shot-name">{formatText(shot.name)}</span>
-                  <span className="metric-value">{shot.losses} losses ({shot.loss_percentage}%)</span>
+                  <span className="metric-value">{shot.losses} losses ({(100 - shot.success_rate).toFixed(1)}%)</span>
                 </div>
               ))
             ) : (
@@ -163,36 +163,27 @@ const MatchAnalysis = () => {
               <table className="analysis-table">
                 <thead>
                   <tr>
+                    <th>Category</th>
                     <th>Shot</th>
-                    <th>Total</th>
-                    <th>Won</th>
-                    <th>Lost</th>
+                    <th>Won with</th>
+                    <th>Lost with</th>
+                    <th>Won against</th>
+                    <th>Lost against</th>
                     <th>Win %</th>
-                    <th>FH Won/Total</th>
-                    <th>BH Won/Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {shotDistribution.map((shot: any, index: number) => {
-                    const won = Math.round(shot.total_shots * shot.success_rate / 100);
-                    const lost = shot.total_shots - won;
-                    
-                    // Get hand-specific data for this shot
-                    const fhData = shotHandAnalysis.find((h: any) => h.shot_name === shot.name && h.hand === 'fh');
-                    const bhData = shotHandAnalysis.find((h: any) => h.shot_name === shot.name && h.hand === 'bh');
-                    
-                    return (
-                      <tr key={index}>
-                        <td className="shot-name">{formatText(shot.name)}</td>
-                        <td>{shot.total_shots}</td>
-                        <td className="won">{won}</td>
-                        <td className="lost">{lost}</td>
-                        <td className="percentage">{shot.success_rate}%</td>
-                        <td>{fhData ? `${fhData.wins}/${fhData.total_shots}` : 'N/A'}</td>
-                        <td>{bhData ? `${bhData.wins}/${bhData.total_shots}` : 'N/A'}</td>
-                      </tr>
-                    );
-                  })}
+                  {shotDistribution.map((shot: any, index: number) => (
+                    <tr key={index}>
+                      <td className="category-name">{formatText(shot.category)}</td>
+                      <td className="shot-name">{formatText(shot.name)}</td>
+                      <td className="won-with">{shot.won_with}</td>
+                      <td className="lost-with">{shot.lost_with}</td>
+                      <td className="won-against">{shot.won_against}</td>
+                      <td className="lost-against">{shot.lost_against}</td>
+                      <td className="percentage">{shot.player_success_rate}%</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -206,14 +197,44 @@ const MatchAnalysis = () => {
             <h3>Shot Distribution</h3>
             {shotDistribution.length > 0 ? (
               <div className="chart-container">
-                <div className="pie-chart-placeholder">
-                  <div className="chart-legend">
-                    {shotDistribution.slice(0, 5).map((shot: any, index: number) => (
-                      <div key={index} className="legend-item">
-                        <div className={`legend-color color-${index}`}></div>
-                        <span>{formatText(shot.name)}: {shot.percentage_of_total}%</span>
-                      </div>
-                    ))}
+                <div className="distribution-columns">
+                  <div className="distribution-column">
+                    <h4>Your Shots</h4>
+                    <div className="chart-legend">
+                      {shotDistribution
+                        .filter((shot: any) => shot.player_total > 0)
+                        .sort((a: any, b: any) => b.player_total - a.player_total)
+                        .slice(0, 5)
+                        .map((shot: any, index: number) => {
+                          const totalPlayerShots = shotDistribution.reduce((sum: number, s: any) => sum + s.player_total, 0);
+                          const percentage = totalPlayerShots > 0 ? ((shot.player_total / totalPlayerShots) * 100).toFixed(1) : 0;
+                          return (
+                            <div key={index} className="legend-item">
+                              <div className={`legend-color color-${index}`}></div>
+                              <span>{formatText(shot.name)}: {percentage}%</span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                  <div className="distribution-column">
+                    <h4>Opponent's Shots</h4>
+                    <div className="chart-legend">
+                      {shotDistribution
+                        .filter((shot: any) => shot.opponent_total > 0)
+                        .sort((a: any, b: any) => b.opponent_total - a.opponent_total)
+                        .slice(0, 5)
+                        .map((shot: any, index: number) => {
+                          const totalOpponentShots = shotDistribution.reduce((sum: number, s: any) => sum + s.opponent_total, 0);
+                          const percentage = totalOpponentShots > 0 ? ((shot.opponent_total / totalOpponentShots) * 100).toFixed(1) : 0;
+                          return (
+                            <div key={index} className="legend-item">
+                              <div className={`legend-color color-${index + 5}`}></div>
+                              <span>{formatText(shot.name)}: {percentage}%</span>
+                            </div>
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -252,26 +273,59 @@ const MatchAnalysis = () => {
             <h3>Hand Analysis</h3>
             {handAnalysis.length > 0 ? (
               <div className="chart-container">
-                <div className="hand-comparison">
-                  {handAnalysis.map((hand: any, index: number) => (
-                    <div key={index} className="hand-stat">
-                      <div className="hand-label">
-                        {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}
-                      </div>
-                      <div className="hand-circle">
-                        <div className="circle-progress" style={{
-                          background: `conic-gradient(var(--primary-color) ${hand.success_rate * 3.6}deg, var(--border-color) 0deg)`
-                        }}>
-                          <div className="circle-inner">
-                            <span className="percentage">{hand.success_rate}%</span>
+                <div className="hand-analysis-players">
+                  <div className="hand-analysis-player">
+                    <h4>Your Hand Analysis</h4>
+                    <div className="hand-comparison">
+                      {handAnalysis
+                        .filter((hand: any) => hand.player_type === 'player')
+                        .map((hand: any, index: number) => (
+                          <div key={index} className="hand-stat">
+                            <div className="hand-label">
+                              {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}
+                            </div>
+                            <div className="hand-circle">
+                              <div className="circle-progress" style={{
+                                background: `conic-gradient(var(--primary-color) ${hand.success_rate * 3.6}deg, var(--border-color) 0deg)`
+                              }}>
+                                <div className="circle-inner">
+                                  <span className="percentage">{hand.success_rate}%</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="hand-details">
+                              {hand.total_shots} shots
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      <div className="hand-details">
-                        {hand.total_shots} shots
-                      </div>
+                        ))}
                     </div>
-                  ))}
+                  </div>
+                  <div className="hand-analysis-player">
+                    <h4>Opponent's Hand Analysis</h4>
+                    <div className="hand-comparison">
+                      {handAnalysis
+                        .filter((hand: any) => hand.player_type === 'opponent')
+                        .map((hand: any, index: number) => (
+                          <div key={index} className="hand-stat">
+                            <div className="hand-label">
+                              {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}
+                            </div>
+                            <div className="hand-circle">
+                              <div className="circle-progress" style={{
+                                background: `conic-gradient(var(--secondary-color) ${hand.success_rate * 3.6}deg, var(--border-color) 0deg)`
+                              }}>
+                                <div className="circle-inner">
+                                  <span className="percentage">{hand.success_rate}%</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="hand-details">
+                              {hand.total_shots} shots
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

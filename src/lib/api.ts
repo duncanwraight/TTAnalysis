@@ -83,22 +83,22 @@ export const matchApi = {
       supabase.from('most_effective_shots')
         .select('*')
         .eq('match_id', id)
-        .order('success_rate', { ascending: false }),
+        .order('wins', { ascending: false }),
 
       // Most Costly Shots
       supabase.from('most_costly_shots')
         .select('*')
         .eq('match_id', id)
-        .order('success_rate', { ascending: true }),
+        .order('losses', { ascending: false }),
 
-      // Shot Distribution
-      supabase.from('shot_distribution')
+      // Shot Distribution (updated to use new breakdown view)
+      supabase.from('player_shot_breakdown')
         .select('*')
         .eq('match_id', id)
-        .order('total_shots', { ascending: false }),
+        .order('player_total', { ascending: false }),
 
-      // Hand Analysis
-      supabase.from('hand_analysis')
+      // Hand Analysis (updated to use new player-specific view)
+      supabase.from('player_hand_analysis')
         .select('*')
         .eq('match_id', id),
 
