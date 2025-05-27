@@ -143,8 +143,8 @@
   color: var(--secondary-color);
 }
 
-/* Shot Analysis Table */
-.shot-analysis-table {
+/* Shot Analysis Tables */
+.shot-analysis-tables {
   background-color: var(--card-background);
   border-radius: 0.75rem;
   box-shadow: var(--shadow);
@@ -152,10 +152,24 @@
   overflow-x: auto;
 }
 
-.shot-analysis-table h3 {
+.shot-analysis-tables h3 {
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--primary-color);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.breakdown-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+}
+
+.breakdown-table h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--secondary-color);
   margin-bottom: 1rem;
   text-align: center;
 }
@@ -370,6 +384,23 @@
 }
 
 /* Hand Analysis */
+.hand-analysis-overall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.hand-analysis-overall h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--secondary-color);
+  margin-bottom: 1.5rem;
+  text-align: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
 .hand-analysis-players {
   display: flex;
   flex-direction: column;

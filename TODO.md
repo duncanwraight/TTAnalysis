@@ -41,26 +41,31 @@
 ## Match Analysis Page Improvements
 
 ### Most effective / most costly shot panels
-- [ ] Fix empty percentages (e.g. "25 losses (%)")
-- [ ] Order panels by highest to lowest (e.g. serve at 18 wins should be above block at 11 wins)
+- [x] Fix empty percentages (e.g. "25 losses (%)")
+- [x] Order panels by highest to lowest (e.g. serve at 18 wins should be above block at 11 wins)
 
 ### Shot breakdown table
-- [ ] Remove total column
-- [ ] Change "won / lost" to "Won with", "Lost with", "Won against", "Lost against"
-- [ ] Fix "Win %" to only be percentage of "Won with" vs "Lost with"
-- [ ] Add category column because shots have same names across different categories
+- [x] Remove total column
+- [x] Change "won / lost" to "Won with", "Lost with", "Won against", "Lost against"
+- [x] Fix "Win %" to only be percentage of "Won with" vs "Lost with"
+- [x] Add category column because shots have same names across different categories
+- [x] Split into two separate tables - one for our shots (won with/lost with), one for opponent's shots (won against/lost against)
+- [x] Add hand column (forehand/backhand) to shot breakdown tables
 
 ### Shot distribution
-- [ ] Split into two columns with our shot distribution and opponent's shot distribution
+- [x] Split into two columns with our shot distribution and opponent's shot distribution
+- [x] Change headings from "Player's Shots" and "Opponent's Shots" to just "Player" and "Opponent"
+- [x] Remove serve category data from shot distribution panel
 
 ### Category performance
-- [ ] Investigate incorrect data showing 100% performance in categories where points were lost
+- [x] Investigate incorrect data showing 100% performance in categories where points were lost
 
 ### Hand analysis
-- [ ] Split into ours and opponent's hand analysis
+- [x] Split into ours and opponent's hand analysis
+- [x] Fix: no information is visible in hand analysis section
 
 ### Tactical insights
-- [ ] Fix duplicate "vs Loop" entries with different W/L scores
+- [x] Fix duplicate "vs Loop" entries with different W/L scores
 
 ## Bug Fixes
 - [x] Fix Match Analysis queries showing No Data

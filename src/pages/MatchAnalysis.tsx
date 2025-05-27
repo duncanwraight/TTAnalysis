@@ -142,6 +142,45 @@ const MatchAnalysis = () => {
   const categoryBreakdown = analysisData?.categoryBreakdown || [];
   const tacticalInsights = analysisData?.tacticalInsights || [];
   const handAnalysis = analysisData?.handAnalysis || [];
+  const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
+  
+  // Create shot+hand breakdown data
+  const createShotHandBreakdown = () => {
+    const breakdown: any[] = [];
+    
+    shotDistribution.forEach((shot: any) => {
+      const shotHandData = shotHandAnalysis.filter((s: any) => s.shot_name === shot.name);
+      
+      // If we have hand data for this shot, create separate rows for each hand
+      if (shotHandData.length > 0) {
+        shotHandData.forEach((handData: any) => {
+          const handLabel = handData.hand === 'fh' ? 'FH' : 'BH';
+          breakdown.push({
+            ...shot,
+            hand: handLabel,
+            hand_wins: handData.wins,
+            hand_losses: handData.losses,
+            hand_total: handData.total_shots,
+            hand_success_rate: handData.success_rate
+          });
+        });
+      } else {
+        // If no hand data, show the shot without hand breakdown
+        breakdown.push({
+          ...shot,
+          hand: '-',
+          hand_wins: 0,
+          hand_losses: 0,
+          hand_total: 0,
+          hand_success_rate: 0
+        });
+      }
+    });
+    
+    return breakdown;
+  };
+  
+  const shotHandBreakdown = createShotHandBreakdown();
   
   const analysisContent = (
     <div className="match-analysis-container" ref={contentRef}>
@@ -222,37 +261,80 @@ const MatchAnalysis = () => {
           </div>
         </div>
 
-        {/* Shot Analysis Table */}
-        <div className="shot-analysis-table">
+        {/* Shot Analysis Tables */}
+        <div className="shot-analysis-tables">
           <h3>Shot Breakdown</h3>
           {shotDistribution.length > 0 ? (
-            <div className="table-container">
-              <table className="analysis-table">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th>Shot</th>
-                    <th>Won with</th>
-                    <th>Lost with</th>
-                    <th>Won against</th>
-                    <th>Lost against</th>
-                    <th>Win %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shotDistribution.map((shot: any, index: number) => (
-                    <tr key={index}>
-                      <td className="category-name">{formatText(shot.category)}</td>
-                      <td className="shot-name">{formatText(shot.name)}</td>
-                      <td className="won-with">{shot.won_with}</td>
-                      <td className="lost-with">{shot.lost_with}</td>
-                      <td className="won-against">{shot.won_against}</td>
-                      <td className="lost-against">{shot.lost_against}</td>
-                      <td className="percentage">{shot.player_success_rate}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="breakdown-tables">
+              <div className="breakdown-table">
+                <h4>Your Shots</h4>
+                <div className="table-container">
+                  <table className="analysis-table">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Shot</th>
+                        <th>Won with</th>
+                        <th>Lost with</th>
+                        <th>Hand</th>
+                        <th>Win %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shotHandBreakdown
+                        .filter((shot: any) => shot.won_with > 0 || shot.lost_with > 0)
+                        .filter((shot: any) => shot.hand_total > 0) // Only show rows with hand data
+                        .map((shot: any, index: number) => (
+                          <tr key={index}>
+                            <td className="category-name">{formatText(shot.category)}</td>
+                            <td className="shot-name">{formatText(shot.name)}</td>
+                            <td className="won-with">{shot.hand_wins}</td>
+                            <td className="lost-with">{shot.hand_losses}</td>
+                            <td className="hand-breakdown">{shot.hand}</td>
+                            <td className="percentage">{shot.hand_success_rate}%</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div className="breakdown-table">
+                <h4>Opponent's Shots</h4>
+                <div className="table-container">
+                  <table className="analysis-table">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Shot</th>
+                        <th>Won against</th>
+                        <th>Lost against</th>
+                        <th>Hand</th>
+                        <th>Win %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shotDistribution
+                        .filter((shot: any) => shot.won_against > 0 || shot.lost_against > 0)
+                        .map((shot: any, index: number) => {
+                          const opponentWinRate = shot.won_against + shot.lost_against > 0 
+                            ? ((shot.won_against / (shot.won_against + shot.lost_against)) * 100).toFixed(1)
+                            : '0.0';
+                          return (
+                            <tr key={index}>
+                              <td className="category-name">{formatText(shot.category)}</td>
+                              <td className="shot-name">{formatText(shot.name)}</td>
+                              <td className="won-against">{shot.won_against}</td>
+                              <td className="lost-against">{shot.lost_against}</td>
+                              <td className="hand-breakdown">-</td>
+                              <td className="percentage">{opponentWinRate}%</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           ) : (
             <div>No shot data available</div>
@@ -266,14 +348,16 @@ const MatchAnalysis = () => {
               <div className="chart-container">
                 <div className="distribution-columns">
                   <div className="distribution-column">
-                    <h4>{isSharedView ? "Player's Shots" : "Your Shots"}</h4>
+                    <h4>Player</h4>
                     <div className="chart-legend">
                       {shotDistribution
-                        .filter((shot: any) => shot.player_total > 0)
+                        .filter((shot: any) => shot.player_total > 0 && shot.category.toLowerCase() !== 'serve')
                         .sort((a: any, b: any) => b.player_total - a.player_total)
                         .slice(0, 5)
                         .map((shot: any, index: number) => {
-                          const totalPlayerShots = shotDistribution.reduce((sum: number, s: any) => sum + s.player_total, 0);
+                          const totalPlayerShots = shotDistribution
+                            .filter((s: any) => s.category.toLowerCase() !== 'serve')
+                            .reduce((sum: number, s: any) => sum + s.player_total, 0);
                           const percentage = totalPlayerShots > 0 ? ((shot.player_total / totalPlayerShots) * 100).toFixed(1) : 0;
                           return (
                             <div key={index} className="legend-item">
@@ -285,14 +369,16 @@ const MatchAnalysis = () => {
                     </div>
                   </div>
                   <div className="distribution-column">
-                    <h4>Opponent's Shots</h4>
+                    <h4>Opponent</h4>
                     <div className="chart-legend">
                       {shotDistribution
-                        .filter((shot: any) => shot.opponent_total > 0)
+                        .filter((shot: any) => shot.opponent_total > 0 && shot.category.toLowerCase() !== 'serve')
                         .sort((a: any, b: any) => b.opponent_total - a.opponent_total)
                         .slice(0, 5)
                         .map((shot: any, index: number) => {
-                          const totalOpponentShots = shotDistribution.reduce((sum: number, s: any) => sum + s.opponent_total, 0);
+                          const totalOpponentShots = shotDistribution
+                            .filter((s: any) => s.category.toLowerCase() !== 'serve')
+                            .reduce((sum: number, s: any) => sum + s.opponent_total, 0);
                           const percentage = totalOpponentShots > 0 ? ((shot.opponent_total / totalOpponentShots) * 100).toFixed(1) : 0;
                           return (
                             <div key={index} className="legend-item">
@@ -340,58 +426,28 @@ const MatchAnalysis = () => {
             <h3>Hand Analysis</h3>
             {handAnalysis.length > 0 ? (
               <div className="chart-container">
-                <div className="hand-analysis-players">
-                  <div className="hand-analysis-player">
-                    <h4>{isSharedView ? "Player's Hand Analysis" : "Your Hand Analysis"}</h4>
-                    <div className="hand-comparison">
-                      {handAnalysis
-                        .filter((hand: any) => hand.player_type === 'player')
-                        .map((hand: any, index: number) => (
-                          <div key={index} className="hand-stat">
-                            <div className="hand-label">
-                              {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}
-                            </div>
-                            <div className="hand-circle">
-                              <div className="circle-progress" style={{
-                                background: `conic-gradient(var(--primary-color) ${hand.success_rate * 3.6}deg, var(--border-color) 0deg)`
-                              }}>
-                                <div className="circle-inner">
-                                  <span className="percentage">{hand.success_rate}%</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="hand-details">
-                              {hand.total_shots} shots
+                <div className="hand-analysis-overall">
+                  <h4>Overall Hand Analysis (Winning Shots)</h4>
+                  <div className="hand-comparison">
+                    {handAnalysis.map((hand: any, index: number) => (
+                      <div key={index} className="hand-stat">
+                        <div className="hand-label">
+                          {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}
+                        </div>
+                        <div className="hand-circle">
+                          <div className="circle-progress" style={{
+                            background: `conic-gradient(var(--primary-color) ${hand.success_rate * 3.6}deg, var(--border-color) 0deg)`
+                          }}>
+                            <div className="circle-inner">
+                              <span className="percentage">{hand.success_rate}%</span>
                             </div>
                           </div>
-                        ))}
-                    </div>
-                  </div>
-                  <div className="hand-analysis-player">
-                    <h4>Opponent's Hand Analysis</h4>
-                    <div className="hand-comparison">
-                      {handAnalysis
-                        .filter((hand: any) => hand.player_type === 'opponent')
-                        .map((hand: any, index: number) => (
-                          <div key={index} className="hand-stat">
-                            <div className="hand-label">
-                              {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}
-                            </div>
-                            <div className="hand-circle">
-                              <div className="circle-progress" style={{
-                                background: `conic-gradient(var(--secondary-color) ${hand.success_rate * 3.6}deg, var(--border-color) 0deg)`
-                              }}>
-                                <div className="circle-inner">
-                                  <span className="percentage">{hand.success_rate}%</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="hand-details">
-                              {hand.total_shots} shots
-                            </div>
-                          </div>
-                        ))}
-                    </div>
+                        </div>
+                        <div className="hand-details">
+                          {hand.total_shots} winning shots
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
