@@ -485,6 +485,103 @@ const MatchAnalysis = () => {
             )}
           </div>
         </div>
+
+        {/* Second Row: Hand Analysis and Set-by-Set Breakdown */}
+        <div className="analysis-row analysis-row-two">
+          <div className="analysis-section">
+            <h3>Hand Analysis</h3>
+            {handAnalysis.length > 0 ? (
+              <div className="hand-analysis-container">
+                <div className="hand-analysis-player">
+                  <h4>Player</h4>
+                  <div className="hand-stats">
+                    {handAnalysis
+                      .filter((hand: any) => hand.player_type === 'player')
+                      .map((hand: any, index: number) => (
+                        <div key={index} className="hand-stat-row">
+                          <div className="hand-info">
+                            <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
+                            <span className="success-rate">{hand.success_rate}%</span>
+                          </div>
+                          <div className="hand-details">
+                            <span className="record">{hand.wins}W - {hand.losses}L</span>
+                            <span className="total">({hand.total_shots} total)</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+                
+                <div className="hand-analysis-opponent">
+                  <h4>Opponent</h4>
+                  <div className="hand-stats">
+                    {handAnalysis
+                      .filter((hand: any) => hand.player_type === 'opponent')
+                      .map((hand: any, index: number) => (
+                        <div key={index} className="hand-stat-row">
+                          <div className="hand-info">
+                            <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
+                            <span className="success-rate">{hand.success_rate}%</span>
+                          </div>
+                          <div className="hand-details">
+                            <span className="record">{hand.wins}W - {hand.losses}L</span>
+                            <span className="total">({hand.total_shots} total)</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>No data</div>
+            )}
+          </div>
+
+          <div className="analysis-section">
+            <h3>Set-by-Set Breakdown</h3>
+            {setBreakdown.length > 0 ? (
+              <div className="set-breakdown">
+                {(() => {
+                  const setData = setBreakdown.reduce((acc: any, item: any) => {
+                    if (!acc[item.set_number]) acc[item.set_number] = [];
+                    acc[item.set_number].push(item);
+                    return acc;
+                  }, {});
+                  
+                  return Object.keys(setData).map((setNum: string) => {
+                    const shots = setData[setNum];
+                    const mostSuccessful = shots.reduce((max: any, shot: any) => 
+                      shot.wins_in_set > max.wins_in_set ? shot : max
+                    );
+                    const leastSuccessful = shots.reduce((min: any, shot: any) => 
+                      shot.wins_in_set < min.wins_in_set ? shot : min
+                    );
+                    
+                    return (
+                      <div key={setNum} className="set-item">
+                        <div className="set-header">Set {setNum}</div>
+                        <div className="set-stats">
+                          <div className="best-shot">
+                            <span className="label">Most successful:</span>
+                            <span className="value">{formatText(mostSuccessful.shot_name)} ({mostSuccessful.wins_in_set} wins)</span>
+                          </div>
+                          {mostSuccessful.shot_name !== leastSuccessful.shot_name && (
+                            <div className="worst-shot">
+                              <span className="label">Least successful:</span>
+                              <span className="value">{formatText(leastSuccessful.shot_name)} ({leastSuccessful.wins_in_set} wins)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            ) : (
+              <div>No data</div>
+            )}
+          </div>
+        </div>
         
         <div className="analysis-actions">
           <button
