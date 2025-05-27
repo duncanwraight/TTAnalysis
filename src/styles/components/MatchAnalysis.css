@@ -385,9 +385,9 @@
 
 /* Hand Analysis */
 .hand-analysis-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .hand-analysis-player,
@@ -462,12 +462,6 @@
   color: var(--light-text-color);
 }
 
-@media (max-width: 768px) {
-  .hand-analysis-container {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-}
 
 /* Tactical Insights Styling */
 .tactical-list {
