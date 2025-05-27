@@ -97,8 +97,8 @@ export const matchApi = {
         .eq('match_id', id)
         .order('player_total', { ascending: false }),
 
-      // Hand Analysis (updated to use new player-specific view)
-      supabase.from('player_hand_analysis')
+      // Hand Analysis
+      supabase.from('hand_analysis')
         .select('*')
         .eq('match_id', id),
 

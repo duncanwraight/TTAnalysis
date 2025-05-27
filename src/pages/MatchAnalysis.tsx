@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
+import { useAuth } from '../context/AuthContext';
 import html2pdf from 'html2pdf.js';
 import '../styles/components/MatchAnalysis.css';
 
@@ -17,13 +18,19 @@ const formatText = (text: string): string => {
 const MatchAnalysis = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const api = useApi();
+  const { user } = useAuth();
   const contentRef = useRef<HTMLDivElement>(null);
   
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  
+  const isSharedView = location.pathname.includes('/shared/');
+  const isAuthenticated = !!user;
   
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -76,32 +83,55 @@ const MatchAnalysis = () => {
       setIsExporting(false);
     }
   };
+
+  const handleShare = async () => {
+    if (!id) return;
+    
+    const shareUrl = `${window.location.origin}/shared/matches/${id}/analysis`;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareSuccess(true);
+      setTimeout(() => setShareSuccess(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      // Fallback: show the URL in a prompt
+      prompt('Copy this link to share:', shareUrl);
+    }
+  };
   
   if (loading) {
-    return (
-      <Layout>
-        <div className="loading-container">
-          <p>Loading analysis...</p>
-        </div>
-      </Layout>
+    const content = (
+      <div className="loading-container">
+        <p>Loading analysis...</p>
+      </div>
     );
+    return isSharedView ? <div className="shared-analysis-container">{content}</div> : <Layout>{content}</Layout>;
   }
 
   if (error) {
-    return (
-      <Layout>
-        <div className="error-container">
-          <h2>Error</h2>
-          <p>{error}</p>
+    const content = (
+      <div className="error-container">
+        <h2>Error</h2>
+        <p>{error}</p>
+        {isSharedView ? (
+          <button
+            className="btn secondary-btn"
+            onClick={() => navigate('/')}
+          >
+            Go to Home
+          </button>
+        ) : (
           <button
             className="btn secondary-btn"
             onClick={() => navigate('/matches')}
           >
             Back to Matches
           </button>
-        </div>
-      </Layout>
+        )}
+      </div>
     );
+    return isSharedView ? <div className="shared-analysis-container">{content}</div> : <Layout>{content}</Layout>;
   }
 
   const matchSummary = analysisData?.matchSummary;
@@ -113,9 +143,8 @@ const MatchAnalysis = () => {
   const tacticalInsights = analysisData?.tacticalInsights || [];
   const handAnalysis = analysisData?.handAnalysis || [];
   
-  return (
-    <Layout>
-      <div className="match-analysis-container" ref={contentRef}>
+  const analysisContent = (
+    <div className="match-analysis-container" ref={contentRef}>
         <div className="analysis-header">
           <h1>Match Analysis</h1>
           {matchSummary && (
@@ -123,6 +152,11 @@ const MatchAnalysis = () => {
               <h2>vs. {matchSummary.opponent_name}</h2>
               <p className="match-date">{new Date(matchSummary.date).toLocaleDateString()}</p>
             </>
+          )}
+          {isSharedView && (
+            <div className="shared-badge">
+              <span>🔗 Shared Analysis</span>
+            </div>
           )}
         </div>
         
@@ -232,7 +266,7 @@ const MatchAnalysis = () => {
               <div className="chart-container">
                 <div className="distribution-columns">
                   <div className="distribution-column">
-                    <h4>Your Shots</h4>
+                    <h4>{isSharedView ? "Player's Shots" : "Your Shots"}</h4>
                     <div className="chart-legend">
                       {shotDistribution
                         .filter((shot: any) => shot.player_total > 0)
@@ -308,7 +342,7 @@ const MatchAnalysis = () => {
               <div className="chart-container">
                 <div className="hand-analysis-players">
                   <div className="hand-analysis-player">
-                    <h4>Your Hand Analysis</h4>
+                    <h4>{isSharedView ? "Player's Hand Analysis" : "Your Hand Analysis"}</h4>
                     <div className="hand-comparison">
                       {handAnalysis
                         .filter((hand: any) => hand.player_type === 'player')
@@ -441,15 +475,38 @@ const MatchAnalysis = () => {
           >
             {isExporting ? 'Exporting PDF...' : 'Export to PDF'}
           </button>
-          <button
-            className="btn secondary-btn"
-            onClick={() => navigate('/matches')}
-          >
-            Back to Matches
-          </button>
+          {isAuthenticated && !isSharedView && (
+            <button
+              className="btn secondary-btn"
+              onClick={handleShare}
+              disabled={shareSuccess}
+            >
+              {shareSuccess ? '✓ Link Copied!' : '🔗 Share Analysis'}
+            </button>
+          )}
+          {isSharedView ? (
+            <button
+              className="btn secondary-btn"
+              onClick={() => navigate('/')}
+            >
+              Go to Home
+            </button>
+          ) : (
+            <button
+              className="btn secondary-btn"
+              onClick={() => navigate('/matches')}
+            >
+              Back to Matches
+            </button>
+          )}
         </div>
       </div>
-    </Layout>
+    );
+
+  return isSharedView ? (
+    <div className="shared-analysis-container">{analysisContent}</div>
+  ) : (
+    <Layout>{analysisContent}</Layout>
   );
 };
 

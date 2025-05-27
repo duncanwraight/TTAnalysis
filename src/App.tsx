@@ -64,6 +64,12 @@ function App() {
             } 
           />
           
+          {/* Public shared analysis route - no authentication required */}
+          <Route 
+            path="/shared/matches/:id/analysis" 
+            element={<MatchAnalysis />} 
+          />
+          
           {/* Admin routes requiring admin status */}
           <Route 
             path="/admin" 
