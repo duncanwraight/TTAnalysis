@@ -649,7 +649,7 @@ const MatchAnalysis = () => {
         {/* Second Row: Hand Analysis and Set-by-Set Breakdown */}
         <div className="analysis-row analysis-row-two">
           <div className="analysis-section">
-            <h3>Hand Analysis</h3>
+            <h3>FH vs. BH Success</h3>
             {handAnalysis.length > 0 ? (
               <div className="hand-analysis-container">
                 <div className="hand-analysis-player">
@@ -729,11 +729,11 @@ const MatchAnalysis = () => {
                       shot.player_wins > max.player_wins ? shot : max
                     );
                     
-                    // Find least successful shot (lowest wins for player, but only among shots they used)
-                    const shotsPlayerUsed = shots.filter((shot: any) => shot.player_wins > 0);
-                    const leastSuccessful = shotsPlayerUsed.length > 0 
-                      ? shotsPlayerUsed.reduce((min: any, shot: any) => 
-                          shot.player_wins < min.player_wins ? shot : min
+                    // Find least successful shot (highest losses for player - shots where they lost points)
+                    const shotsWithLosses = shots.filter((shot: any) => shot.player_losses > 0);
+                    const leastSuccessful = shotsWithLosses.length > 0 
+                      ? shotsWithLosses.reduce((max: any, shot: any) => 
+                          shot.player_losses > max.player_losses ? shot : max
                         )
                       : null;
                     
@@ -748,7 +748,7 @@ const MatchAnalysis = () => {
                           {leastSuccessful && mostSuccessful.shot_name !== leastSuccessful.shot_name && (
                             <div className="worst-shot">
                               <span className="label">Least successful:</span>
-                              <span className="value">{formatText(leastSuccessful.shot_name)} ({leastSuccessful.player_wins} wins)</span>
+                              <span className="value">{formatText(leastSuccessful.shot_name)} ({leastSuccessful.player_losses} losses)</span>
                             </div>
                           )}
                         </div>
