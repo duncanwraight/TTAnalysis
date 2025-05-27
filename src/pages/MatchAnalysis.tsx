@@ -138,11 +138,8 @@ const MatchAnalysis = () => {
   const effectiveShots = analysisData?.mostEffectiveShots || [];
   const costlyShots = analysisData?.mostCostlyShots || [];
   const shotDistribution = analysisData?.shotDistribution || [];
-  const setBreakdown = analysisData?.setBreakdown || [];
   const categoryBreakdown = analysisData?.categoryBreakdown || [];
   const tacticalInsights = analysisData?.tacticalInsights || [];
-  const handAnalysis = analysisData?.handAnalysis || [];
-  const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
   
   // Create shot+hand breakdown data for player
   const createPlayerShotHandBreakdown = () => {
