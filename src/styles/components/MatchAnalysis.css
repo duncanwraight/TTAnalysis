@@ -235,6 +235,62 @@
   color: var(--secondary-color);
 }
 
+/* Sort buttons */
+.sort-button {
+  background: none;
+  border: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: color 0.2s ease;
+}
+
+.sort-button:hover {
+  color: var(--primary-color);
+}
+
+.sort-arrow {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--primary-color);
+}
+
+/* Category/Shot/Hand cell styling */
+.analysis-table td.category-shot-hand {
+  padding: 0.5rem 1rem;
+}
+
+.analysis-table td.category-shot-hand .category-name {
+  font-weight: 500;
+  color: var(--light-text-color);
+  font-size: 0.8rem;
+  margin-bottom: 0.2rem;
+}
+
+.analysis-table td.category-shot-hand .shot-name {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+  margin-bottom: 0.2rem;
+}
+
+.analysis-table td.category-shot-hand .hand-breakdown {
+  font-weight: 500;
+  color: var(--secondary-color);
+  font-size: 0.8rem;
+  background-color: var(--background-color);
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  display: inline-block;
+}
+
 /* Analysis Rows */
 .analysis-row {
   display: grid;

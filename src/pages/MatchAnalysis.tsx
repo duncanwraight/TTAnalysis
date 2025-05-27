@@ -29,6 +29,17 @@ const MatchAnalysis = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
   
+  // Sorting state for shot breakdown tables
+  const [playerTableSort, setPlayerTableSort] = useState<{
+    field: 'category_shot_hand' | 'won' | 'lost' | 'percentage';
+    direction: 'asc' | 'desc';
+  }>({ field: 'won', direction: 'desc' });
+  
+  const [opponentTableSort, setOpponentTableSort] = useState<{
+    field: 'category_shot_hand' | 'won' | 'lost' | 'percentage';
+    direction: 'asc' | 'desc';
+  }>({ field: 'won', direction: 'desc' });
+  
   const isSharedView = location.pathname.includes('/shared/');
   const isAuthenticated = !!user;
   
@@ -228,6 +239,60 @@ const MatchAnalysis = () => {
   const shotHandBreakdown = createPlayerShotHandBreakdown();
   const opponentShotHandBreakdown = createOpponentShotHandBreakdown();
   
+  // Sorting functions
+  const sortData = (data: any[], sortConfig: { field: string; direction: 'asc' | 'desc' }) => {
+    return [...data].sort((a, b) => {
+      if (sortConfig.field === 'category_shot_hand') {
+        // Sort by category, then shot, then hand
+        const aKey = `${a.category}-${a.name}-${a.hand}`;
+        const bKey = `${b.category}-${b.name}-${b.hand}`;
+        const comparison = aKey.localeCompare(bKey);
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      } else if (sortConfig.field === 'won') {
+        const aValue = a.hand_wins || 0;
+        const bValue = b.hand_wins || 0;
+        const comparison = aValue - bValue;
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      } else if (sortConfig.field === 'lost') {
+        const aValue = a.hand_losses || 0;
+        const bValue = b.hand_losses || 0;
+        const comparison = aValue - bValue;
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      } else if (sortConfig.field === 'percentage') {
+        const aValue = a.hand_success_rate || 0;
+        const bValue = b.hand_success_rate || 0;
+        const comparison = aValue - bValue;
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      }
+      return 0;
+    });
+  };
+  
+  const handlePlayerSort = (field: 'category_shot_hand' | 'won' | 'lost' | 'percentage') => {
+    setPlayerTableSort(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+  
+  const handleOpponentSort = (field: 'category_shot_hand' | 'won' | 'lost' | 'percentage') => {
+    setOpponentTableSort(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+  
+  // Apply sorting to the data
+  const sortedPlayerData = sortData(
+    shotHandBreakdown.filter((shot: any) => shot.won_with > 0 || shot.lost_with > 0).filter((shot: any) => shot.hand_total > 0),
+    playerTableSort
+  );
+  
+  const sortedOpponentData = sortData(
+    opponentShotHandBreakdown.filter((shot: any) => shot.hand_total > 0),
+    opponentTableSort
+  );
+  
   const analysisContent = (
     <div className="match-analysis-container" ref={contentRef}>
         <div className="analysis-header">
@@ -318,28 +383,73 @@ const MatchAnalysis = () => {
                   <table className="analysis-table">
                     <thead>
                       <tr>
-                        <th>Category</th>
-                        <th>Shot</th>
-                        <th>Hand</th>
-                        <th>Won with</th>
-                        <th>Lost with</th>
-                        <th>Win %</th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handlePlayerSort('category_shot_hand')}
+                          >
+                            Category/Shot/Hand
+                            {playerTableSort.field === 'category_shot_hand' && (
+                              <span className="sort-arrow">
+                                {playerTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handlePlayerSort('won')}
+                          >
+                            Won with
+                            {playerTableSort.field === 'won' && (
+                              <span className="sort-arrow">
+                                {playerTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handlePlayerSort('lost')}
+                          >
+                            Lost with
+                            {playerTableSort.field === 'lost' && (
+                              <span className="sort-arrow">
+                                {playerTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handlePlayerSort('percentage')}
+                          >
+                            Win %
+                            {playerTableSort.field === 'percentage' && (
+                              <span className="sort-arrow">
+                                {playerTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {shotHandBreakdown
-                        .filter((shot: any) => shot.won_with > 0 || shot.lost_with > 0)
-                        .filter((shot: any) => shot.hand_total > 0) // Only show rows with hand data
-                        .map((shot: any, index: number) => (
-                          <tr key={index}>
-                            <td className="category-name">{formatText(shot.category)}</td>
-                            <td className="shot-name">{formatText(shot.name)}</td>
-                            <td className="hand-breakdown">{shot.hand}</td>
-                            <td className="won-with">{shot.hand_wins}</td>
-                            <td className="lost-with">{shot.hand_losses}</td>
-                            <td className="percentage">{shot.hand_success_rate}%</td>
-                          </tr>
-                        ))}
+                      {sortedPlayerData.map((shot: any, index: number) => (
+                        <tr key={index}>
+                          <td className="category-shot-hand">
+                            <div className="category-name">{formatText(shot.category)}</div>
+                            <div className="shot-name">{formatText(shot.name)}</div>
+                            <div className="hand-breakdown">{shot.hand}</div>
+                          </td>
+                          <td className="won-with">{shot.hand_wins}</td>
+                          <td className="lost-with">{shot.hand_losses}</td>
+                          <td className="percentage">{shot.hand_success_rate}%</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -351,27 +461,73 @@ const MatchAnalysis = () => {
                   <table className="analysis-table">
                     <thead>
                       <tr>
-                        <th>Category</th>
-                        <th>Shot</th>
-                        <th>Hand</th>
-                        <th>Won against</th>
-                        <th>Lost against</th>
-                        <th>Win %</th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handleOpponentSort('category_shot_hand')}
+                          >
+                            Category/Shot/Hand
+                            {opponentTableSort.field === 'category_shot_hand' && (
+                              <span className="sort-arrow">
+                                {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handleOpponentSort('won')}
+                          >
+                            Won against
+                            {opponentTableSort.field === 'won' && (
+                              <span className="sort-arrow">
+                                {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handleOpponentSort('lost')}
+                          >
+                            Lost against
+                            {opponentTableSort.field === 'lost' && (
+                              <span className="sort-arrow">
+                                {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handleOpponentSort('percentage')}
+                          >
+                            Win %
+                            {opponentTableSort.field === 'percentage' && (
+                              <span className="sort-arrow">
+                                {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {opponentShotHandBreakdown
-                        .filter((shot: any) => shot.hand_total > 0) // Only show rows with hand data
-                        .map((shot: any, index: number) => (
-                          <tr key={index}>
-                            <td className="category-name">{formatText(shot.category)}</td>
-                            <td className="shot-name">{formatText(shot.name)}</td>
-                            <td className="hand-breakdown">{shot.hand}</td>
-                            <td className="won-against">{shot.hand_wins}</td>
-                            <td className="lost-against">{shot.hand_losses}</td>
-                            <td className="percentage">{shot.hand_success_rate}%</td>
-                          </tr>
-                        ))}
+                      {sortedOpponentData.map((shot: any, index: number) => (
+                        <tr key={index}>
+                          <td className="category-shot-hand">
+                            <div className="category-name">{formatText(shot.category)}</div>
+                            <div className="shot-name">{formatText(shot.name)}</div>
+                            <div className="hand-breakdown">{shot.hand}</div>
+                          </td>
+                          <td className="won-against">{shot.hand_wins}</td>
+                          <td className="lost-against">{shot.hand_losses}</td>
+                          <td className="percentage">{shot.hand_success_rate}%</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -542,20 +698,40 @@ const MatchAnalysis = () => {
             {setBreakdown.length > 0 ? (
               <div className="set-breakdown">
                 {(() => {
-                  const setData = setBreakdown.reduce((acc: any, item: any) => {
+                  // Filter setBreakdown to show only player perspective - shots where player had involvement
+                  const playerSetData = setBreakdown.reduce((acc: any, item: any) => {
                     if (!acc[item.set_number]) acc[item.set_number] = [];
-                    acc[item.set_number].push(item);
+                    
+                    // Create player perspective data: wins they achieved and losses they had with shots
+                    const playerShotData = {
+                      ...item,
+                      player_wins: item.wins_in_set, // Times player won with this shot in the set
+                      player_losses: item.total_shots_in_set - item.wins_in_set // Times opponent won with this shot (player lost against it)
+                    };
+                    
+                    // Only include shots where the player had some involvement
+                    if (playerShotData.player_wins > 0 || playerShotData.player_losses > 0) {
+                      acc[item.set_number].push(playerShotData);
+                    }
+                    
                     return acc;
                   }, {});
                   
-                  return Object.keys(setData).map((setNum: string) => {
-                    const shots = setData[setNum];
+                  return Object.keys(playerSetData).map((setNum: string) => {
+                    const shots = playerSetData[setNum];
+                    
+                    // Find most successful shot (highest wins for player)
                     const mostSuccessful = shots.reduce((max: any, shot: any) => 
-                      shot.wins_in_set > max.wins_in_set ? shot : max
+                      shot.player_wins > max.player_wins ? shot : max
                     );
-                    const leastSuccessful = shots.reduce((min: any, shot: any) => 
-                      shot.wins_in_set < min.wins_in_set ? shot : min
-                    );
+                    
+                    // Find least successful shot (lowest wins for player, but only among shots they used)
+                    const shotsPlayerUsed = shots.filter((shot: any) => shot.player_wins > 0);
+                    const leastSuccessful = shotsPlayerUsed.length > 0 
+                      ? shotsPlayerUsed.reduce((min: any, shot: any) => 
+                          shot.player_wins < min.player_wins ? shot : min
+                        )
+                      : null;
                     
                     return (
                       <div key={setNum} className="set-item">
@@ -563,12 +739,12 @@ const MatchAnalysis = () => {
                         <div className="set-stats">
                           <div className="best-shot">
                             <span className="label">Most successful:</span>
-                            <span className="value">{formatText(mostSuccessful.shot_name)} ({mostSuccessful.wins_in_set} wins)</span>
+                            <span className="value">{formatText(mostSuccessful.shot_name)} ({mostSuccessful.player_wins} wins)</span>
                           </div>
-                          {mostSuccessful.shot_name !== leastSuccessful.shot_name && (
+                          {leastSuccessful && mostSuccessful.shot_name !== leastSuccessful.shot_name && (
                             <div className="worst-shot">
                               <span className="label">Least successful:</span>
-                              <span className="value">{formatText(leastSuccessful.shot_name)} ({leastSuccessful.wins_in_set} wins)</span>
+                              <span className="value">{formatText(leastSuccessful.shot_name)} ({leastSuccessful.player_wins} wins)</span>
                             </div>
                           )}
                         </div>
