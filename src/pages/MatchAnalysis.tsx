@@ -463,32 +463,43 @@ const MatchAnalysis = () => {
             )}
           </div>
 
-          <div className="analysis-section chart-section">
+          <div className="analysis-section">
             <h3>Hand Analysis</h3>
             {handAnalysis.length > 0 ? (
-              <div className="chart-container">
-                <div className="hand-analysis-overall">
-                  <h4>Overall Hand Analysis (Winning Shots)</h4>
-                  <div className="hand-comparison">
-                    {handAnalysis.map((hand: any, index: number) => (
-                      <div key={index} className="hand-stat">
-                        <div className="hand-label">
-                          {hand.hand === 'fh' ? 'Forehand' : 'Backhand'}
-                        </div>
-                        <div className="hand-circle">
-                          <div className="circle-progress" style={{
-                            background: `conic-gradient(var(--primary-color) ${hand.success_rate * 3.6}deg, var(--border-color) 0deg)`
-                          }}>
-                            <div className="circle-inner">
-                              <span className="percentage">{hand.success_rate}%</span>
-                            </div>
+              <div className="hand-analysis-container">
+                <div className="hand-analysis-player">
+                  <h4>Your Hand Performance</h4>
+                  <div className="hand-stats">
+                    {handAnalysis
+                      .filter((hand: any) => hand.player_type === 'player')
+                      .map((hand: any, index: number) => (
+                        <div key={index} className="hand-stat-item">
+                          <div className="hand-name">{hand.hand === 'fh' ? 'Forehand' : 'Backhand'}</div>
+                          <div className="hand-metrics">
+                            <span className="success-rate">{hand.success_rate}%</span>
+                            <span className="shot-count">{hand.wins}W - {hand.losses}L</span>
+                            <span className="total-shots">({hand.total_shots} total)</span>
                           </div>
                         </div>
-                        <div className="hand-details">
-                          {hand.total_shots} winning shots
+                      ))}
+                  </div>
+                </div>
+                
+                <div className="hand-analysis-opponent">
+                  <h4>Opponent Hand Performance</h4>
+                  <div className="hand-stats">
+                    {handAnalysis
+                      .filter((hand: any) => hand.player_type === 'opponent')
+                      .map((hand: any, index: number) => (
+                        <div key={index} className="hand-stat-item">
+                          <div className="hand-name">{hand.hand === 'fh' ? 'Forehand' : 'Backhand'}</div>
+                          <div className="hand-metrics">
+                            <span className="success-rate">{hand.success_rate}%</span>
+                            <span className="shot-count">{hand.wins}W - {hand.losses}L</span>
+                            <span className="total-shots">({hand.total_shots} total)</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
               </div>
