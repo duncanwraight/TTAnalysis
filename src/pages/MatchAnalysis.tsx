@@ -377,7 +377,7 @@ const MatchAnalysis = () => {
         {/* Headline Metrics */}
         <div className="headline-metrics">
           <div className="metric-box effective">
-            <h4>Your Most Effective</h4>
+            <h4>You Won With...</h4>
             {effectiveShots.length > 0 ? (
               effectiveShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
@@ -391,7 +391,7 @@ const MatchAnalysis = () => {
           </div>
           
           <div className="metric-box costly">
-            <h4>Your Most Costly</h4>
+            <h4>You Lost Trying...</h4>
             {costlyShots.length > 0 ? (
               costlyShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
@@ -405,7 +405,7 @@ const MatchAnalysis = () => {
           </div>
           
           <div className="metric-box opponent-effective">
-            <h4>Opponent Most Effective</h4>
+            <h4>Opponent Won With...</h4>
             {opponentEffectiveShots.length > 0 ? (
               opponentEffectiveShots.slice(0, 3).map((shot: any, index: number) => (
                 <div key={index} className="metric-item">
