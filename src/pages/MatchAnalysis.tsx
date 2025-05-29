@@ -40,6 +40,9 @@ const MatchAnalysis = () => {
     direction: 'asc' | 'desc';
   }>({ field: 'won', direction: 'desc' });
   
+  // Filter state for shot breakdown tables
+  const [hideMinorShots, setHideMinorShots] = useState(false);
+  
   const isSharedView = location.pathname.includes('/shared/');
   const isAuthenticated = !!user;
   
@@ -344,16 +347,39 @@ const MatchAnalysis = () => {
     }));
   };
   
-  // Apply sorting to the data
-  const sortedPlayerData = sortData(
-    shotHandBreakdown.filter((shot: any) => shot.won_with > 0 || shot.lost_with > 0).filter((shot: any) => shot.hand_total > 0),
-    playerTableSort
-  );
-  
-  const sortedOpponentData = sortData(
-    opponentShotHandBreakdown.filter((shot: any) => shot.hand_total > 0),
-    opponentTableSort
-  );
+  // Apply filtering and sorting to the data
+  const filterPlayerData = (data: any[]) => {
+    let filtered = data.filter((shot: any) => shot.won_with > 0 || shot.lost_with > 0).filter((shot: any) => shot.hand_total > 0);
+    
+    if (hideMinorShots) {
+      // Filter out shots with less than 15% in either won or lost columns
+      filtered = filtered.filter((shot: any) => {
+        const wonPercentage = totalPlayerWins > 0 ? (shot.hand_wins / totalPlayerWins) * 100 : 0;
+        const lostPercentage = totalPlayerWins > 0 ? (shot.hand_losses / totalPlayerWins) * 100 : 0;
+        return wonPercentage >= 15 || lostPercentage >= 15;
+      });
+    }
+    
+    return filtered;
+  };
+
+  const filterOpponentData = (data: any[]) => {
+    let filtered = data.filter((shot: any) => shot.hand_total > 0);
+    
+    if (hideMinorShots) {
+      // Filter out shots with less than 15% in either won against or lost against columns
+      filtered = filtered.filter((shot: any) => {
+        const wonAgainstPercentage = totalOpponentWins > 0 ? (shot.hand_wins / totalOpponentWins) * 100 : 0;
+        const lostAgainstPercentage = totalPlayerWins > 0 ? (shot.hand_losses / totalPlayerWins) * 100 : 0;
+        return wonAgainstPercentage >= 15 || lostAgainstPercentage >= 15;
+      });
+    }
+    
+    return filtered;
+  };
+
+  const sortedPlayerData = sortData(filterPlayerData(shotHandBreakdown), playerTableSort);
+  const sortedOpponentData = sortData(filterOpponentData(opponentShotHandBreakdown), opponentTableSort);
   
   const analysisContent = (
     <div className="match-analysis-container" ref={contentRef}>
@@ -408,12 +434,15 @@ const MatchAnalysis = () => {
           <div className="metric-box effective">
             <h4>You Won With...</h4>
             {effectiveShots.length > 0 ? (
-              effectiveShots.slice(0, 3).map((shot: any, index: number) => (
-                <div key={index} className="metric-item">
-                  <span className="shot-name">{formatText(shot.name)}</span>
-                  <span className="metric-value">{shot.wins} wins ({shot.success_rate}%)</span>
-                </div>
-              ))
+              effectiveShots.slice(0, 3).map((shot: any, index: number) => {
+                const winPercentage = totalPlayerWins > 0 ? ((shot.wins / totalPlayerWins) * 100).toFixed(1) : '0.0';
+                return (
+                  <div key={index} className="metric-item">
+                    <span className="shot-name">{formatText(shot.name)}</span>
+                    <span className="metric-value">{shot.wins} wins ({winPercentage}%)</span>
+                  </div>
+                );
+              })
             ) : (
               <div>No data</div>
             )}
@@ -422,12 +451,16 @@ const MatchAnalysis = () => {
           <div className="metric-box costly">
             <h4>You Lost Trying...</h4>
             {costlyShots.length > 0 ? (
-              costlyShots.slice(0, 3).map((shot: any, index: number) => (
-                <div key={index} className="metric-item">
-                  <span className="shot-name">{formatText(shot.name)}</span>
-                  <span className="metric-value">{shot.losses} losses ({(100 - shot.success_rate).toFixed(1)}%)</span>
-                </div>
-              ))
+              costlyShots.slice(0, 3).map((shot: any, index: number) => {
+                const totalPlayerLosses = matchSummary?.points_lost || 0;
+                const lossPercentage = totalPlayerLosses > 0 ? ((shot.losses / totalPlayerLosses) * 100).toFixed(1) : '0.0';
+                return (
+                  <div key={index} className="metric-item">
+                    <span className="shot-name">{formatText(shot.name)}</span>
+                    <span className="metric-value">{shot.losses} losses ({lossPercentage}%)</span>
+                  </div>
+                );
+              })
             ) : (
               <div>No data</div>
             )}
@@ -436,12 +469,15 @@ const MatchAnalysis = () => {
           <div className="metric-box opponent-effective">
             <h4>Opponent Won With...</h4>
             {opponentEffectiveShots.length > 0 ? (
-              opponentEffectiveShots.slice(0, 3).map((shot: any, index: number) => (
-                <div key={index} className="metric-item">
-                  <span className="shot-name">{formatText(shot.name)}</span>
-                  <span className="metric-value">{shot.wins} wins ({shot.success_rate}%)</span>
-                </div>
-              ))
+              opponentEffectiveShots.slice(0, 3).map((shot: any, index: number) => {
+                const winPercentage = totalOpponentWins > 0 ? ((shot.wins / totalOpponentWins) * 100).toFixed(1) : '0.0';
+                return (
+                  <div key={index} className="metric-item">
+                    <span className="shot-name">{formatText(shot.name)}</span>
+                    <span className="metric-value">{shot.wins} wins ({winPercentage}%)</span>
+                  </div>
+                );
+              })
             ) : (
               <div>No data</div>
             )}
@@ -478,7 +514,16 @@ const MatchAnalysis = () => {
 
         {/* Shot Analysis Tables */}
         <div className="shot-analysis-tables">
-          <h3>Shot Breakdown</h3>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem'}}>
+            <h3 style={{margin: 0}}>Shot Breakdown</h3>
+            <button
+              className="btn secondary-btn"
+              onClick={() => setHideMinorShots(!hideMinorShots)}
+              style={{fontSize: '0.9rem', padding: '0.5rem 1rem'}}
+            >
+              {hideMinorShots ? 'Show All Shots' : 'Hide Minor Shots (<15%)'}
+            </button>
+          </div>
           {shotDistribution.length > 0 ? (
             <div className="breakdown-tables">
               <div className="breakdown-table">
@@ -764,14 +809,16 @@ const MatchAnalysis = () => {
         {/* Second Row: Hand Analysis and Set-by-Set Breakdown */}
         <div className="analysis-row analysis-row-two">
           <div className="analysis-section">
-            <h3>FH vs. BH Success</h3>
+            <h3>FH vs. BH Success <span style={{fontSize: '0.8em', color: '#666', fontWeight: 'normal'}}>(excl. serves)</span></h3>
             {handAnalysis.length > 0 ? (
               <div className="hand-analysis-container">
                 <div className="hand-analysis-player">
                   <h4>Player</h4>
                   <div className="hand-stats">
                     {(() => {
-                      const playerHands = handAnalysis.filter((hand: any) => hand.player_type === 'player');
+                      const playerHands = handAnalysis.filter((hand: any) => 
+                        hand.player_type === 'player' && hand.category?.toLowerCase() !== 'serve'
+                      );
                       const totalPlayerWins = playerHands.reduce((sum: number, hand: any) => sum + hand.wins, 0);
                       
                       return playerHands.map((hand: any, index: number) => {
@@ -798,7 +845,9 @@ const MatchAnalysis = () => {
                   <h4>Opponent</h4>
                   <div className="hand-stats">
                     {(() => {
-                      const opponentHands = handAnalysis.filter((hand: any) => hand.player_type === 'opponent');
+                      const opponentHands = handAnalysis.filter((hand: any) => 
+                        hand.player_type === 'opponent' && hand.category?.toLowerCase() !== 'serve'
+                      );
                       const totalOpponentWins = opponentHands.reduce((sum: number, hand: any) => sum + hand.wins, 0);
                       
                       return opponentHands.map((hand: any, index: number) => {
