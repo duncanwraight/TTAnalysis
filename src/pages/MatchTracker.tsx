@@ -293,6 +293,13 @@ const MatchTracker = () => {
       
       // Create point in database
       // Use direct shot IDs and hands from the ShotInfo objects
+      console.log('MatchTracker recording point with:', {
+        winner,
+        winningShot,
+        isLucky: winningShot.isLucky,
+        willSaveAsLucky: winningShot.isLucky || false
+      });
+      
       const pointData = {
         set_id: currentSetData.id,
         match_id: match.id,
@@ -302,7 +309,8 @@ const MatchTracker = () => {
         winning_hand: winningShot.hand,
         other_shot_id: otherShot.shotId,
         other_hand: otherShot.hand,
-        notes: ''
+        notes: '',
+        is_lucky_shot: winningShot.isLucky || false
       };
       
       // Create the point in the database
