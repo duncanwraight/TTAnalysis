@@ -274,6 +274,14 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
         throw error;
       }
       
+      // Debug logging for lucky shots
+      console.log('Recording point with winning shot:', {
+        shotId: winningShot.shotId,
+        hand: winningShot.hand,
+        isLucky: winningShot.isLucky,
+        isLuckyFallback: winningShot.isLucky || false
+      });
+      
       // Use the new ShotInfo format
       const newPoint = await api.point.createPoint({
         set_id: currentSetData.id,

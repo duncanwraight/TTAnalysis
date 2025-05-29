@@ -112,6 +112,12 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
       isLucky: !selected.isLucky
     };
     
+    console.log('Lucky shot toggle:', {
+      before: selected.isLucky,
+      after: updatedShot.isLucky,
+      updatedShot: updatedShot
+    });
+    
     onSelect(updatedShot);
   };
 
