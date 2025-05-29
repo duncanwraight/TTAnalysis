@@ -552,10 +552,10 @@ const MatchAnalysis = () => {
                             <span className="hand-breakdown">{shot.hand}</span>
                           </td>
                           <td className="won-with">
-                            {shot.hand_wins} ({totalPlayerWins > 0 ? ((shot.hand_wins / totalPlayerWins) * 100).toFixed(1) : '0.0'}%)
+                            {shot.hand_wins} <span className="percentage-text">({totalPlayerWins > 0 ? ((shot.hand_wins / totalPlayerWins) * 100).toFixed(1) : '0.0'}%)</span>
                           </td>
                           <td className="lost-with">
-                            {shot.hand_losses} ({totalPlayerWins > 0 ? ((shot.hand_losses / totalPlayerWins) * 100).toFixed(1) : '0.0'}%)
+                            {shot.hand_losses} <span className="percentage-text">({totalPlayerWins > 0 ? ((shot.hand_losses / totalPlayerWins) * 100).toFixed(1) : '0.0'}%)</span>
                           </td>
                           <td className="win-ratio">
                             {shot.hand_success_rate}%
@@ -638,10 +638,10 @@ const MatchAnalysis = () => {
                             <span className="hand-breakdown">{shot.hand}</span>
                           </td>
                           <td className="won-against">
-                            {shot.hand_wins} ({totalOpponentWins > 0 ? ((shot.hand_wins / totalOpponentWins) * 100).toFixed(1) : '0.0'}%)
+                            {shot.hand_wins} <span className="percentage-text">({totalOpponentWins > 0 ? ((shot.hand_wins / totalOpponentWins) * 100).toFixed(1) : '0.0'}%)</span>
                           </td>
                           <td className="lost-against">
-                            {shot.hand_losses} ({totalPlayerWins > 0 ? ((shot.hand_losses / totalPlayerWins) * 100).toFixed(1) : '0.0'}%)
+                            {shot.hand_losses} <span className="percentage-text">({totalPlayerWins > 0 ? ((shot.hand_losses / totalPlayerWins) * 100).toFixed(1) : '0.0'}%)</span>
                           </td>
                           <td className="win-ratio">{shot.hand_success_rate}%</td>
                         </tr>

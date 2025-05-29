@@ -301,6 +301,12 @@
   color: var(--secondary-color);
 }
 
+/* Percentage text styling */
+.percentage-text {
+  font-weight: 400;
+  color: #6b7280;
+}
+
 /* Sort buttons */
 .sort-button {
   background: none;
