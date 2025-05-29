@@ -456,17 +456,8 @@ const MatchAnalysis = () => {
               const opponentLuckyShots = actualLuckyShots.filter((shot: any) => shot.winner === 'opponent').length;
               const totalLuckyShots = playerLuckyShots + opponentLuckyShots;
               
-              // Debug logging (remove in production)
-              console.log('Lucky shots data:', {
-                allPoints: luckyShots.length,
-                actualLuckyShots: actualLuckyShots.length,
-                playerLucky: playerLuckyShots,
-                opponentLucky: opponentLuckyShots,
-                sampleData: luckyShots.slice(0, 3)
-              });
-              
               if (totalLuckyShots === 0) {
-                return <div className="no-data">No lucky shots recorded ({luckyShots.length} total points)</div>;
+                return <div className="no-data">No lucky shots recorded</div>;
               }
               
               return (
