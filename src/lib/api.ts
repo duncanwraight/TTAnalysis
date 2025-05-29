@@ -71,7 +71,8 @@ export const matchApi = {
       shotHandAnalysis,
       setBreakdown,
       categoryBreakdown,
-      tacticalInsights
+      tacticalInsights,
+      luckyShots
     ] = await Promise.all([
       // Match Summary
       supabase.from('match_summary')
@@ -123,7 +124,13 @@ export const matchApi = {
       supabase.from('tactical_insights')
         .select('*')
         .eq('match_id', id)
-        .order('win_percentage', { ascending: false })
+        .order('win_percentage', { ascending: false }),
+
+      // Lucky Shots - fetch points with lucky shot flag
+      supabase.from('points')
+        .select('winner, winning_shot_id, is_lucky_shot')
+        .eq('match_id', id)
+        .eq('is_lucky_shot', true)
     ]);
 
     // Check for errors and log results
@@ -136,7 +143,8 @@ export const matchApi = {
       { name: 'Shot Hand Analysis', result: shotHandAnalysis },
       { name: 'Set Breakdown', result: setBreakdown },
       { name: 'Category Breakdown', result: categoryBreakdown },
-      { name: 'Tactical Insights', result: tacticalInsights }
+      { name: 'Tactical Insights', result: tacticalInsights },
+      { name: 'Lucky Shots', result: luckyShots }
     ];
 
     for (const { name, result } of results) {
@@ -157,7 +165,8 @@ export const matchApi = {
       shotHandAnalysis: shotHandAnalysis.data,
       setBreakdown: setBreakdown.data,
       categoryBreakdown: categoryBreakdown.data,
-      tacticalInsights: tacticalInsights.data
+      tacticalInsights: tacticalInsights.data,
+      luckyShots: luckyShots.data
     };
     
     return finalResult;

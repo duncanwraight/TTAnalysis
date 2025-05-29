@@ -211,10 +211,19 @@
   table-layout: fixed;
 }
 
-.analysis-table th:nth-child(1) { width: 40%; }
-.analysis-table th:nth-child(2) { width: 20%; }
-.analysis-table th:nth-child(3) { width: 20%; }
-.analysis-table th:nth-child(4) { width: 20%; }
+/* Player table column widths (4 columns) */
+.breakdown-table:first-child .analysis-table th:nth-child(1) { width: 40%; }
+.breakdown-table:first-child .analysis-table th:nth-child(2) { width: 20%; }
+.breakdown-table:first-child .analysis-table th:nth-child(3) { width: 20%; }
+.breakdown-table:first-child .analysis-table th:nth-child(4) { width: 20%; }
+
+/* Opponent table column widths (6 columns) */
+.breakdown-table:last-child .analysis-table th:nth-child(1) { width: 25%; }
+.breakdown-table:last-child .analysis-table th:nth-child(2) { width: 12.5%; }
+.breakdown-table:last-child .analysis-table th:nth-child(3) { width: 12.5%; }
+.breakdown-table:last-child .analysis-table th:nth-child(4) { width: 12.5%; }
+.breakdown-table:last-child .analysis-table th:nth-child(5) { width: 12.5%; }
+.breakdown-table:last-child .analysis-table th:nth-child(6) { width: 12.5%; }
 
 .analysis-table th,
 .analysis-table td {
@@ -259,6 +268,23 @@
 
 .analysis-table td.lost-against {
   color: #dc2626;
+  font-weight: 600;
+}
+
+.analysis-table td.won-against-percent {
+  color: #059669;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.analysis-table td.lost-against-percent {
+  color: #dc2626;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.analysis-table td.win-ratio {
+  color: var(--secondary-color);
   font-weight: 600;
 }
 
@@ -340,6 +366,10 @@
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+.analysis-row-four {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
 .analysis-row-two {
   grid-template-columns: 1fr 1fr;
 }
@@ -349,7 +379,17 @@
     grid-template-columns: 1fr;
   }
   
+  .analysis-row-four {
+    grid-template-columns: 1fr 1fr;
+  }
+  
   .analysis-row-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .analysis-row-four {
     grid-template-columns: 1fr;
   }
 }
@@ -691,6 +731,46 @@
 .worst-shot .value {
   font-weight: 600;
   color: var(--text-color);
+}
+
+/* Lucky Shots Styling */
+.lucky-shots-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lucky-shot-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--background-color);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.lucky-shot-item:hover {
+  background-color: #f8fafc;
+}
+
+.lucky-player {
+  font-weight: 600;
+  color: var(--secondary-color);
+  font-size: 1rem;
+}
+
+.lucky-count {
+  font-weight: 500;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.lucky-percentage {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.9rem;
 }
 
 /* Shared Analysis Container */

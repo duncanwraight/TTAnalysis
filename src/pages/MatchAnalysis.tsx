@@ -31,12 +31,12 @@ const MatchAnalysis = () => {
   
   // Sorting state for shot breakdown tables
   const [playerTableSort, setPlayerTableSort] = useState<{
-    field: 'category_shot_hand' | 'won' | 'lost' | 'percentage';
+    field: 'category_shot_hand' | 'won' | 'lost' | 'percentage' | 'winningShots';
     direction: 'asc' | 'desc';
   }>({ field: 'won', direction: 'desc' });
   
   const [opponentTableSort, setOpponentTableSort] = useState<{
-    field: 'category_shot_hand' | 'won' | 'lost' | 'percentage';
+    field: 'category_shot_hand' | 'won' | 'lost' | 'percentage' | 'wonAgainst' | 'lostAgainst' | 'wonAgainstPercent' | 'lostAgainstPercent' | 'winRatio';
     direction: 'asc' | 'desc';
   }>({ field: 'won', direction: 'desc' });
   
@@ -154,6 +154,7 @@ const MatchAnalysis = () => {
   const tacticalInsights = analysisData?.tacticalInsights || [];
   const handAnalysis = analysisData?.handAnalysis || [];
   const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
+  const luckyShots = analysisData?.luckyShots || [];
   
   // Determine if player won the match based on match score
   const determineMatchWinner = (matchScore: string): boolean => {
@@ -272,6 +273,10 @@ const MatchAnalysis = () => {
   const shotHandBreakdown = createPlayerShotHandBreakdown();
   const opponentShotHandBreakdown = createOpponentShotHandBreakdown();
   
+  // Calculate total player wins for percentage calculations
+  const totalPlayerWins = matchSummary?.points_won || 0;
+  const totalOpponentWins = matchSummary?.points_lost || 0;
+  
   // Sorting functions
   const sortData = (data: any[], sortConfig: { field: string; direction: 'asc' | 'desc' }) => {
     return [...data].sort((a, b) => {
@@ -281,34 +286,58 @@ const MatchAnalysis = () => {
         const bKey = `${b.category}-${b.name}-${b.hand}`;
         const comparison = aKey.localeCompare(bKey);
         return sortConfig.direction === 'asc' ? comparison : -comparison;
-      } else if (sortConfig.field === 'won') {
+      } else if (sortConfig.field === 'won' || sortConfig.field === 'wonAgainst') {
         const aValue = a.hand_wins || 0;
         const bValue = b.hand_wins || 0;
         const comparison = aValue - bValue;
         return sortConfig.direction === 'asc' ? comparison : -comparison;
-      } else if (sortConfig.field === 'lost') {
+      } else if (sortConfig.field === 'lost' || sortConfig.field === 'lostAgainst') {
         const aValue = a.hand_losses || 0;
         const bValue = b.hand_losses || 0;
         const comparison = aValue - bValue;
         return sortConfig.direction === 'asc' ? comparison : -comparison;
-      } else if (sortConfig.field === 'percentage') {
+      } else if (sortConfig.field === 'percentage' || sortConfig.field === 'winRatio') {
         const aValue = a.hand_success_rate || 0;
         const bValue = b.hand_success_rate || 0;
         const comparison = aValue - bValue;
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      } else if (sortConfig.field === 'winningShots') {
+        // For player table - percentage of total winning shots
+        const aWins = a.hand_wins || 0;
+        const bWins = b.hand_wins || 0;
+        const aPercent = totalPlayerWins > 0 ? (aWins / totalPlayerWins) * 100 : 0;
+        const bPercent = totalPlayerWins > 0 ? (bWins / totalPlayerWins) * 100 : 0;
+        const comparison = aPercent - bPercent;
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      } else if (sortConfig.field === 'wonAgainstPercent') {
+        // For opponent table - percentage of opponent's total winning shots
+        const aWins = a.hand_wins || 0;
+        const bWins = b.hand_wins || 0;
+        const aPercent = totalOpponentWins > 0 ? (aWins / totalOpponentWins) * 100 : 0;
+        const bPercent = totalOpponentWins > 0 ? (bWins / totalOpponentWins) * 100 : 0;
+        const comparison = aPercent - bPercent;
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      } else if (sortConfig.field === 'lostAgainstPercent') {
+        // For opponent table - percentage of opponent's total losing shots
+        const aLosses = a.hand_losses || 0;
+        const bLosses = b.hand_losses || 0;
+        const aPercent = totalPlayerWins > 0 ? (aLosses / totalPlayerWins) * 100 : 0;
+        const bPercent = totalPlayerWins > 0 ? (bLosses / totalPlayerWins) * 100 : 0;
+        const comparison = aPercent - bPercent;
         return sortConfig.direction === 'asc' ? comparison : -comparison;
       }
       return 0;
     });
   };
   
-  const handlePlayerSort = (field: 'category_shot_hand' | 'won' | 'lost' | 'percentage') => {
+  const handlePlayerSort = (field: 'category_shot_hand' | 'won' | 'lost' | 'percentage' | 'winningShots') => {
     setPlayerTableSort(prev => ({
       field,
       direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
     }));
   };
   
-  const handleOpponentSort = (field: 'category_shot_hand' | 'won' | 'lost' | 'percentage') => {
+  const handleOpponentSort = (field: 'category_shot_hand' | 'won' | 'lost' | 'percentage' | 'wonAgainst' | 'lostAgainst' | 'wonAgainstPercent' | 'lostAgainstPercent' | 'winRatio') => {
     setOpponentTableSort(prev => ({
       field,
       direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
@@ -472,10 +501,10 @@ const MatchAnalysis = () => {
                         <th>
                           <button 
                             className="sort-button"
-                            onClick={() => handlePlayerSort('percentage')}
+                            onClick={() => handlePlayerSort('winningShots')}
                           >
-                            Win %
-                            {playerTableSort.field === 'percentage' && (
+                            % of Winning Shots
+                            {playerTableSort.field === 'winningShots' && (
                               <span className="sort-arrow">
                                 {playerTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
                               </span>
@@ -496,7 +525,9 @@ const MatchAnalysis = () => {
                           </td>
                           <td className="won-with">{shot.hand_wins}</td>
                           <td className="lost-with">{shot.hand_losses}</td>
-                          <td className="percentage">{shot.hand_success_rate}%</td>
+                          <td className="percentage">
+                            {totalPlayerWins > 0 ? ((shot.hand_wins / totalPlayerWins) * 100).toFixed(1) : '0.0'}%
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -526,10 +557,10 @@ const MatchAnalysis = () => {
                         <th>
                           <button 
                             className="sort-button"
-                            onClick={() => handleOpponentSort('won')}
+                            onClick={() => handleOpponentSort('wonAgainst')}
                           >
-                            Won against
-                            {opponentTableSort.field === 'won' && (
+                            Won Against
+                            {opponentTableSort.field === 'wonAgainst' && (
                               <span className="sort-arrow">
                                 {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
                               </span>
@@ -539,10 +570,10 @@ const MatchAnalysis = () => {
                         <th>
                           <button 
                             className="sort-button"
-                            onClick={() => handleOpponentSort('lost')}
+                            onClick={() => handleOpponentSort('wonAgainstPercent')}
                           >
-                            Lost against
-                            {opponentTableSort.field === 'lost' && (
+                            % of Won Against
+                            {opponentTableSort.field === 'wonAgainstPercent' && (
                               <span className="sort-arrow">
                                 {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
                               </span>
@@ -552,10 +583,36 @@ const MatchAnalysis = () => {
                         <th>
                           <button 
                             className="sort-button"
-                            onClick={() => handleOpponentSort('percentage')}
+                            onClick={() => handleOpponentSort('lostAgainst')}
                           >
-                            Win %
-                            {opponentTableSort.field === 'percentage' && (
+                            Lost Against
+                            {opponentTableSort.field === 'lostAgainst' && (
+                              <span className="sort-arrow">
+                                {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handleOpponentSort('lostAgainstPercent')}
+                          >
+                            % of Lost Against
+                            {opponentTableSort.field === 'lostAgainstPercent' && (
+                              <span className="sort-arrow">
+                                {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
+                              </span>
+                            )}
+                          </button>
+                        </th>
+                        <th>
+                          <button 
+                            className="sort-button"
+                            onClick={() => handleOpponentSort('winRatio')}
+                          >
+                            % Win Ratio
+                            {opponentTableSort.field === 'winRatio' && (
                               <span className="sort-arrow">
                                 {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
                               </span>
@@ -575,8 +632,14 @@ const MatchAnalysis = () => {
                             <span className="hand-breakdown">{shot.hand}</span>
                           </td>
                           <td className="won-against">{shot.hand_wins}</td>
+                          <td className="won-against-percent">
+                            {totalOpponentWins > 0 ? ((shot.hand_wins / totalOpponentWins) * 100).toFixed(1) : '0.0'}%
+                          </td>
                           <td className="lost-against">{shot.hand_losses}</td>
-                          <td className="percentage">{shot.hand_success_rate}%</td>
+                          <td className="lost-against-percent">
+                            {totalPlayerWins > 0 ? ((shot.hand_losses / totalPlayerWins) * 100).toFixed(1) : '0.0'}%
+                          </td>
+                          <td className="win-ratio">{shot.hand_success_rate}%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -589,8 +652,8 @@ const MatchAnalysis = () => {
           )}
         </div>
 
-        {/* First Row: Shot Distribution, Category Performance, Tactical Insights */}
-        <div className="analysis-row analysis-row-three">
+        {/* First Row: Shot Distribution, Category Performance, Tactical Insights, Who Got Lucky */}
+        <div className="analysis-row analysis-row-four">
           <div className="analysis-section chart-section">
             <h3>Shot Distribution</h3>
             {shotDistribution.length > 0 ? (
@@ -690,6 +753,37 @@ const MatchAnalysis = () => {
             ) : (
               <div>No data</div>
             )}
+          </div>
+
+          <div className="analysis-section">
+            <h3>Who got lucky?</h3>
+            {(() => {
+              const playerLuckyShots = luckyShots.filter((shot: any) => shot.winner === 'player').length;
+              const opponentLuckyShots = luckyShots.filter((shot: any) => shot.winner === 'opponent').length;
+              const totalLuckyShots = playerLuckyShots + opponentLuckyShots;
+              
+              if (totalLuckyShots === 0) {
+                return <div>No lucky shots recorded</div>;
+              }
+              
+              const playerPercent = ((playerLuckyShots / totalLuckyShots) * 100).toFixed(1);
+              const opponentPercent = ((opponentLuckyShots / totalLuckyShots) * 100).toFixed(1);
+              
+              return (
+                <div className="lucky-shots-container">
+                  <div className="lucky-shot-item">
+                    <div className="lucky-player">You</div>
+                    <div className="lucky-count">{playerLuckyShots} lucky shots</div>
+                    <div className="lucky-percentage">({playerPercent}%)</div>
+                  </div>
+                  <div className="lucky-shot-item">
+                    <div className="lucky-player">Opponent</div>
+                    <div className="lucky-count">{opponentLuckyShots} lucky shots</div>
+                    <div className="lucky-percentage">({opponentPercent}%)</div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
