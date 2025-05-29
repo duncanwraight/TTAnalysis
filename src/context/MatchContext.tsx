@@ -208,11 +208,24 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
 
   // Handler for when the other shot is selected
   const handleOtherShotSelect = (shot: ShotInfo) => {
+    console.log('Other shot selected, about to record point:', {
+      otherShot: shot,
+      winningShot: winningShot,
+      selectedWinner: selectedWinner
+    });
+    
     setOtherShot(shot);
     
     // Only record the point if both shots are selected
     if (winningShot) {
+      console.log('Calling recordPoint with:', {
+        winner: selectedWinner,
+        winningShot: winningShot,
+        otherShot: shot
+      });
       recordPoint(selectedWinner!, winningShot, shot);
+    } else {
+      console.log('No winning shot available to record point');
     }
   };
 
@@ -228,7 +241,15 @@ export const MatchProvider: React.FC<MatchProviderProps> = ({ children, matchId 
 
   /* Point Recording and Scoring Logic */
   const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
+    console.log('recordPoint function called with:', {
+      winner,
+      winningShot,
+      otherShot,
+      match: match?.id
+    });
+    
     if (!match) {
+      console.log('No match available, returning early');
       return;
     }
     
