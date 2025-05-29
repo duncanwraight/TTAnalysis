@@ -446,6 +446,43 @@ const MatchAnalysis = () => {
               <div>No data</div>
             )}
           </div>
+          
+          <div className="metric-box lucky-shots">
+            <h4>Who got lucky?</h4>
+            {(() => {
+              // Filter lucky shots from all points data
+              const actualLuckyShots = luckyShots.filter((shot: any) => shot.is_lucky_shot === true);
+              const playerLuckyShots = actualLuckyShots.filter((shot: any) => shot.winner === 'player').length;
+              const opponentLuckyShots = actualLuckyShots.filter((shot: any) => shot.winner === 'opponent').length;
+              const totalLuckyShots = playerLuckyShots + opponentLuckyShots;
+              
+              // Debug logging (remove in production)
+              console.log('Lucky shots data:', {
+                allPoints: luckyShots.length,
+                actualLuckyShots: actualLuckyShots.length,
+                playerLucky: playerLuckyShots,
+                opponentLucky: opponentLuckyShots,
+                sampleData: luckyShots.slice(0, 3)
+              });
+              
+              if (totalLuckyShots === 0) {
+                return <div className="no-data">No lucky shots recorded ({luckyShots.length} total points)</div>;
+              }
+              
+              return (
+                <>
+                  <div className="metric-item">
+                    <span className="shot-name">You</span>
+                    <span className="metric-value">{playerLuckyShots} lucky shots</span>
+                  </div>
+                  <div className="metric-item">
+                    <span className="shot-name">Opponent</span>
+                    <span className="metric-value">{opponentLuckyShots} lucky shots</span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
         </div>
 
         {/* Shot Analysis Tables */}
@@ -652,8 +689,8 @@ const MatchAnalysis = () => {
           )}
         </div>
 
-        {/* First Row: Shot Distribution, Category Performance, Tactical Insights, Who Got Lucky */}
-        <div className="analysis-row analysis-row-four">
+        {/* First Row: Shot Distribution, Category Performance, Tactical Insights */}
+        <div className="analysis-row analysis-row-three">
           <div className="analysis-section chart-section">
             <h3>Shot Distribution</h3>
             {shotDistribution.length > 0 ? (
@@ -755,36 +792,6 @@ const MatchAnalysis = () => {
             )}
           </div>
 
-          <div className="analysis-section">
-            <h3>Who got lucky?</h3>
-            {(() => {
-              const playerLuckyShots = luckyShots.filter((shot: any) => shot.winner === 'player').length;
-              const opponentLuckyShots = luckyShots.filter((shot: any) => shot.winner === 'opponent').length;
-              const totalLuckyShots = playerLuckyShots + opponentLuckyShots;
-              
-              if (totalLuckyShots === 0) {
-                return <div>No lucky shots recorded</div>;
-              }
-              
-              const playerPercent = ((playerLuckyShots / totalLuckyShots) * 100).toFixed(1);
-              const opponentPercent = ((opponentLuckyShots / totalLuckyShots) * 100).toFixed(1);
-              
-              return (
-                <div className="lucky-shots-container">
-                  <div className="lucky-shot-item">
-                    <div className="lucky-player">You</div>
-                    <div className="lucky-count">{playerLuckyShots} lucky shots</div>
-                    <div className="lucky-percentage">({playerPercent}%)</div>
-                  </div>
-                  <div className="lucky-shot-item">
-                    <div className="lucky-player">Opponent</div>
-                    <div className="lucky-count">{opponentLuckyShots} lucky shots</div>
-                    <div className="lucky-percentage">({opponentPercent}%)</div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
         </div>
 
         {/* Second Row: Hand Analysis and Set-by-Set Breakdown */}
@@ -796,40 +803,54 @@ const MatchAnalysis = () => {
                 <div className="hand-analysis-player">
                   <h4>Player</h4>
                   <div className="hand-stats">
-                    {handAnalysis
-                      .filter((hand: any) => hand.player_type === 'player')
-                      .map((hand: any, index: number) => (
-                        <div key={index} className="hand-stat-row">
-                          <div className="hand-info">
-                            <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
-                            <span className="success-rate">{hand.success_rate}%</span>
+                    {(() => {
+                      const playerHands = handAnalysis.filter((hand: any) => hand.player_type === 'player');
+                      const totalPlayerWins = playerHands.reduce((sum: number, hand: any) => sum + hand.wins, 0);
+                      
+                      return playerHands.map((hand: any, index: number) => {
+                        const winPercentage = totalPlayerWins > 0 ? ((hand.wins / totalPlayerWins) * 100).toFixed(1) : '0.0';
+                        return (
+                          <div key={index} className="hand-stat-row">
+                            <div className="hand-info">
+                              <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
+                              <span className="success-rate">{hand.success_rate}%</span>
+                            </div>
+                            <div className="hand-details">
+                              <span className="record">{hand.wins}W - {hand.losses}L</span>
+                              <span className="win-distribution">({winPercentage}% of wins)</span>
+                              <span className="total">({hand.total_shots} total)</span>
+                            </div>
                           </div>
-                          <div className="hand-details">
-                            <span className="record">{hand.wins}W - {hand.losses}L</span>
-                            <span className="total">({hand.total_shots} total)</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
                 
                 <div className="hand-analysis-opponent">
                   <h4>Opponent</h4>
                   <div className="hand-stats">
-                    {handAnalysis
-                      .filter((hand: any) => hand.player_type === 'opponent')
-                      .map((hand: any, index: number) => (
-                        <div key={index} className="hand-stat-row">
-                          <div className="hand-info">
-                            <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
-                            <span className="success-rate">{hand.success_rate}%</span>
+                    {(() => {
+                      const opponentHands = handAnalysis.filter((hand: any) => hand.player_type === 'opponent');
+                      const totalOpponentWins = opponentHands.reduce((sum: number, hand: any) => sum + hand.wins, 0);
+                      
+                      return opponentHands.map((hand: any, index: number) => {
+                        const winPercentage = totalOpponentWins > 0 ? ((hand.wins / totalOpponentWins) * 100).toFixed(1) : '0.0';
+                        return (
+                          <div key={index} className="hand-stat-row">
+                            <div className="hand-info">
+                              <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
+                              <span className="success-rate">{hand.success_rate}%</span>
+                            </div>
+                            <div className="hand-details">
+                              <span className="record">{hand.wins}W - {hand.losses}L</span>
+                              <span className="win-distribution">({winPercentage}% of wins)</span>
+                              <span className="total">({hand.total_shots} total)</span>
+                            </div>
                           </div>
-                          <div className="hand-details">
-                            <span className="record">{hand.wins}W - {hand.losses}L</span>
-                            <span className="total">({hand.total_shots} total)</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               </div>
@@ -886,7 +907,7 @@ const MatchAnalysis = () => {
                             <span className="label">Most successful:</span>
                             <span className="value">{formatText(mostSuccessful.shot_name)} ({mostSuccessful.player_wins} wins)</span>
                           </div>
-                          {leastSuccessful && mostSuccessful.shot_name !== leastSuccessful.shot_name && (
+                          {leastSuccessful && leastSuccessful.player_losses > 0 && (
                             <div className="worst-shot">
                               <span className="label">Least successful:</span>
                               <span className="value">{formatText(leastSuccessful.shot_name)} ({leastSuccessful.player_losses} losses)</span>

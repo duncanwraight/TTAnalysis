@@ -126,11 +126,10 @@ export const matchApi = {
         .eq('match_id', id)
         .order('win_percentage', { ascending: false }),
 
-      // Lucky Shots - fetch points with lucky shot flag
+      // Lucky Shots - fetch all points with lucky shot flag
       supabase.from('points')
         .select('winner, winning_shot_id, is_lucky_shot')
         .eq('match_id', id)
-        .eq('is_lucky_shot', true)
     ]);
 
     // Check for errors and log results
