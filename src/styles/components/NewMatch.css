@@ -62,6 +62,46 @@
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
+.server-button-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.server-button {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 48px; /* Good touch target size */
+}
+
+.server-button:hover:not([disabled]) {
+  border-color: var(--primary-color);
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+.server-button.selected {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+}
+
+.server-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+/* Legacy radio group styles (kept for compatibility) */
 .radio-group {
   display: flex;
   gap: 2rem;
@@ -129,7 +169,18 @@ button[disabled] {
   .new-match-container {
     padding: 1.5rem;
   }
-  
+
+  .server-button-group {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .server-button {
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+  }
+
+  /* Legacy radio group mobile styles */
   .radio-group {
     flex-direction: column;
     gap: 0.75rem;

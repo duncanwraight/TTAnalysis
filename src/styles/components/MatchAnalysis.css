@@ -219,19 +219,56 @@
   table-layout: fixed;
 }
 
-/* Player table column widths (4 columns) */
-.breakdown-table:first-child .analysis-table th:nth-child(1) { width: 40%; }
-.breakdown-table:first-child .analysis-table th:nth-child(2) { width: 20%; }
-.breakdown-table:first-child .analysis-table th:nth-child(3) { width: 20%; }
-.breakdown-table:first-child .analysis-table th:nth-child(4) { width: 20%; }
+@media (max-width: 767px) {
+  .analysis-table {
+    table-layout: auto;
+    font-size: 0.85rem;
+  }
+}
 
-/* Opponent table column widths (6 columns) */
-.breakdown-table:last-child .analysis-table th:nth-child(1) { width: 25%; }
-.breakdown-table:last-child .analysis-table th:nth-child(2) { width: 12.5%; }
-.breakdown-table:last-child .analysis-table th:nth-child(3) { width: 12.5%; }
-.breakdown-table:last-child .analysis-table th:nth-child(4) { width: 12.5%; }
-.breakdown-table:last-child .analysis-table th:nth-child(5) { width: 12.5%; }
-.breakdown-table:last-child .analysis-table th:nth-child(6) { width: 12.5%; }
+/* Desktop table column widths */
+@media (min-width: 768px) {
+  /* Player table column widths (4 columns) */
+  .breakdown-table:first-child .analysis-table th:nth-child(1) { width: 45%; }
+  .breakdown-table:first-child .analysis-table th:nth-child(2) { width: 18%; }
+  .breakdown-table:first-child .analysis-table th:nth-child(3) { width: 18%; }
+  .breakdown-table:first-child .analysis-table th:nth-child(4) { width: 19%; }
+
+  /* Opponent table column widths (6 columns) */
+  .breakdown-table:last-child .analysis-table th:nth-child(1) { width: 30%; }
+  .breakdown-table:last-child .analysis-table th:nth-child(2) { width: 14%; }
+  .breakdown-table:last-child .analysis-table th:nth-child(3) { width: 14%; }
+  .breakdown-table:last-child .analysis-table th:nth-child(4) { width: 14%; }
+  .breakdown-table:last-child .analysis-table th:nth-child(5) { width: 14%; }
+  .breakdown-table:last-child .analysis-table th:nth-child(6) { width: 14%; }
+}
+
+/* Mobile table styling */
+@media (max-width: 767px) {
+  .analysis-table {
+    table-layout: auto; /* Let columns size naturally */
+  }
+
+  /* Remove fixed widths on mobile - let content determine size */
+  .breakdown-table .analysis-table th,
+  .breakdown-table .analysis-table td {
+    width: auto !important;
+  }
+
+  /* First column should be wider for shot descriptions */
+  .breakdown-table .analysis-table th:nth-child(1),
+  .breakdown-table .analysis-table td:nth-child(1) {
+    min-width: 120px;
+    max-width: 50%;
+  }
+
+  /* Smaller columns for numbers/percentages */
+  .breakdown-table .analysis-table th:nth-child(n+2),
+  .breakdown-table .analysis-table td:nth-child(n+2) {
+    min-width: 60px;
+    white-space: nowrap;
+  }
+}
 
 .analysis-table th,
 .analysis-table td {
@@ -340,6 +377,14 @@
   white-space: nowrap;
 }
 
+@media (max-width: 767px) {
+  .analysis-table td.category-shot-hand {
+    white-space: normal;
+    line-height: 1.3;
+    padding: 0.4rem 0.5rem;
+  }
+}
+
 .analysis-table td.category-shot-hand .category-name {
   font-weight: 500;
   color: var(--light-text-color);
@@ -350,6 +395,18 @@
   font-weight: 600;
   color: var(--primary-color);
   font-size: 0.9rem;
+}
+
+@media (max-width: 767px) {
+  .analysis-table td.category-shot-hand .category-name {
+    font-size: 0.7rem;
+    display: block;
+  }
+
+  .analysis-table td.category-shot-hand .shot-name {
+    font-size: 0.8rem;
+    display: block;
+  }
 }
 
 .analysis-table td.category-shot-hand .hand-breakdown {
@@ -363,10 +420,27 @@
   margin-left: 0.25rem;
 }
 
+@media (max-width: 767px) {
+  .analysis-table td.category-shot-hand .hand-breakdown {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.3rem;
+    margin-left: 0;
+    margin-top: 0.1rem;
+    display: block;
+    width: fit-content;
+  }
+}
+
 .analysis-table td.category-shot-hand .separator {
   color: var(--light-text-color);
   font-weight: 400;
   font-size: 0.8rem;
+}
+
+@media (max-width: 767px) {
+  .analysis-table td.category-shot-hand .separator {
+    display: none; /* Hide separators on mobile to save space */
+  }
 }
 
 /* Analysis Rows */
@@ -875,6 +949,15 @@
     gap: 1.5rem;
   }
 
+  /* Show mobile headers, hide desktop headers */
+  .desktop-header {
+    display: none;
+  }
+
+  .mobile-header {
+    display: inline;
+  }
+
   .analysis-header h1 {
     font-size: 2rem;
   }
@@ -904,19 +987,52 @@
     gap: 1.5rem;
   }
 
-
   .analysis-table {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
   .analysis-table th,
   .analysis-table td {
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.5rem;
+  }
+
+  /* Better mobile formatting for percentage text */
+  .analysis-table td.won-with,
+  .analysis-table td.lost-with,
+  .analysis-table td.won-against,
+  .analysis-table td.lost-against {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  .analysis-table td.percentage {
+    font-size: 0.75rem;
+  }
+
+  .percentage-text {
+    font-size: 0.7rem;
   }
 
   .distribution-columns {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+  }
+
+  /* Make table container horizontally scrollable on very small screens */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop headers (default) */
+@media (min-width: 769px) {
+  .desktop-header {
+    display: inline;
+  }
+
+  .mobile-header {
+    display: none;
   }
 }
 

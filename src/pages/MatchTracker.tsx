@@ -8,6 +8,7 @@ import PointHistory from '../components/PointHistory';
 import { Match, MatchSet, Point, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
+import { useShotData } from '../lib/shotsApi';
 
 
 type MatchState = {
@@ -29,6 +30,7 @@ const MatchTracker = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const api = useApi();
+  const { fetchShotsWithCategories } = useShotData();
   
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,20 @@ const MatchTracker = () => {
   const [selectedWinner, setSelectedWinner] = useState<'player' | 'opponent' | null>(null);
   const [winningShot, setWinningShot] = useState<ShotInfo | null>(null);
   const [otherShot, setOtherShot] = useState<ShotInfo | null>(null);
+  const [isLuckyPoint, setIsLuckyPoint] = useState<boolean>(false);
+  const [isWinningShotMinimized, setIsWinningShotMinimized] = useState<boolean>(false);
+
+  // Mobile detection hook
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // State for tracking if we can undo the last point
   const [canUndo, setCanUndo] = useState<boolean>(false);
@@ -174,6 +190,8 @@ const MatchTracker = () => {
     setSelectedWinner(null);
     setWinningShot(null);
     setOtherShot(null);
+    setIsLuckyPoint(false);
+    setIsWinningShotMinimized(false);
   };
   
   // Handler for when a player panel is clicked (indicating who won the point)
@@ -182,9 +200,43 @@ const MatchTracker = () => {
   };
   
   // Handler for when a winning shot is selected
-  const handleWinningShotSelect = (shot: ShotInfo) => {
+  const handleWinningShotSelect = async (shot: ShotInfo) => {
     if (!shot || !shot.shotId) return;
-    setWinningShot(shot);
+    // Apply the lucky point state to the shot
+    const shotWithLucky: ShotInfo = {
+      ...shot,
+      isLucky: isLuckyPoint
+    };
+    setWinningShot(shotWithLucky);
+
+    // Auto-minimize the winning shot selector to show the other shot selector (mobile only)
+    if (isMobile) {
+      setIsWinningShotMinimized(true);
+    }
+
+    // Check if this is a service fault - if so, record point immediately without other shot
+    try {
+      const { shots } = await fetchShotsWithCategories();
+      if (shots.some(s => s.id === shot.shotId && s.name === 'service_fault')) {
+        if (selectedWinner) {
+          // Use the "no_shot" entry for service fault scenarios
+          const noShotId = shots.find(s => s.name === 'no_shot')?.id;
+          if (noShotId) {
+            const noOtherShot: ShotInfo = {
+              shotId: noShotId,
+              hand: 'fh', // Default hand (not relevant for no_shot)
+              isLucky: false
+            };
+
+            // Record the point immediately
+            await recordPoint(selectedWinner, shotWithLucky, noOtherShot);
+          }
+        }
+      }
+    } catch (error) {
+      // If we can't fetch shots data, just continue with normal flow
+      console.error('Failed to check for service fault:', error);
+    }
   };
   
   // Handler for when the other shot is selected
@@ -203,6 +255,7 @@ const MatchTracker = () => {
   // Handler for undoing a winning shot selection
   const handleUndoWinningShot = () => {
     setWinningShot(null);
+    setIsWinningShotMinimized(false);
   };
   
   // Handler for undoing an other shot selection
@@ -729,12 +782,12 @@ const MatchTracker = () => {
           <>
             {/* Step 1: Select who won the point */}
             <div style={{
-              marginTop: '0.1rem',
-              marginBottom: '0.25rem',
+              marginTop: '0.07rem',
+              marginBottom: '0.2rem',
               textAlign: 'center',
               color: 'var(--light-text-color)'
             }}>
-              <p style={{ margin: 0 }}>Tap on who won the point</p>
+              <p style={{ margin: 0, fontSize: '0.9rem' }}>Tap on who won the point</p>
             </div>
             
             <div style={{
@@ -894,33 +947,99 @@ const MatchTracker = () => {
             </div>
           </>
         ) : (
-          // Step 2: Select both winning and other shots at the same time
-          <div className="shot-selection-container">
-            
-            <div className="shot-selection winning-shot">
-              <h3>{selectedWinner === 'player' ? 'Your' : 'Opponent\'s'} Winning Shot:</h3>
-              <ShotSelector 
-                onSelect={handleWinningShotSelect}
-                shotType="winning"
-                selected={winningShot}
-                onUndo={handleUndoWinningShot}
-                currentServer={getCurrentServer()}
-                isWinningPlayer={selectedWinner === 'player'}
-              />
+          // Step 2: Select winning shot with lucky option
+          <div style={{ marginTop: '-1rem' }}>
+            {/* Lucky Point Toggle */}
+            <div style={{
+              marginBottom: '0.5rem',
+              textAlign: 'center',
+              padding: '0.5rem',
+              backgroundColor: 'rgba(37, 99, 235, 0.05)',
+              borderRadius: '0.375rem',
+              border: 'none'
+            }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '500',
+                gap: '0.5rem'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isLuckyPoint}
+                  onChange={(e) => setIsLuckyPoint(e.target.checked)}
+                  style={{
+                    width: '1.2rem',
+                    height: '1.2rem',
+                    accentColor: '#2563eb'
+                  }}
+                />
+                <span>Lucky Point? (hit net/edge)</span>
+              </label>
             </div>
-            <div className="shot-selection other-shot">
-              <h3>{selectedWinner === 'opponent' ? 'Your' : 'Opponent\'s'} Other Shot:</h3>
-              <ShotSelector 
-                onSelect={handleOtherShotSelect}
-                shotType="other"
-                selected={otherShot}
-                disabled={winningShot === null}
-                onUndo={handleUndoOtherShot}
-                currentServer={getCurrentServer()}
-                isWinningPlayer={selectedWinner === 'player'}
-              />
+
+            <div className="shot-selection-container">
+              <div className="shot-selection winning-shot">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3>{selectedWinner === 'player' ? 'Your' : 'Opponent\'s'} Winning Shot:</h3>
+                  {winningShot && isMobile && (
+                    <button
+                      type="button"
+                      onClick={() => setIsWinningShotMinimized(!isWinningShotMinimized)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary-color)',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        padding: '0.25rem'
+                      }}
+                    >
+                      {isWinningShotMinimized ? 'Expand ▼' : 'Minimize ▲'}
+                    </button>
+                  )}
+                </div>
+                {(!isMobile || (!isWinningShotMinimized || !winningShot)) && (
+                  <ShotSelector
+                    onSelect={handleWinningShotSelect}
+                    shotType="winning"
+                    selected={winningShot}
+                    onUndo={handleUndoWinningShot}
+                    currentServer={getCurrentServer()}
+                    isWinningPlayer={selectedWinner === 'player'}
+                  />
+                )}
+                {isMobile && isWinningShotMinimized && winningShot && (
+                  <div style={{
+                    padding: '0.5rem',
+                    backgroundColor: 'var(--background-color)',
+                    borderRadius: '4px',
+                    fontSize: '0.9rem',
+                    color: 'var(--text-color)'
+                  }}>
+                    Selected: {winningShot.hand.toUpperCase()} shot
+                  </div>
+                )}
+              </div>
+
+              {(!isMobile || (isWinningShotMinimized && winningShot)) && (
+                <div className="shot-selection other-shot">
+                  <h3>{selectedWinner === 'opponent' ? 'Your' : 'Opponent\'s'} Other Shot:</h3>
+                  <ShotSelector
+                    onSelect={handleOtherShotSelect}
+                    shotType="other"
+                    selected={otherShot}
+                    disabled={winningShot === null}
+                    onUndo={handleUndoOtherShot}
+                    currentServer={getCurrentServer()}
+                    isWinningPlayer={selectedWinner === 'player'}
+                  />
+                </div>
+              )}
             </div>
-            {/* Record Point button removed - point is now recorded automatically when other shot is selected */}
           </div>
         )}
         

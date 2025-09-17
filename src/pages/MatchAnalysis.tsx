@@ -195,10 +195,10 @@ const MatchAnalysis = () => {
   // Create shot+hand breakdown data for player
   const createPlayerShotHandBreakdown = () => {
     const breakdown: any[] = [];
-    
+
     shotDistribution.forEach((shot: any) => {
-      const shotHandData = shotHandAnalysis.filter((s: any) => 
-        s.shot_id === shot.shot_id && s.player_type === 'player'
+      const shotHandData = shotHandAnalysis.filter((s: any) =>
+        s.shot_name === shot.name
       );
       
       // If we have hand data for this shot, create separate rows for each hand
@@ -233,10 +233,10 @@ const MatchAnalysis = () => {
   // Create shot+hand breakdown data for opponent
   const createOpponentShotHandBreakdown = () => {
     const breakdown: any[] = [];
-    
+
     shotDistribution.forEach((shot: any) => {
-      const shotHandData = shotHandAnalysis.filter((s: any) => 
-        s.shot_id === shot.shot_id && s.player_type === 'opponent'
+      const shotHandData = shotHandAnalysis.filter((s: any) =>
+        s.shot_name === shot.name
       );
       
       // If we have hand data for this shot, create separate rows for each hand
@@ -275,6 +275,7 @@ const MatchAnalysis = () => {
   
   const shotHandBreakdown = createPlayerShotHandBreakdown();
   const opponentShotHandBreakdown = createOpponentShotHandBreakdown();
+
   
   // Calculate total player wins for percentage calculations
   const totalPlayerWins = matchSummary?.points_won || 0;
@@ -537,7 +538,8 @@ const MatchAnalysis = () => {
                             className="sort-button"
                             onClick={() => handlePlayerSort('category_shot_hand')}
                           >
-                            Category/Shot/Hand
+                            <span className="desktop-header">Category/Shot/Hand</span>
+                            <span className="mobile-header">Shot</span>
                             {playerTableSort.field === 'category_shot_hand' && (
                               <span className="sort-arrow">
                                 {playerTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
@@ -623,7 +625,8 @@ const MatchAnalysis = () => {
                             className="sort-button"
                             onClick={() => handleOpponentSort('category_shot_hand')}
                           >
-                            Category/Shot/Hand
+                            <span className="desktop-header">Category/Shot/Hand</span>
+                            <span className="mobile-header">Shot</span>
                             {opponentTableSort.field === 'category_shot_hand' && (
                               <span className="sort-arrow">
                                 {opponentTableSort.direction === 'asc' ? ' ↑' : ' ↓'}
@@ -816,9 +819,8 @@ const MatchAnalysis = () => {
                   <h4>Player</h4>
                   <div className="hand-stats">
                     {(() => {
-                      const playerHands = handAnalysis.filter((hand: any) => 
-                        hand.player_type === 'player' && hand.category?.toLowerCase() !== 'serve'
-                      );
+                      // handAnalysis already contains only player data
+                      const playerHands = handAnalysis;
                       const totalPlayerWins = playerHands.reduce((sum: number, hand: any) => sum + hand.wins, 0);
                       
                       return playerHands.map((hand: any, index: number) => {
@@ -845,27 +847,22 @@ const MatchAnalysis = () => {
                   <h4>Opponent</h4>
                   <div className="hand-stats">
                     {(() => {
-                      const opponentHands = handAnalysis.filter((hand: any) => 
-                        hand.player_type === 'opponent' && hand.category?.toLowerCase() !== 'serve'
-                      );
-                      const totalOpponentWins = opponentHands.reduce((sum: number, hand: any) => sum + hand.wins, 0);
-                      
+                      // For now, we don't have opponent hand analysis data
+                      return [
+                        <div key="no-data" style={{textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '2rem'}}>
+                          Opponent hand data not available
+                        </div>
+                      ];
+
+                      /*
+                      const opponentHands = [];
+                      const totalOpponentWins = 0;
+
                       return opponentHands.map((hand: any, index: number) => {
-                        const winPercentage = totalOpponentWins > 0 ? ((hand.wins / totalOpponentWins) * 100).toFixed(1) : '0.0';
-                        return (
-                          <div key={index} className="hand-stat-row">
-                            <div className="hand-info">
-                              <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
-                              <span className="success-rate">{hand.success_rate}%</span>
-                            </div>
-                            <div className="hand-details">
-                              <span className="record">{hand.wins}W - {hand.losses}L</span>
-                              <span className="win-distribution">({winPercentage}% of wins)</span>
-                              <span className="total">({hand.total_shots} total)</span>
-                            </div>
-                          </div>
-                        );
+                        // Commented out opponent data rendering
+                        return null;
                       });
+                      */
                     })()}
                   </div>
                 </div>

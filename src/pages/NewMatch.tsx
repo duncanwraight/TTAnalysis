@@ -180,31 +180,23 @@ const NewMatch = () => {
           
           <div className="form-group">
             <label htmlFor="initial_server">First Server</label>
-            <div className="radio-group">
-              <div className="radio-option">
-                <input
-                  type="radio"
-                  id="player_serves"
-                  name="initial_server"
-                  value="player"
-                  checked={formData.initial_server === 'player'}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <label htmlFor="player_serves">You</label>
-              </div>
-              <div className="radio-option">
-                <input
-                  type="radio"
-                  id="opponent_serves"
-                  name="initial_server"
-                  value="opponent"
-                  checked={formData.initial_server === 'opponent'}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <label htmlFor="opponent_serves">Opponent</label>
-              </div>
+            <div className="server-button-group">
+              <button
+                type="button"
+                className={`server-button ${formData.initial_server === 'player' ? 'selected' : ''}`}
+                onClick={() => setFormData(prev => ({ ...prev, initial_server: 'player' }))}
+                disabled={isSubmitting}
+              >
+                You
+              </button>
+              <button
+                type="button"
+                className={`server-button ${formData.initial_server === 'opponent' ? 'selected' : ''}`}
+                onClick={() => setFormData(prev => ({ ...prev, initial_server: 'opponent' }))}
+                disabled={isSubmitting}
+              >
+                Opponent
+              </button>
             </div>
           </div>
           

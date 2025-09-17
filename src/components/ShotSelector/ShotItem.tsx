@@ -23,9 +23,14 @@ const ShotItem: React.FC<ShotItemProps> = ({
     <div 
       className={`shot-item ${isDisabled ? 'shot-item-disabled' : ''}`} 
       data-shot-id={idString}
-      style={{ 
+      style={{
         position: 'relative',
-        border: selectedHand ? '2px solid #1890ff' : '1px solid #d9d9d9'
+        border: selectedHand ? '2px solid #1890ff' : '1px solid #d9d9d9',
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%'
       }}
     >
       <button

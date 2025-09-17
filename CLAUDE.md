@@ -18,11 +18,6 @@ npm install
 # Start only the development server (without Supabase)
 npm run dev
 
-# Start Express API server
-npm run server
-
-# Start both API and frontend servers
-npm run dev:all
 
 # Apply new migrations to database (NEVER use supabase db reset)
 supabase db push
@@ -42,9 +37,8 @@ npm run promote-admin user@example.com
 
 The `start-dev.sh` script handles:
 1. Starting the local Supabase services (PostgreSQL, Auth, etc.)
-2. Setting environment variables for the Express server
-3. Creating a test user if one doesn't exist
-4. Starting the development servers
+2. Creating a test user if one doesn't exist
+3. Starting the development server
 
 ## Architecture
 
@@ -108,20 +102,12 @@ The database uses PostgreSQL with Supabase for Auth and Row Level Security. The 
   - For Supabase:
     - `VITE_SUPABASE_URL` - URL for Supabase instance
     - `VITE_SUPABASE_ANON_KEY` - Anonymous API key for Supabase
-  - For PostgreSQL direct connection:
-    - `VITE_PG_HOST` - Database host (set by start-dev.sh)
-    - `VITE_PG_PORT` - Database port (set by start-dev.sh)
-    - `VITE_PG_DATABASE` - Database name (set by start-dev.sh)
-    - `VITE_PG_USER` - Database user (set by start-dev.sh)
-    - `VITE_PG_PASSWORD` - Database password (set by start-dev.sh)
 
 - Use `./start-dev.sh` for local development, which sets up:
   - Local Supabase instance for authentication and database
-  - Express API server for database access
   - React frontend with Vite
   - Test user creation if needed
 
 - Mobile-first design for courtside usage during matches
-- Express server handles direct PostgreSQL access
 - Match deletion and creation are fully implemented
 - Point recording uses shot IDs from the shots database

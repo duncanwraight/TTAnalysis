@@ -126,21 +126,25 @@
 }
 
 .shot-selection {
-  margin-bottom: 1.5rem;
-  background-color: var(--card-background);
-  border-radius: 0.5rem;
-  box-shadow: var(--shadow);
-  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
   flex: 1;
   max-width: 100%;
 }
 
 .shot-selection.winning-shot {
-  border-top: 4px solid var(--primary-color);
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0.25rem;
 }
 
 .shot-selection.other-shot {
-  border-top: 4px solid var(--secondary-color);
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0.75rem;
 }
 
 .shot-selection h3 {

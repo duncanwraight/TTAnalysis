@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ShotCategory from './ShotCategory';
 import ShotList from './ShotList';
 import { useShotData, ShotCategory as DbShotCategory, Shot } from '../../lib/shotsApi';
@@ -44,9 +44,40 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   const [dbShots, setDbShots] = useState<Shot[]>(cachedShots);
   const [loading, setLoading] = useState<boolean>(cachedCategories.length === 0);
   const [error, setError] = useState<string | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(false);
+
+  const categoriesRef = useRef<HTMLDivElement>(null);
   
   /* Data Fetching */
   const { fetchShotsWithCategories } = useShotData();
+
+  /* Scroll Detection */
+  const updateScrollState = useCallback(() => {
+    const container = categoriesRef.current;
+    if (!container) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const container = categoriesRef.current;
+    if (!container) return;
+
+    updateScrollState();
+    container.addEventListener('scroll', updateScrollState);
+
+    return () => {
+      container.removeEventListener('scroll', updateScrollState);
+    };
+  }, [updateScrollState, dbCategories]);
+
+  useEffect(() => {
+    // Update scroll state when categories change
+    updateScrollState();
+  }, [dbCategories, updateScrollState]);
   
   /* Data Loading on Component Mount */
   useEffect(() => {
@@ -106,12 +137,12 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   // Handle lucky shot toggle
   const handleLuckyToggle = () => {
     if (!selected) return;
-    
+
     const updatedShot: ShotInfo = {
       ...selected,
       isLucky: !selected.isLucky
     };
-    
+
     onSelect(updatedShot);
   };
 
@@ -214,7 +245,10 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
         <div className="error-message">{error}</div>
       )}
       
-      <div className="shot-categories">
+      <div
+        ref={categoriesRef}
+        className={`shot-categories ${canScrollLeft ? 'can-scroll-left' : ''} ${canScrollRight ? 'can-scroll-right' : 'cannot-scroll-right'}`}
+      >
         {dbCategories.length > 0 ? (
           // Use database categories if available
           dbCategories
@@ -241,21 +275,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
         isServeDisabled={isServeDisabled}
       />
       
-      {selected && shotType === 'winning' && (
-        <div className="shot-modifiers">
-          <div className="modifier-checkboxes">
-            <label className="modifier-checkbox">
-              <input
-                type="checkbox"
-                checked={selected.isLucky || false}
-                onChange={handleLuckyToggle}
-                disabled={disabled}
-              />
-              <span className="checkbox-label">Lucky shot (hit net/edge)</span>
-            </label>
-          </div>
-        </div>
-      )}
+      {/* Lucky shot modifier moved to individual shot items */}
     </div>
   );
 };
