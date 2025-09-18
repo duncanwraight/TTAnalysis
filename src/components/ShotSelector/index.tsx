@@ -134,17 +134,6 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     onSelect(shotInfo);
   };
 
-  // Handle lucky shot toggle
-  const handleLuckyToggle = () => {
-    if (!selected) return;
-
-    const updatedShot: ShotInfo = {
-      ...selected,
-      isLucky: !selected.isLucky
-    };
-
-    onSelect(updatedShot);
-  };
 
   // Find the current category
   const getCurrentCategory = () => {
