@@ -385,7 +385,7 @@ GRANT SELECT ON category_breakdown TO anon;
 INSERT INTO public.shot_categories (name, display_order) VALUES
 ('serve', 1),
 ('around_the_net', 2),
-('pips', 3),
+('pips / anti', 3),
 ('attacks', 4),
 ('defence', 5)
 ON CONFLICT (name) DO NOTHING;
@@ -401,9 +401,9 @@ INSERT INTO public.shots (category_id, name, display_name, description, display_
 ((SELECT id FROM public.shot_categories WHERE name = 'around_the_net'), 'flick', 'Flick', 'Quick aggressive stroke', 2),
 
 -- Pips category
-((SELECT id FROM public.shot_categories WHERE name = 'pips'), 'bump', 'Bump', 'Pips bump shot', 1),
-((SELECT id FROM public.shot_categories WHERE name = 'pips'), 'sideswipe', 'Sideswipe', 'Pips sideswipe', 2),
-((SELECT id FROM public.shot_categories WHERE name = 'pips'), 'attack', 'Attack', 'Pips attack', 3),
+((SELECT id FROM public.shot_categories WHERE name = 'pips / anti'), 'bump', 'Bump', 'Pips bump shot', 1),
+((SELECT id FROM public.shot_categories WHERE name = 'pips / anti'), 'sideswipe', 'Sideswipe', 'Pips sideswipe', 2),
+((SELECT id FROM public.shot_categories WHERE name = 'pips / anti'), 'attack', 'Attack', 'Pips attack', 3),
 
 -- Attacks category
 ((SELECT id FROM public.shot_categories WHERE name = 'attacks'), 'flat_hit', 'Flat-hit', 'Direct flat attack', 1),

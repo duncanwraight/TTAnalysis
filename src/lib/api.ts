@@ -68,6 +68,7 @@ export const matchApi = {
       mostCostlyShots,
       shotDistribution,
       handAnalysis,
+      opponentHandAnalysis,
       shotHandAnalysis,
       setBreakdown,
       categoryBreakdown,
@@ -100,6 +101,11 @@ export const matchApi = {
 
       // Hand Analysis
       supabase.from('hand_analysis')
+        .select('*')
+        .eq('match_id', id),
+
+      // Opponent Hand Analysis
+      supabase.from('opponent_hand_analysis')
         .select('*')
         .eq('match_id', id),
 
@@ -139,6 +145,7 @@ export const matchApi = {
       { name: 'Most Costly Shots', result: mostCostlyShots },
       { name: 'Shot Distribution', result: shotDistribution },
       { name: 'Hand Analysis', result: handAnalysis },
+      { name: 'Opponent Hand Analysis', result: opponentHandAnalysis },
       { name: 'Shot Hand Analysis', result: shotHandAnalysis },
       { name: 'Set Breakdown', result: setBreakdown },
       { name: 'Category Breakdown', result: categoryBreakdown },
@@ -161,6 +168,7 @@ export const matchApi = {
       mostCostlyShots: mostCostlyShots.data,
       shotDistribution: shotDistribution.data,
       handAnalysis: handAnalysis.data,
+      opponentHandAnalysis: opponentHandAnalysis.data,
       shotHandAnalysis: shotHandAnalysis.data,
       setBreakdown: setBreakdown.data,
       categoryBreakdown: categoryBreakdown.data,

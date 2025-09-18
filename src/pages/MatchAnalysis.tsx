@@ -156,6 +156,7 @@ const MatchAnalysis = () => {
   const categoryBreakdown = analysisData?.categoryBreakdown || [];
   const tacticalInsights = analysisData?.tacticalInsights || [];
   const handAnalysis = analysisData?.handAnalysis || [];
+  const opponentHandAnalysis = analysisData?.opponentHandAnalysis || [];
   const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
   const luckyShots = analysisData?.luckyShots || [];
   
@@ -847,22 +848,39 @@ const MatchAnalysis = () => {
                   <h4>Opponent</h4>
                   <div className="hand-stats">
                     {(() => {
-                      // For now, we don't have opponent hand analysis data
-                      return [
-                        <div key="no-data" style={{textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '2rem'}}>
-                          Opponent hand data not available
-                        </div>
-                      ];
+                      // Create opponent hand analysis from existing data
+                      // When opponent wins, their winning_hand is the relevant data
+                      // When player wins, opponent's other_hand is relevant
 
-                      /*
-                      const opponentHands = [];
-                      const totalOpponentWins = 0;
+                      // Use actual opponent hand analysis data
+                      const opponentHandData = opponentHandAnalysis;
 
-                      return opponentHands.map((hand: any, index: number) => {
-                        // Commented out opponent data rendering
-                        return null;
+                      if (opponentHandData.length === 0) {
+                        return [
+                          <div key="no-data" style={{textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '2rem'}}>
+                            No opponent hand data available
+                          </div>
+                        ];
+                      }
+
+                      const totalOpponentWins = opponentHandData.reduce((sum: number, hand: any) => sum + hand.wins, 0);
+
+                      return opponentHandData.map((hand: any, index: number) => {
+                        const winPercentage = totalOpponentWins > 0 ? ((hand.wins / totalOpponentWins) * 100).toFixed(1) : '0.0';
+                        return (
+                          <div key={index} className="hand-stat-row">
+                            <div className="hand-info">
+                              <span className="hand-name">{hand.hand === 'fh' ? 'FH' : 'BH'}</span>
+                              <span className="success-rate">{hand.success_rate}%</span>
+                            </div>
+                            <div className="hand-details">
+                              <span className="record">{hand.wins}W - {hand.losses}L</span>
+                              <span className="win-distribution">({winPercentage}% of wins)</span>
+                              <span className="total">({hand.total_shots} total)</span>
+                            </div>
+                          </div>
+                        );
                       });
-                      */
                     })()}
                   </div>
                 </div>
