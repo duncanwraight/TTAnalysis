@@ -292,6 +292,40 @@ describe('cards', () => {
     ]);
   });
 
+  it('notes attacking winners dropping off in a later set', () => {
+    // Set 1: 8 winning loops, 11-6. Set 2: 2 winning loops and 4 losing ones, 6-11.
+    const a = analyse([
+      ...many(8, 'player', 1, { win: 'loop' }), ...many(3, 'player', 1, { win: 'push' }), ...many(6, 'opponent', 1, { win: 'push', lose: 'push' }),
+      ...many(2, 'player', 2, { win: 'loop' }), ...many(4, 'player', 2, { win: 'push' }),
+      ...many(4, 'opponent', 2, { win: 'push', lose: 'loop' }), ...many(7, 'opponent', 2, { win: 'push', lose: 'push' }),
+    ]);
+    expect(a.attacksBySet).toEqual([
+      { setNumber: 1, points: 17, player: { won: 8, lost: 0 }, opponent: { won: 0, lost: 0 } },
+      { setNumber: 2, points: 17, player: { won: 2, lost: 4 }, opponent: { won: 0, lost: 0 } },
+    ]);
+    expect(a.cards).toContainEqual({
+      tag: 'Match story',
+      title: 'Your attacking dropped off in set 2',
+      text: 'An attack was your winning shot in 8 points in set 1, and 2 in set 2. Your losing shot in 0, then 4.',
+    });
+  });
+
+  it('notes the opponent\'s attacking dropping off', () => {
+    const a = analyse([
+      ...many(6, 'opponent', 1, { win: 'loop' }), ...many(5, 'opponent', 1, { win: 'push', lose: 'push' }), ...many(2, 'player', 1, { win: 'push', lose: 'push' }),
+      ...many(11, 'player', 2, { win: 'push', lose: 'push' }),
+    ]);
+    expect(a.cards.map(c => c.title)).toContain('Their attacking dropped off in set 2');
+  });
+
+  it('ignores a drop into a set cut short with End Set', () => {
+    const a = analyse([
+      ...many(8, 'player', 1, { win: 'loop' }), ...many(3, 'player', 1, { win: 'push' }),
+      ...many(3, 'player', 2, { win: 'push' }),
+    ]);
+    expect(a.cards.map(c => c.title).filter(t => t.includes('attacking dropped off'))).toEqual([]);
+  });
+
   it('has no cards for a match with no points', () => {
     expect(analyse([]).cards).toEqual([]);
   });

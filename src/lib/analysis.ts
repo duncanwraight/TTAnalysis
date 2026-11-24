@@ -114,6 +114,9 @@ export type Pattern = {
   count: number;
 };
 
+/** Attacks as each side's winning and losing shot in one set. */
+export type SetAttacks = { setNumber: number; points: number; player: Tally; opponent: Tally };
+
 export type Card = { tag: 'Match story' | 'Work on' | 'Scouting'; title: string; text: string };
 
 export type Analysis = {
@@ -132,6 +135,7 @@ export type Analysis = {
   shots: { player: ShotRow[]; opponent: ShotRow[] };
   // Winning and losing shots by hand, serves left out
   hands: { player: { fh: Tally; bh: Tally }; opponent: { fh: Tally; bh: Tally } };
+  attacksBySet: SetAttacks[];
   unforced: {
     // False until at least one of the player's unforced errors has been ticked
     recorded: boolean;
@@ -189,9 +193,10 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   const runs: Run[] = [];
   const rows: PointRow[] = [];
   const patterns = { player: new Map<string, Pattern>(), opponent: new Map<string, Pattern>() };
+  const attacksBySet = new Map<number, { player: Tally; opponent: Tally }>();
   let current: Run | null = null;
 
-  const tallyShot = (side: Side, shot: AnalysisShot, hand: Hand | null, result: 'won' | 'lost', isUnforced: boolean) => {
+  const tallyShot = (side: Side, shot: AnalysisShot, hand: Hand | null, result: 'won' | 'lost', isUnforced: boolean, setNumber: number) => {
     const label = shotLabel(shot);
     const key = `${shot.id}:${hand ?? ''}`;
     const row = shotRows[side].get(key) ?? { key, shot: label, hand, category: shot.category, won: 0, lost: 0, unforced: 0 };
@@ -204,6 +209,12 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     categoryRows[side].set(shot.category, cat);
 
     if (hand && shot.category !== SERVE_CATEGORY) hands[side][hand][result] += 1;
+
+    if (shot.category === ATTACK_CATEGORY) {
+      const setAttacks = attacksBySet.get(setNumber) ?? { player: emptyRecord(), opponent: emptyRecord() };
+      setAttacks[side][result] += 1;
+      attacksBySet.set(setNumber, setAttacks);
+    }
   };
 
   for (const point of points) {
@@ -225,11 +236,11 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     const isUnforced = isServiceFault || !!point.is_unforced_error;
 
     if (isServiceFault) {
-      tallyShot(loser, winningShot, null, 'lost', true);
+      tallyShot(loser, winningShot, null, 'lost', true, setNumber);
     } else {
-      tallyShot(winner, winningShot, point.winning_hand ?? null, 'won', false);
+      tallyShot(winner, winningShot, point.winning_hand ?? null, 'won', false, setNumber);
       if (otherShot.name !== NO_SHOT) {
-        tallyShot(loser, otherShot, point.other_hand ?? null, 'lost', isUnforced);
+        tallyShot(loser, otherShot, point.other_hand ?? null, 'lost', isUnforced, setNumber);
         const winHand = point.winning_hand ?? null;
         const loseHand = point.other_hand ?? null;
         const key = `${winningShot.id}:${winHand ?? ''}>${otherShot.id}:${loseHand ?? ''}`;
@@ -335,6 +346,11 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       opponent: [...shotRows.opponent.values()].sort((a, b) => byNet(b, a)),
     },
     hands,
+    attacksBySet: setSummaries.map(s => ({
+      setNumber: s.setNumber,
+      points: s.playerScore + s.opponentScore,
+      ...(attacksBySet.get(s.setNumber) ?? { player: emptyRecord(), opponent: emptyRecord() }),
+    })),
     unforced,
     rows,
     patterns: {
@@ -408,6 +424,29 @@ export const buildCards = (a: Analysis): Card[] => {
       title: `Came back in set ${won.s.setNumber}`,
       text: `Down ${scoreAt(won.s, won.best.index)}, won ${won.s.playerScore}-${won.s.opponentScore}.`,
     });
+  }
+
+  // An attack drop-off: far fewer attacking winners in a later set than an
+  // earlier one. Only full-length sets count, so a set ended early doesn't.
+  for (const side of ['player', 'opponent'] as const) {
+    const sets = a.attacksBySet.filter(s => s.points >= 11);
+    let drop: { from: SetAttacks; to: SetAttacks } | null = null;
+    sets.forEach((from, i) => sets.slice(i + 1).forEach(to => {
+      const high = from[side].won;
+      const low = to[side].won;
+      if (high - low >= 4 && low * 2 <= high && (!drop || high - low > drop.from[side].won - drop.to[side].won)) {
+        drop = { from, to };
+      }
+    }));
+    if (drop) {
+      const { from, to } = drop as { from: SetAttacks; to: SetAttacks };
+      const [whose, Whose] = side === 'player' ? ['your', 'Your'] : ['their', 'Their'];
+      story.push({
+        tag: 'Match story',
+        title: `${Whose} attacking dropped off in set ${to.setNumber}`,
+        text: `An attack was ${whose} winning shot in ${from[side].won} points in set ${from.setNumber}, and ${to[side].won} in set ${to.setNumber}. ${Whose} losing shot in ${from[side].lost}, then ${to[side].lost}.`,
+      });
+    }
   }
 
   // Early against late in sets
