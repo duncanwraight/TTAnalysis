@@ -76,7 +76,7 @@ const MatchAnalysis = () => {
       const element = contentRef.current;
       const opt = {
         margin: 0.5,
-        filename: `match-analysis-${analysisData.matchSummary.opponent_name}-${new Date(analysisData.matchSummary.date).toLocaleDateString().replace(/\//g, '-')}.pdf`,
+        filename: `match-analysis-${analysisData.matchSummary.opponent_name}-${new Date(`${analysisData.matchSummary.date}T00:00:00`).toLocaleDateString().replace(/\//g, '-')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 2,
@@ -102,7 +102,22 @@ const MatchAnalysis = () => {
     if (!id) return;
     
     const shareUrl = `${window.location.origin}/shared/matches/${id}/analysis`;
-    
+
+    // The shared link only works once the match is marked as shared
+    if (!analysisData?.matchSummary?.is_shared) {
+      try {
+        await api.match.updateMatch(id, { is_shared: true });
+        setAnalysisData((prev: any) => ({
+          ...prev,
+          matchSummary: { ...prev.matchSummary, is_shared: true }
+        }));
+      } catch (error) {
+        console.error('Failed to enable sharing:', error);
+        alert('Could not enable sharing for this match. Please try again.');
+        return;
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(shareUrl);
       setShareSuccess(true);
@@ -114,6 +129,20 @@ const MatchAnalysis = () => {
     }
   };
   
+  const handleStopSharing = async () => {
+    if (!id) return;
+    try {
+      await api.match.updateMatch(id, { is_shared: false });
+      setAnalysisData((prev: any) => ({
+        ...prev,
+        matchSummary: { ...prev.matchSummary, is_shared: false }
+      }));
+    } catch (error) {
+      console.error('Failed to stop sharing:', error);
+      alert('Could not stop sharing this match. Please try again.');
+    }
+  };
+
   if (loading) {
     const content = (
       <div className="loading-container">
@@ -149,14 +178,22 @@ const MatchAnalysis = () => {
   }
 
   const matchSummary = analysisData?.matchSummary;
-  const effectiveShots = analysisData?.mostEffectiveShots || [];
-  const costlyShots = analysisData?.mostCostlyShots || [];
   const shotDistribution = analysisData?.shotDistribution || [];
+  // Player's shots that won them points, and the shots they were playing when they lost one
+  const effectiveShots = shotDistribution
+    .filter((shot: any) => shot.won_with > 0)
+    .map((shot: any) => ({ name: shot.name, wins: shot.won_with }))
+    .sort((a: any, b: any) => b.wins - a.wins);
+  const costlyShots = shotDistribution
+    .filter((shot: any) => shot.lost_with > 0)
+    .map((shot: any) => ({ name: shot.name, losses: shot.lost_with }))
+    .sort((a: any, b: any) => b.losses - a.losses);
   const setBreakdown = analysisData?.setBreakdown || [];
   const categoryBreakdown = analysisData?.categoryBreakdown || [];
   const tacticalInsights = analysisData?.tacticalInsights || [];
-  const handAnalysis = analysisData?.handAnalysis || [];
-  const opponentHandAnalysis = analysisData?.opponentHandAnalysis || [];
+  const allHandAnalysis = analysisData?.handAnalysis || [];
+  const handAnalysis = allHandAnalysis.filter((h: any) => h.player_type === 'player');
+  const opponentHandAnalysis = allHandAnalysis.filter((h: any) => h.player_type === 'opponent');
   const shotHandAnalysis = analysisData?.shotHandAnalysis || [];
   const luckyShots = analysisData?.luckyShots || [];
   
@@ -199,7 +236,7 @@ const MatchAnalysis = () => {
 
     shotDistribution.forEach((shot: any) => {
       const shotHandData = shotHandAnalysis.filter((s: any) =>
-        s.shot_name === shot.name
+        s.shot_id === shot.shot_id && s.player_type === 'player'
       );
       
       // If we have hand data for this shot, create separate rows for each hand
@@ -237,7 +274,7 @@ const MatchAnalysis = () => {
 
     shotDistribution.forEach((shot: any) => {
       const shotHandData = shotHandAnalysis.filter((s: any) =>
-        s.shot_name === shot.name
+        s.shot_id === shot.shot_id && s.player_type === 'opponent'
       );
       
       // If we have hand data for this shot, create separate rows for each hand
@@ -390,7 +427,7 @@ const MatchAnalysis = () => {
           {matchSummary && (
             <>
               <h2>vs. {matchSummary.opponent_name}</h2>
-              <p className="match-date">{new Date(matchSummary.date).toLocaleDateString()}</p>
+              <p className="match-date">{new Date(`${matchSummary.date}T00:00:00`).toLocaleDateString()}</p>
             </>
           )}
           {isSharedView && (
@@ -971,6 +1008,14 @@ const MatchAnalysis = () => {
               disabled={shareSuccess}
             >
               {shareSuccess ? '✓ Link Copied!' : '🔗 Share Analysis'}
+            </button>
+          )}
+          {isAuthenticated && !isSharedView && matchSummary?.is_shared && (
+            <button
+              className="btn outline-btn"
+              onClick={handleStopSharing}
+            >
+              Stop Sharing
             </button>
           )}
           {isSharedView ? (

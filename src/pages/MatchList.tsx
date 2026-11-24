@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import type { Match } from '../types/database.types';
 import { useApi } from '../lib/useApi';
+import { useAuth } from '../context/AuthContext';
 
 const MatchList = () => {
   const api = useApi();
@@ -11,20 +12,24 @@ const MatchList = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchMatches = async () => {
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  const fetchMatches = useCallback(async () => {
+    if (!userId) return;
     try {
       setLoading(true);
       setError(null);
-      
-      const data = await api.match.getAllMatches();
+
+      const data = await api.match.getAllMatches(userId);
       setMatches(data);
     } catch (err) {
       setError('Failed to load matches. Please try again later.');
     } finally {
       setLoading(false);
     }
-  };
-  
+  }, [api, userId]);
+
   // Handle match deletion
   const handleDeleteMatch = async (id: string, event: React.MouseEvent) => {
     event.preventDefault();
@@ -46,7 +51,7 @@ const MatchList = () => {
   
   useEffect(() => {
     fetchMatches();
-  }, []);
+  }, [fetchMatches]);
 
   return (
     <Layout>
@@ -80,7 +85,7 @@ const MatchList = () => {
               <div key={match.id} className="match-card">
                 <div className="match-card-header">
                   <h3>vs. {match.opponent_name}</h3>
-                  <span className="match-date">{new Date(match.date).toLocaleDateString()}</span>
+                  <span className="match-date">{new Date(`${match.date}T00:00:00`).toLocaleDateString()}</span>
                 </div>
                 <div className="match-card-body">
                   <p className="match-score">Score: {match.match_score}</p>

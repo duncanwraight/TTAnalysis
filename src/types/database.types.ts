@@ -25,6 +25,8 @@ export type Match = {
   match_score: string;
   notes?: string;
   initial_server?: 'player' | 'opponent';
+  best_of: number;
+  is_shared: boolean;
   created_at: string;
   updated_at: string;
 };

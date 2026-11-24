@@ -18,10 +18,13 @@ function isPostgrestError(error: unknown): error is PostgrestError {
  */
 export const matchApi = {
   // Get all matches
-  getAllMatches: async () => {
+  // Get all matches owned by a user. The user_id filter is needed because RLS
+  // also exposes other users' shared matches.
+  getAllMatches: async (userId: string) => {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
+      .eq('user_id', userId)
       .order('date', { ascending: false });
     
     if (error) throw error;
@@ -64,11 +67,8 @@ export const matchApi = {
     
     const [
       matchSummary,
-      mostEffectiveShots,
-      mostCostlyShots,
       shotDistribution,
       handAnalysis,
-      opponentHandAnalysis,
       shotHandAnalysis,
       setBreakdown,
       categoryBreakdown,
@@ -81,18 +81,6 @@ export const matchApi = {
         .eq('match_id', id)
         .single(),
 
-      // Most Effective Shots
-      supabase.from('most_effective_shots')
-        .select('*')
-        .eq('match_id', id)
-        .order('wins', { ascending: false }),
-
-      // Most Costly Shots
-      supabase.from('most_costly_shots')
-        .select('*')
-        .eq('match_id', id)
-        .order('losses', { ascending: false }),
-
       // Shot Distribution (updated to use new breakdown view)
       supabase.from('player_shot_breakdown')
         .select('*')
@@ -101,11 +89,6 @@ export const matchApi = {
 
       // Hand Analysis
       supabase.from('hand_analysis')
-        .select('*')
-        .eq('match_id', id),
-
-      // Opponent Hand Analysis
-      supabase.from('opponent_hand_analysis')
         .select('*')
         .eq('match_id', id),
 
@@ -141,11 +124,8 @@ export const matchApi = {
     // Check for errors and log results
     const results = [
       { name: 'Match Summary', result: matchSummary },
-      { name: 'Most Effective Shots', result: mostEffectiveShots },
-      { name: 'Most Costly Shots', result: mostCostlyShots },
       { name: 'Shot Distribution', result: shotDistribution },
       { name: 'Hand Analysis', result: handAnalysis },
-      { name: 'Opponent Hand Analysis', result: opponentHandAnalysis },
       { name: 'Shot Hand Analysis', result: shotHandAnalysis },
       { name: 'Set Breakdown', result: setBreakdown },
       { name: 'Category Breakdown', result: categoryBreakdown },
@@ -164,11 +144,8 @@ export const matchApi = {
 
     const finalResult = {
       matchSummary: matchSummary.data,
-      mostEffectiveShots: mostEffectiveShots.data,
-      mostCostlyShots: mostCostlyShots.data,
       shotDistribution: shotDistribution.data,
       handAnalysis: handAnalysis.data,
-      opponentHandAnalysis: opponentHandAnalysis.data,
       shotHandAnalysis: shotHandAnalysis.data,
       setBreakdown: setBreakdown.data,
       categoryBreakdown: categoryBreakdown.data,
@@ -180,7 +157,10 @@ export const matchApi = {
   },
 
   // Create a new match
-  createMatch: async (match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at'>, userId?: string) => {
+  createMatch: async (
+    match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'best_of' | 'is_shared'> & { best_of?: number },
+    userId?: string
+  ) => {
     let user_id = userId;
     
     if (!user_id) {
