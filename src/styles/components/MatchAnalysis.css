@@ -173,11 +173,96 @@
   .ma-stage { grid-template-columns: 90px minmax(0, 1fr) 56px; }
 }
 
+/* Tabs between the analysis and the coach's summary */
+.ma-tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--ma-line); margin-top: -0.75rem; }
+.ma-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 2px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ma-ink-2);
+  text-decoration: none;
+}
+.ma-tab:hover { color: var(--ma-ink); }
+.ma-tab[aria-current="page"] { color: var(--ma-ink); font-weight: 600; border-bottom-color: var(--ma-ink); }
+.ma-tab-dot { width: 8px; height: 8px; border-radius: 50%; background: #b45309; }
+
 /* Coach's summary */
-.ma-coach-headline { font-size: 16px; line-height: 1.55; color: var(--ma-ink); max-width: 760px; }
-.ma-coach-try { padding-top: 6px; border-top: 1px solid var(--ma-line); }
-.ma-coach-try strong { font-weight: 600; color: var(--ma-ink); }
-.ma-coach-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
-.ma-coach-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.ma-coach-notes { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
-.ma-coach-notes textarea { width: 100%; resize: vertical; }
+.cs { display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start; }
+.cs-main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 44px; }
+.cs-rail { flex: 1 1 260px; min-width: 0; max-width: 340px; display: flex; flex-direction: column; gap: 16px; }
+.cs h2, .cs h3, .cs p, .cs ol { margin: 0; }
+.cs-small { font-size: 13px; line-height: 1.55; }
+
+.cs-headline { font-size: 21px; line-height: 1.55; font-weight: 500; max-width: 720px; }
+.cs-label { font-size: 13px !important; font-weight: 600 !important; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ma-ink-3); margin-bottom: 8px !important; }
+
+.cs-problems { list-style: none; padding: 0; border-bottom: 1px solid var(--ma-line); }
+.cs-problem { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0 12px; padding: 28px 0; border-top: 1px solid var(--ma-line); }
+.cs-num { font-size: 15px; font-weight: 600; color: var(--ma-ink-3); padding-top: 2px; }
+.cs-problem-body { display: flex; flex-direction: column; gap: 14px; }
+.cs-problem-body h3 { font-size: 20px; font-weight: 600; }
+.cs-detail { font-size: 16px; line-height: 1.65; color: var(--ma-ink-2); max-width: 680px; }
+.cs-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.cs-panels.single { grid-template-columns: minmax(0, 1fr); }
+.cs-panel { border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.cs-panel-check { background: var(--surface-2); }
+.cs-panel-technical { background: var(--surface); border: 1px solid var(--ma-line); }
+.cs-panel-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ma-ink); }
+.cs-panel p { font-size: 15px; line-height: 1.6; color: #334155; }
+
+.cs-mental { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.cs-mental-card { display: flex; flex-direction: column; gap: 8px; }
+.cs-mental-card h3 { font-size: 17px; font-weight: 600; }
+.cs-mental-card p { font-size: 15px; line-height: 1.6; color: var(--ma-ink-2); }
+
+.cs-rail-card { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+.cs-fact { display: flex; flex-direction: column; gap: 2px; }
+.cs-fact span { font-size: 13px; color: var(--ma-ink-3); }
+.cs-fact strong { font-size: 15px; font-weight: 500; }
+.cs-rail-title { font-size: 13px; font-weight: 600; }
+.cs-notes { font-size: 14px; line-height: 1.6; color: var(--ma-ink-2); white-space: pre-line; }
+.cs-rail-card textarea { width: 100%; resize: vertical; }
+.cs-form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-disclaimer { padding: 0 4px; }
+
+.cs-stale {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.cs-stale p { font-size: 14px; line-height: 1.5; color: #78350f; flex: 1 1 260px; }
+
+.cs-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; max-width: 560px; margin: 24px auto 0; }
+.cs-empty-icon { width: 56px; height: 56px; border-radius: 14px; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; }
+.cs-empty h2 { font-size: 24px; font-weight: 700; margin: 0; }
+.cs-empty p { margin: 0; font-size: 16px; line-height: 1.6; color: var(--ma-ink-2); }
+.cs-empty .cs-small { font-size: 13px; }
+.cs-empty-button { min-height: 48px; padding: 0 24px; font-size: 16px; margin-top: 8px; }
+
+/* After the base rules above, so these win on phones */
+@media (max-width: 640px) {
+  .ma-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+  .ma-tab { justify-content: center; }
+  .cs { gap: 32px; }
+  .cs-main { gap: 32px; }
+  .cs-rail { max-width: none; }
+  .cs-headline { font-size: 18px; }
+  .cs-problem { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 20px 0; }
+  .cs-problem-body h3 { font-size: 18px; }
+  .cs-detail { font-size: 15px; }
+  .cs-panels { grid-template-columns: minmax(0, 1fr); }
+  .cs-panel { padding: 14px 16px; }
+  .cs-stale .btn { width: 100%; }
+}

@@ -57,6 +57,15 @@ function App() {
           />
           
           <Route
+            path="/matches/:id/summary"
+            element={
+              <ProtectedRoute>
+                <MatchAnalysis />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/matches/:id/points"
             element={
               <ProtectedRoute>
@@ -67,6 +76,7 @@ function App() {
 
           {/* Public shared analysis route - no authentication required */}
           <Route path="/shared/:token" element={<MatchAnalysis />} />
+          <Route path="/shared/:token/summary" element={<MatchAnalysis />} />
           {/* Old-style links (match ID instead of token) now show the invalid link message */}
           <Route path="/shared/matches/:token/analysis" element={<MatchAnalysis />} />
           

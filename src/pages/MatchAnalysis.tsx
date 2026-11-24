@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
@@ -110,7 +110,7 @@ const MatchAnalysis = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const api = useApi();
-  const { user, aiSummariesEnabled } = useAuth();
+  const { user, aiSummariesEnabled, adminLoading } = useAuth();
   const contentRef = useRef<HTMLDivElement>(null);
 
   const [data, setData] = useState<AnalysisData | null>(null);
@@ -128,6 +128,10 @@ const MatchAnalysis = () => {
 
   const isSharedView = location.pathname.startsWith('/shared/');
   const isOwnerView = !!user && !isSharedView;
+  // The coach's summary is its own tab, at /matches/:id/summary or /shared/:token/summary
+  const view: 'analysis' | 'summary' = location.pathname.endsWith('/summary') ? 'summary' : 'analysis';
+  const analysisPath = isSharedView ? `/shared/${token}` : `/matches/${id}/analysis`;
+  const summaryPath = isSharedView ? `/shared/${token}/summary` : `/matches/${id}/summary`;
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -193,7 +197,7 @@ const MatchAnalysis = () => {
       const date = new Date(`${data.match.date}T00:00:00`).toLocaleDateString().replace(/\//g, '-');
       const options = {
         margin: 0.4,
-        filename: `match-analysis-${cleanText(data.match.player_name) ? `${cleanText(data.match.player_name)}-` : ''}${data.match.opponent_name}-${date}.pdf`,
+        filename: `${view === 'summary' ? 'coach-summary' : 'match-analysis'}-${cleanText(data.match.player_name) ? `${cleanText(data.match.player_name)}-` : ''}${data.match.opponent_name}-${date}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const },
@@ -292,6 +296,14 @@ const MatchAnalysis = () => {
     <div className="ma-pair-row"><span className="muted">{label}</span><strong>Won {t.won} · Lost {t.lost}</strong></div>
   );
 
+  // Owners see the tab once AI summaries are on for them or a summary exists;
+  // a shared link only when there's a summary to show
+  const showSummaryTab = isSharedView ? !!data.summary : (aiSummariesEnabled || !!data.summary);
+  const summaryStale = !!data.summary && !!currentHash && data.summary.input_hash !== currentHash;
+  if (view === 'summary' && !showSummaryTab && !(isOwnerView && adminLoading)) {
+    return <Navigate to={analysisPath} replace />;
+  }
+
   const analysisContent = (
     <div className="ma" ref={contentRef}>
       <header className="ma-header">
@@ -317,6 +329,30 @@ const MatchAnalysis = () => {
         </div>
       </header>
 
+      {showSummaryTab && (
+        <nav className="ma-tabs" aria-label="Match views" data-html2canvas-ignore="true">
+          <Link to={analysisPath} className="ma-tab" aria-current={view === 'analysis' ? 'page' : undefined}>Analysis</Link>
+          <Link to={summaryPath} className="ma-tab" aria-current={view === 'summary' ? 'page' : undefined}>
+            Coach's summary
+            {summaryStale && isOwnerView && <span className="ma-tab-dot" role="img" aria-label="out of date" />}
+          </Link>
+        </nav>
+      )}
+
+      {view === 'summary' ? (
+        <CoachSummary
+          stored={data.summary}
+          stale={summaryStale}
+          canGenerate={isOwnerView && aiSummariesEnabled}
+          isOwner={isOwnerView}
+          totalPoints={totalPoints}
+          generating={generating}
+          error={summaryError}
+          onGenerate={() => generateSummary()}
+          savedNotes={data.summaryNotes}
+          onRewrite={generateSummary}
+        />
+      ) : (<>
       <aside className="ma-note" aria-label="How points are recorded">
         <strong>How to read this page.</strong> Each point records two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Rally shots aren't recorded, so the numbers only cover the last two shots of each point.
       </aside>
@@ -356,17 +392,6 @@ const MatchAnalysis = () => {
               </div>
             </section>
           )}
-
-          <CoachSummary
-            stored={data.summary}
-            stale={!!data.summary && !!currentHash && data.summary.input_hash !== currentHash}
-            canGenerate={isOwnerView && aiSummariesEnabled}
-            generating={generating}
-            error={summaryError}
-            onGenerate={() => generateSummary()}
-            savedNotes={data.summaryNotes}
-            onRewrite={generateSummary}
-          />
 
           <section aria-labelledby="ma-ue" className="section">
             <div className="section-head">
@@ -619,6 +644,7 @@ const MatchAnalysis = () => {
           </section>
         </>
       )}
+      </>)}
 
       <footer className="ma-footer" data-html2canvas-ignore="true">
         <button type="button" className="btn primary" onClick={exportToPDF} disabled={isExporting}>
