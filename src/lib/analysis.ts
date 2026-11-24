@@ -50,7 +50,7 @@ export const SERVICE_FAULT = 'service_fault';
 
 /** What counts as an unforced error, shown wherever one can be ticked or read. */
 export const UNFORCED_ERROR_DEFINITION =
-  "An unforced error is a shot you should have made. You weren't out of position, you read the spin, you went for the right shot, and it still missed.";
+  "An unforced error is a shot you would typically expect to make. You weren't out of position, you read the spin, you went for the right type of shot, and it still missed.";
 export const NO_SHOT = 'no_shot';
 const SERVE_CATEGORY = 'serve';
 const ATTACK_CATEGORY = 'attacks';
@@ -104,7 +104,7 @@ export type Run = { side: Side; length: number; setNumber: number; fromPlayer: n
 
 export type Stage = { label: string; won: number; lost: number; unforced: number };
 
-/** A winning shot and the losing shot it was played against, seen three times or more, unforced errors left out. */
+/** A winning shot and the losing shot it was played against, seen three times or more, excluding unforced errors. */
 export type Pattern = {
   key: string;
   winningShot: string;
@@ -416,10 +416,10 @@ export const buildCards = (a: Analysis): Card[] => {
     const run = closingRun(lost.s, 'opponent');
     story.push({
       tag: 'Match story',
-      title: `Set ${lost.s.setNumber} got away`,
+      title: `Lost set ${lost.s.setNumber} from ${scoreAt(lost.s, lost.best.index)} up`,
       text: run >= 3
-        ? `Up ${scoreAt(lost.s, lost.best.index)}, then lost ${run} in a row.`
-        : `Up ${scoreAt(lost.s, lost.best.index)}, lost ${lost.s.playerScore}-${lost.s.opponentScore}.`,
+        ? `Lost the last ${run} points of the set.`
+        : `Lost the set ${lost.s.playerScore}-${lost.s.opponentScore}.`,
     });
   }
   const won = swings.filter(x => !x.lostIt).sort((x, y) => y.best.gap - x.best.gap)[0];
@@ -445,11 +445,11 @@ export const buildCards = (a: Analysis): Card[] => {
     }));
     if (drop) {
       const { from, to } = drop as { from: SetAttacks; to: SetAttacks };
-      const [whose, Whose] = side === 'player' ? ['your', 'Your'] : ['their', 'Their'];
+      const [Who, Whose] = side === 'player' ? ['You', 'Your'] : ['They', 'Their'];
       story.push({
         tag: 'Match story',
         title: `${Whose} attacking dropped off in set ${to.setNumber}`,
-        text: `An attack was ${whose} winning shot in ${from[side].won} points in set ${from.setNumber}, and ${to[side].won} in set ${to.setNumber}. ${Whose} losing shot in ${from[side].lost}, then ${to[side].lost}.`,
+        text: `${Who} won ${from[side].won} points with an attacking shot in set ${from.setNumber} and ${to[side].won} in set ${to.setNumber}. Points lost on an attacking shot went from ${from[side].lost} to ${to[side].lost}.`,
       });
     }
   }
@@ -461,9 +461,9 @@ export const buildCards = (a: Analysis): Card[] => {
   if (earlyTotal >= 8 && lateTotal >= 8) {
     const diff = pct(early.won, earlyTotal) - pct(late.won, lateTotal);
     if (diff >= 20) {
-      story.push({ tag: 'Match story', title: 'Faded late in sets', text: `Won ${early.won} of the first ${earlyTotal} points in sets. Won ${late.won} of ${lateTotal} from the 16th point on.` });
+      story.push({ tag: 'Match story', title: 'Won fewer points late in sets', text: `Won ${early.won} of the first ${earlyTotal} points in sets. Won ${late.won} of ${lateTotal} from the 16th point on.` });
     } else if (diff <= -20) {
-      story.push({ tag: 'Match story', title: 'Finished sets strongly', text: `Won ${late.won} of ${lateTotal} points from the 16th point on, against ${early.won} of the first ${earlyTotal}.` });
+      story.push({ tag: 'Match story', title: 'Won more points late in sets', text: `Won ${late.won} of ${lateTotal} points from the 16th point on, against ${early.won} of the first ${earlyTotal}.` });
     }
   }
 

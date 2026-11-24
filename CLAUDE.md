@@ -79,7 +79,7 @@ The `start-dev.sh` script handles:
 
 Each point records two shots: the winner's winning shot and the loser's losing shot ("other shot" in the schema), which is either the shot that set up the winner or the one that missed. Rally shots aren't recorded, so the analysis page always talks about winning and losing shots, never shots played. The page is built by `buildAnalysis` in `src/lib/analysis.ts` from the raw match, sets, points and shots, and is covered by `src/lib/analysis.test.ts`. A service fault is recorded as the receiver's winning shot with `no_shot` for the server; the analysis charges it to the server as an unforced losing shot.
 
-The page also lists patterns: winning/losing shot pairs that happened three times or more for each side, leaving out unforced errors. The user's own name for defaulting the player lives in auth user metadata (`display_name`), not in `profiles`, which only admins can update.
+The page also lists patterns: winning/losing shot pairs that happened three times or more for each side, excluding unforced errors. The user's own name for defaulting the player lives in auth user metadata (`display_name`), not in `profiles`, which only admins can update.
 
 The older SQL views (`point_shots` and the views built on it) are no longer used by the frontend. Views use `security_invoker`, so a view created without it bypasses RLS.
 

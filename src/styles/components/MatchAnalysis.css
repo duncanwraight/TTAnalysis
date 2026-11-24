@@ -38,13 +38,6 @@
 .ma-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .ma-chips .chip { height: 32px; padding: 0 12px; font-size: 15px; }
 
-.ma-shared-badge {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--ma-ink-2);
-}
-
 /* Unforced error definition */
 /* Uses .ma-note's look, but sits inside a section heading rather than under the page header */
 .section-head .ma-note.ma-definition { margin-top: 4px; font-size: 13px; color: var(--ma-ink-3); }

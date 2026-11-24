@@ -257,7 +257,7 @@ describe('cards', () => {
   it('notes a set lost from 2 or more up, with the closing run', () => {
     // 7-3 up, then 0-8 to lose 7-11
     const a = analyse([...many(7, 'player'), ...many(3, 'opponent'), ...many(8, 'opponent')]);
-    expect(a.cards[0]).toEqual({ tag: 'Match story', title: 'Set 1 got away', text: 'Up 7-0, then lost 11 in a row.' });
+    expect(a.cards[0]).toEqual({ tag: 'Match story', title: 'Lost set 1 from 7-0 up', text: 'Lost the last 11 points of the set.' });
   });
 
   it('notes a comeback', () => {
@@ -272,7 +272,7 @@ describe('cards', () => {
       ...many(5, 'player', n), ...many(4, 'opponent', n),
       ...many(5, 'opponent', n),
     ];
-    expect(titles([...set(1), ...set(2)])).toContain('Faded late in sets');
+    expect(titles([...set(1), ...set(2)])).toContain('Won fewer points late in sets');
   });
 
   it('names the most costly shot to work on', () => {
@@ -314,7 +314,7 @@ describe('cards', () => {
     expect(a.cards).toContainEqual({
       tag: 'Match story',
       title: 'Your attacking dropped off in set 2',
-      text: 'An attack was your winning shot in 8 points in set 1, and 2 in set 2. Your losing shot in 0, then 4.',
+      text: 'You won 8 points with an attacking shot in set 1 and 2 in set 2. Points lost on an attacking shot went from 0 to 4.',
     });
   });
 

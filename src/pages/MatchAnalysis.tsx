@@ -272,7 +272,6 @@ const MatchAnalysis = () => {
               <> · <a href={match.video_url} target="_blank" rel="noopener noreferrer">Watch the video</a></>
             )}
           </p>
-          {isSharedView && <span className="ma-shared-badge">Shared analysis</span>}
         </div>
         <div className="ma-result">
           <p className="ma-result-text">{setsResult} {a.setsWon.won}–{a.setsWon.lost}</p>
@@ -287,7 +286,7 @@ const MatchAnalysis = () => {
       </header>
 
       <aside className="ma-note" aria-label="How points are recorded">
-        <strong>How to read this page.</strong> Each point records two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Shots in the middle of a rally aren't recorded, so every number here is about how points ended.
+        <strong>How to read this page.</strong> Each point records two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Rally shots aren't recorded, so the numbers only cover the last two shots of each point.
       </aside>
 
       {totalPoints === 0 ? (
@@ -296,7 +295,7 @@ const MatchAnalysis = () => {
         <>
           <section aria-label="Headline numbers" className="ma-grid tiles">
             <Tile label="Points won" value={`${a.points.won}`} of={`of ${totalPoints}`}
-              note={a.points.won === a.points.lost ? 'Level on points' : `${pct(a.points.won, totalPoints)}% of points`} />
+              note={a.points.won === a.points.lost ? 'Equal points won' : `${pct(a.points.won, totalPoints)}% of points`} />
             <Tile label="On your serve" value={`${pct(a.onServe.won, a.onServe.won + a.onServe.lost)}%`}
               of={`${a.onServe.won} of ${a.onServe.won + a.onServe.lost}`} note="Points won while serving" />
             <Tile label="On their serve" value={`${pct(a.onReceive.won, a.onReceive.won + a.onReceive.lost)}%`}
@@ -329,8 +328,7 @@ const MatchAnalysis = () => {
           <section aria-labelledby="ma-ue" className="section">
             <div className="section-head">
               <h2 id="ma-ue">Unforced errors</h2>
-              <p>Points you gave away, by losing shot. This is where practice pays off fastest.</p>
-              <p className="ma-note ma-definition"><strong>What counts as unforced.</strong> {UNFORCED_ERROR_DEFINITION} A shot that missed because the other player made it hard is forced, not unforced.</p>
+              <p className="ma-note ma-definition"><strong>What counts as unforced.</strong> {UNFORCED_ERROR_DEFINITION} If the other player made it hard to play your shot with spin, placement or speed, it is not an unforced error.</p>
             </div>
             {a.unforced.recorded ? (
               <>
@@ -406,13 +404,13 @@ const MatchAnalysis = () => {
 
           <section aria-labelledby="ma-story" className="section">
             <div className="ma-story-head">
-              <h2 id="ma-story">How the match went</h2>
+              <h2 id="ma-story">Match progression</h2>
               <div className="ma-legend">
                 <span><span className="ma-swatch you" />Point to you</span>
                 <span><span className="ma-swatch opp" />Point to opponent</span>
               </div>
             </div>
-            <p className="muted" style={{ fontSize: 14 }}>The score gap through each set, point by point. Above the middle line, you were ahead.</p>
+            <p className="muted" style={{ fontSize: 14 }}>Each chart shows the difference in score after every point. Above the line, you were ahead.</p>
             <div className="ma-grid sets">
               {a.sets.map(s => (
                 <figure key={s.setNumber} className="card ma-set">
@@ -465,7 +463,7 @@ const MatchAnalysis = () => {
           <section aria-labelledby="ma-cat" className="section">
             <div className="section-head">
               <h2 id="ma-cat">Categories</h2>
-              <p>Winning and losing shots grouped by type, for both players. Shows who was attacking and whose defence held.</p>
+              <p>Winning and losing shots grouped by type, for both players. Shows who was attacking and who defended effectively.</p>
             </div>
             <div className="ma-grid halves">
               <CategoryTable title="You" rows={a.categories.player} yours />
@@ -476,7 +474,7 @@ const MatchAnalysis = () => {
           <section aria-labelledby="ma-patterns" className="section">
             <div className="section-head">
               <h2 id="ma-patterns">Patterns</h2>
-              <p>A winning shot and the losing shot it was played against, when the same pair happened three times or more. Unforced errors are left out.</p>
+              <p>A winning shot and the losing shot it was played against, when the same pair happened three times or more. Unforced errors are excluded.</p>
             </div>
             <div className="ma-grid halves">
               <PatternList title="How you won points" patterns={a.patterns.player} yours />
