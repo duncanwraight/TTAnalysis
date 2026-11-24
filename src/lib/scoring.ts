@@ -3,6 +3,8 @@
  * can rely on one implementation.
  */
 
+import type { MatchSet, Point } from '../types/database.types';
+
 export type Side = 'player' | 'opponent';
 
 export type SetScore = {
@@ -13,6 +15,8 @@ export type SetScore = {
 export const POINTS_TO_WIN_SET = 11;
 export const MIN_SET_MARGIN = 2;
 export const DEFAULT_BEST_OF = 5;
+
+export const EMPTY_SET: SetScore = { playerScore: 0, opponentScore: 0 };
 
 export const otherSide = (side: Side): Side => (side === 'player' ? 'opponent' : 'player');
 
@@ -72,4 +76,79 @@ export const getServer = (matchInitialServer: Side, setNumber: number, score: Se
   // count is even, so continuing every point from there lines up.
   const changes = isDeuce ? 10 + (totalPoints - 20) : Math.floor(totalPoints / 2);
   return changes % 2 === 0 ? setInitialServer : otherSide(setInitialServer);
+};
+
+export type MatchState = {
+  currentSet: number;
+  sets: SetScore[];
+  points: Point[];
+  isMatchComplete: boolean;
+  // Database rows for the sets that exist so far, ordered by set_number
+  dbSets: MatchSet[];
+  // ID of the current set's row, or null if it hasn't been created yet
+  currentSetId: string | null;
+};
+
+/**
+ * Build tracker state from what's in the database. Set rows hold the scores;
+ * the current set is the last row unless that set is over, in which case the
+ * next set starts (its row is created when its first point is recorded).
+ */
+export const buildMatchState = (
+  dbSetsIn: MatchSet[],
+  points: Point[],
+  bestOf: number,
+  markedComplete: boolean
+): MatchState => {
+  const dbSets = [...dbSetsIn].sort((a, b) => a.set_number - b.set_number);
+
+  if (dbSets.length === 0) {
+    return {
+      currentSet: 1,
+      sets: [{ ...EMPTY_SET }],
+      points,
+      isMatchComplete: false,
+      dbSets: [],
+      currentSetId: null,
+    };
+  }
+
+  const sets: SetScore[] = dbSets.map(s => ({ playerScore: s.player_score, opponentScore: s.opponent_score }));
+  const last = dbSets[dbSets.length - 1];
+  const isMatchComplete = markedComplete || isMatchOver(finishedSets(sets), bestOf);
+
+  if (!isMatchComplete && isSetOver(sets[sets.length - 1])) {
+    return {
+      currentSet: last.set_number + 1,
+      sets: [...sets, { ...EMPTY_SET }],
+      points,
+      isMatchComplete,
+      dbSets,
+      currentSetId: null,
+    };
+  }
+
+  return {
+    currentSet: last.set_number,
+    sets,
+    points,
+    isMatchComplete,
+    dbSets,
+    currentSetId: last.id,
+  };
+};
+
+/**
+ * Whether Undo should reverse an End Set rather than remove a point. That's the
+ * case when the most recent set finished without reaching a winning score:
+ * either the match is complete on a set that isn't over, or the current set is
+ * empty and the one before it isn't over.
+ */
+export const lastActionWasEndSet = (sets: SetScore[], isMatchComplete: boolean): boolean => {
+  const last = sets[sets.length - 1];
+  if (!last) return false;
+  if (isMatchComplete) return !isSetOver(last);
+  if (sets.length < 2) return false;
+  const previous = sets[sets.length - 2];
+  return last.playerScore + last.opponentScore === 0 && !isSetOver(previous);
 };

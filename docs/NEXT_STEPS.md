@@ -13,19 +13,16 @@ Everything below is merged to `main`, migrated on production Supabase (project `
 
 Not yet checked on production by a person: recording a match, undo, the analysis page, the Share button (including the copy-by-hand fallback when clipboard access is blocked) and the password reset email. The password reset link also needs `https://tt-analysis.vercel.app/reset-password` in the Supabase dashboard's allowed redirect URLs.
 
-## 1. Tests for the scoring rules
+## 1. Tests for the scoring rules (done)
 
-Goal: find any remaining bugs in the tracker logic before more changes go in.
+`npm test` runs Vitest over `src/lib/scoring.test.ts`, which covers every function in `src/lib/scoring.ts`. `buildMatchState` moved there from `MatchTracker.tsx` so the reload logic is tested too. No scoring bugs turned up.
 
-- Add Vitest (`npm i -D vitest`) and an `npm test` script.
-- Cover `src/lib/scoring.ts`: `isSetOver`, `setLeader`, `countSetsWon`, `setsNeededToWin`, `finishedSets`, `isMatchOver`, `matchScoreString`, `setScoreString`, `getServer`.
-- Cases worth having:
-  - Sets: 11-9 over, 11-10 not over, 12-10 over, deuce runs like 15-13.
-  - Server: changes every 2 points, every point from 10-10, the other player starts the next set, and set 2 or 4 when the opponent served first.
-  - Match over for best of 1, 3, 5 and 7, including a set ended early with End Set (for example 8-5 counted as a finished set).
-  - Match score string after End Set must count the set once. This was a real double-counting bug.
-- `buildMatchState` in `src/pages/MatchTracker.tsx` holds the reload logic (which set is current, whether to add an empty set). It is worth moving into `scoring.ts` so it can be tested too, particularly the case where the last set is over and the match is not.
-- If a test fails, fix the code, not the test, and check the tracker in the browser.
+Decided while writing the tests:
+
+- A match stops as soon as a side has the sets it needs. Dead sets are not played out.
+- Undo straight after End Set reverses the End Set and keeps the set's points: the empty next set is deleted, or the match is reopened if End Set finished it. The next Undo removes the last point. `lastActionWasEndSet` decides which, and the button reads "Undo End Set" when that's what it will do. Checked in the browser against a local stack.
+
+Run `npm test` alongside lint and build before shipping.
 
 ## 2. Security audit
 
@@ -67,7 +64,7 @@ Stop it with `supabase stop --workdir <scratch dir> --no-backup`. Never run `sup
 
 ## Shipping changes
 
-1. `npm run lint` and `npm run build`.
+1. `npm run lint`, `npm test` and `npm run build`.
 2. If there is a new migration: `supabase db push --remote --dry-run` to confirm only the expected file is pending, then `supabase db push --remote --yes`.
 3. Push `main`. Vercel deploys from it in about 30 seconds.
 

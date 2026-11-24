@@ -5,35 +5,26 @@ import PlayerPanel from '../components/PlayerPanel';
 import ShotSelector from '../components/ShotSelector/index';
 import ScoreBoard from '../components/ScoreBoard';
 import PointHistory from '../components/PointHistory';
-import { Match, MatchSet, Point, ShotInfo } from '../types/database.types';
+import { Match, MatchSet, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT } from '../lib/shotsApi';
 import {
   DEFAULT_BEST_OF,
+  EMPTY_SET,
+  MatchState,
   SetScore,
   Side,
+  buildMatchState,
   finishedSets,
   getServer,
   isMatchOver,
   isSetOver,
+  lastActionWasEndSet,
   matchScoreString,
   setLeader,
   setScoreString,
 } from '../lib/scoring';
-
-type MatchState = {
-  currentSet: number;
-  sets: SetScore[];
-  points: Point[];
-  isMatchComplete: boolean;
-  // Database rows for the sets that exist so far, ordered by set_number
-  dbSets: MatchSet[];
-  // ID of the current set's row, or null if it hasn't been created yet
-  currentSetId: string | null;
-};
-
-const EMPTY_SET: SetScore = { playerScore: 0, opponentScore: 0 };
 
 // Supabase errors are plain objects with a message, not Error instances
 const errorMessage = (error: unknown) => {
@@ -42,55 +33,6 @@ const errorMessage = (error: unknown) => {
     return error.message;
   }
   return 'Unknown error';
-};
-
-/**
- * Build tracker state from what's in the database. Set rows hold the scores;
- * the current set is the last row unless that set is over, in which case the
- * next set starts (its row is created when its first point is recorded).
- */
-const buildMatchState = (
-  dbSetsIn: MatchSet[],
-  points: Point[],
-  bestOf: number,
-  markedComplete: boolean
-): MatchState => {
-  const dbSets = [...dbSetsIn].sort((a, b) => a.set_number - b.set_number);
-
-  if (dbSets.length === 0) {
-    return {
-      currentSet: 1,
-      sets: [{ ...EMPTY_SET }],
-      points,
-      isMatchComplete: false,
-      dbSets: [],
-      currentSetId: null,
-    };
-  }
-
-  const sets: SetScore[] = dbSets.map(s => ({ playerScore: s.player_score, opponentScore: s.opponent_score }));
-  const last = dbSets[dbSets.length - 1];
-  const isMatchComplete = markedComplete || isMatchOver(finishedSets(sets), bestOf);
-
-  if (!isMatchComplete && isSetOver(sets[sets.length - 1])) {
-    return {
-      currentSet: last.set_number + 1,
-      sets: [...sets, { ...EMPTY_SET }],
-      points,
-      isMatchComplete,
-      dbSets,
-      currentSetId: null,
-    };
-  }
-
-  return {
-    currentSet: last.set_number,
-    sets,
-    points,
-    isMatchComplete,
-    dbSets,
-    currentSetId: last.id,
-  };
 };
 
 const MatchTracker = () => {
@@ -140,6 +82,7 @@ const MatchTracker = () => {
   const bestOf = match?.best_of ?? DEFAULT_BEST_OF;
   const initialServer: Side = match?.initial_server === 'opponent' ? 'opponent' : 'player';
   const canUndo = matchState.points.length > 0;
+  const undoesEndSet = lastActionWasEndSet(matchState.sets, matchState.isMatchComplete);
 
   /* Match Data Loading */
   useEffect(() => {
@@ -366,6 +309,26 @@ const MatchTracker = () => {
     withSaving(async () => {
       if (!match || matchState.points.length === 0) return;
 
+      // Straight after End Set, Undo reverses the End Set and leaves the
+      // set's points alone. A second Undo then removes the last point.
+      if (lastActionWasEndSet(matchState.sets, matchState.isMatchComplete)) {
+        try {
+          let dbSets = matchState.dbSets;
+          if (!matchState.isMatchComplete) {
+            // Remove the empty set End Set created for the next set
+            const emptySet = dbSets.find(s => s.set_number === matchState.currentSet);
+            if (emptySet) await api.set.deleteSet(emptySet.id);
+            dbSets = dbSets.filter(s => s.set_number < matchState.currentSet);
+          }
+          const newState = buildMatchState(dbSets, matchState.points, bestOf, false);
+          await syncMatchResult(newState.sets, false, false);
+          setMatchState(newState);
+        } catch (error) {
+          alert(`Failed to undo End Set: ${errorMessage(error)}. Refresh the page to see the saved state.`);
+        }
+        return;
+      }
+
       // Points are kept in the order they were recorded
       const lastPoint = matchState.points[matchState.points.length - 1];
       const setRow = matchState.dbSets.find(s => s.id === lastPoint.set_id);
@@ -552,9 +515,9 @@ const MatchTracker = () => {
                 className="btn outline-btn undo-btn"
                 onClick={undoLastPoint}
                 disabled={isSaving}
-                title="Undo the last point and reopen the match"
+                title={undoesEndSet ? 'Undo End Set and reopen the match' : 'Undo the last point and reopen the match'}
               >
-                ↩️ Undo Last Point
+                ↩️ {undoesEndSet ? 'Undo End Set' : 'Undo Last Point'}
               </button>
             )}
             <button 
@@ -923,9 +886,9 @@ const MatchTracker = () => {
               className="btn outline-btn undo-btn"
               onClick={undoLastPoint}
               disabled={isSaving}
-              title="Undo last point"
+              title={undoesEndSet ? 'Undo End Set' : 'Undo last point'}
             >
-              ↩️ Undo
+              ↩️ {undoesEndSet ? 'Undo End Set' : 'Undo'}
             </button>
           )}
           
