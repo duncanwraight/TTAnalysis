@@ -1,0 +1,44 @@
+/* Small page-specific pieces. Everything shared lives in index.css. */
+
+/* Home */
+.home-steps { display: flex; flex-direction: column; gap: 16px; }
+.home-steps ol { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.home-steps li { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; }
+.home-steps h3 { font-size: 16px; }
+.home-steps p { font-size: 15px; }
+.home-step-number {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface-2); font-weight: 700; font-size: 15px;
+}
+
+/* Sign in, sign up and password reset */
+.auth-card { display: flex; flex-direction: column; gap: 16px; padding: 28px; }
+.auth-card h2 { font-size: 24px; }
+.auth-card > p { color: var(--ink-2); font-size: 15px; }
+.auth-actions { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.auth-actions .btn { margin-bottom: 8px; }
+
+/* Match list */
+.match-cards { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.match-card { display: flex; flex-direction: column; gap: 6px; }
+.match-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.match-card-head h2 { font-size: 17px; line-height: 1.3; }
+.match-card-head .chip { flex: none; }
+.match-card-meta { font-size: 14px; color: var(--ink-2); }
+.match-card-notes { font-size: 14px; color: var(--ink-3); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.match-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 10px; }
+.match-card-actions .btn.small { min-height: var(--tap); }
+.match-card-delete { margin-left: auto; }
+
+/* Admin */
+.admin-category { display: flex; flex-direction: column; }
+.admin-category-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0 4px; }
+.admin-category-head h2 { font-size: 18px; }
+.admin-category-head .faint { font-weight: 400; font-size: 14px; }
+.admin-empty { font-size: 14px; padding: 8px 0; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+
+@media (max-width: 640px) {
+  .auth-card { padding: 20px; }
+}

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabase';
-import '../styles/components/Auth.css';
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -60,26 +59,26 @@ const ResetPassword = () => {
 
   return (
     <Layout>
-      <div className="page-container auth-page">
-        <div className="auth-container">
-          <div className="auth-form">
-            <h2>Choose a New Password</h2>
+      <div className="page tight">
+        <div>
+          <div className="card auth-card">
+            <h2>Choose a new password</h2>
 
             {done ? (
-              <div className="success-message">
+              <div className="notice success" role="status">
                 <p>Your password has been updated.</p>
-                <Button onClick={() => navigate('/matches')}>Go to Matches</Button>
+                <Button variant="primary" onClick={() => navigate('/matches')}>Go to your matches</Button>
               </div>
             ) : hasSession === false ? (
               <div>
-                <div className="error-message">
+                <div className="notice error" role="alert">
                   This reset link is invalid or has expired. Request a new one from the login page.
                 </div>
-                <Button onClick={() => navigate('/auth')}>Back to Login</Button>
+                <Button onClick={() => navigate('/auth')}>Back to sign in</Button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
+              <form className="form" onSubmit={handleSubmit}>
+                <div className="field">
                   <label htmlFor="new-password">New password</label>
                   <input
                     type="password"
@@ -90,7 +89,7 @@ const ResetPassword = () => {
                     required
                   />
                 </div>
-                <div className="form-group">
+                <div className="field">
                   <label htmlFor="confirm-password">Confirm new password</label>
                   <input
                     type="password"
@@ -101,10 +100,10 @@ const ResetPassword = () => {
                     required
                   />
                 </div>
-                {error && <div className="error-message">{error}</div>}
-                <div className="form-actions">
-                  <Button type="submit" disabled={saving || hasSession === null}>
-                    {saving ? 'Saving...' : 'Update Password'}
+                {error && <div className="notice error" role="alert">{error}</div>}
+                <div className="auth-actions">
+                  <Button type="submit" variant="primary" className="block" disabled={saving || hasSession === null}>
+                    {saving ? 'Saving...' : 'Save new password'}
                   </Button>
                 </div>
               </form>

@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AuthComponent from '../components/auth/Auth';
 import { useAuth } from '../context/AuthContext';
-import '../styles/components/Auth.css';
-import '../styles/components/Layout.css';
 
 const Auth = () => {
   const { user, loading } = useAuth();
@@ -52,15 +50,10 @@ const Auth = () => {
 
   return (
     <Layout>
-      <div className="page-container auth-page">
-        <div className="auth-header">
-          <h1>Table Tennis Analysis</h1>
-          <p>Sign in to track and analyze your matches</p>
-        </div>
-        
+      <div className="page tight">
         {loading && !showLoginForm ? (
-          <div className="loading-container">
-            <p>Loading authentication...</p>
+          <div className="state" role="status">
+            <p>Checking whether you're signed in...</p>
           </div>
         ) : (
           <AuthComponent />

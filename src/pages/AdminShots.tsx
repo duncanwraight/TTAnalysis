@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShotCategory, Shot } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
-import '../styles/components/AdminShots.css';
+import Layout from '../components/Layout';
 
 interface EditingCategory {
   id?: string;
@@ -83,7 +82,7 @@ const AdminShots: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Are you sure? This will delete all shots in this category.')) return;
+    if (!confirm('Delete this category and every shot in it?')) return;
 
     try {
       await api.shot.deleteCategory(id);
@@ -137,7 +136,7 @@ const AdminShots: React.FC = () => {
   };
 
   const handleDeleteShot = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this shot?')) return;
+    if (!confirm('Delete this shot?')) return;
 
     try {
       await api.shot.deleteShot(id);
@@ -173,107 +172,97 @@ const AdminShots: React.FC = () => {
       .sort((a, b) => a.display_order - b.display_order);
   };
 
-  if (loading) return <div className="admin-shots-loading">Loading...</div>;
+  const categoryLabel = (name: string) => name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
 
   return (
-    <div className="admin-shots">
-      <div className="admin-shots-header">
-        <h1>Shot Management</h1>
-        <Button onClick={() => startEditCategory()}>Add Category</Button>
-      </div>
+    <Layout>
+      <div className="page">
+        <div className="page-head">
+          <div>
+            <h1>Shots</h1>
+            <p>The shot list every user picks from in the tracker. Changes apply straight away.</p>
+          </div>
+          <div className="page-head-actions">
+            <Button onClick={() => startEditCategory()}>Add category</Button>
+          </div>
+        </div>
 
-      {error && <div className="admin-shots-error">Error: {error}</div>}
+        {error && <div className="notice error" role="alert">{error}</div>}
 
-      <div className="admin-shots-content">
-        {categories.map(category => (
-          <Card key={category.id} className="category-card">
-            <div className="category-header">
-              <h2>{category.name}</h2>
-              <div className="category-actions">
-                <Button 
-                  variant="secondary" 
-                  className="btn-small"
-                  onClick={() => startEditShot(undefined, category.id)}
-                >
-                  Add Shot
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  className="btn-small"
-                  onClick={() => startEditCategory(category)}
-                >
-                  Edit
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  className="btn-small btn-danger"
-                  onClick={() => handleDeleteCategory(category.id)}
-                >
-                  Delete
-                </Button>
-              </div>
-            </div>
-
-            <div className="shots-list">
-              {getShotsByCategory(category.id).map(shot => (
-                <div key={shot.id} className="shot-item">
-                  <div className="shot-info">
-                    <div className="shot-name">{shot.display_name}</div>
-                    <div className="shot-description">{shot.description}</div>
-                  </div>
-                  <div className="shot-actions">
-                    <Button 
-                      variant="secondary" 
-                      className="btn-small"
-                      onClick={() => startEditShot(shot)}
-                    >
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      className="btn-small btn-danger"
-                      onClick={() => handleDeleteShot(shot.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+        {loading ? (
+          <div className="state" role="status"><p>Loading shots...</p></div>
+        ) : (
+          categories.map(category => (
+            <section key={category.id} className="card table-card admin-category" aria-labelledby={`cat-${category.id}`}>
+              <div className="admin-category-head">
+                <h2 id={`cat-${category.id}`}>
+                  {categoryLabel(category.name)} <span className="faint">· order {category.display_order}</span>
+                </h2>
+                <div className="page-head-actions">
+                  <Button variant="secondary" className="small" onClick={() => startEditShot(undefined, category.id)}>Add shot</Button>
+                  <Button variant="secondary" className="small" onClick={() => startEditCategory(category)}>Edit</Button>
+                  <Button variant="danger" className="small" onClick={() => handleDeleteCategory(category.id)}>Delete</Button>
                 </div>
-              ))}
-            </div>
-          </Card>
-        ))}
+              </div>
+              <table className="data-table" style={{ minWidth: 560 }}>
+                <thead>
+                  <tr>
+                    <th scope="col">Shot</th>
+                    <th scope="col">Internal name</th>
+                    <th scope="col">Description</th>
+                    <th scope="col" className="actions"><span className="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getShotsByCategory(category.id).map(shot => (
+                    <tr key={shot.id}>
+                      <th scope="row">{shot.display_name}</th>
+                      <td className="muted"><code>{shot.name}</code></td>
+                      <td className="muted">{shot.description}</td>
+                      <td className="actions">
+                        <Button variant="secondary" className="small" onClick={() => startEditShot(shot)}>Edit</Button>
+                        <Button variant="danger" className="small" onClick={() => handleDeleteShot(shot.id)}>Delete</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {getShotsByCategory(category.id).length === 0 && <p className="faint admin-empty">No shots in this category yet.</p>}
+            </section>
+          ))
+        )}
       </div>
 
-      {/* Category Form Modal */}
       {showCategoryForm && editingCategory && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>{editingCategory.id ? 'Edit Category' : 'Add Category'}</h3>
-            <div className="form-group">
-              <label>Name:</label>
+        <div className="dialog-backdrop">
+          <form
+            className="card dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="category-dialog-title"
+            onSubmit={(e) => { e.preventDefault(); handleSaveCategory(); }}
+          >
+            <h2 id="category-dialog-title">{editingCategory.id ? 'Edit category' : 'Add category'}</h2>
+            <label className="field">
+              <span>Name</span>
               <input
                 type="text"
                 value={editingCategory.name}
-                onChange={(e) => setEditingCategory({
-                  ...editingCategory,
-                  name: e.target.value
-                })}
+                onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                required
+                autoFocus
               />
-            </div>
-            <div className="form-group">
-              <label>Display Order:</label>
+            </label>
+            <label className="field">
+              <span>Display order</span>
               <input
                 type="number"
                 value={editingCategory.display_order}
-                onChange={(e) => setEditingCategory({
-                  ...editingCategory,
-                  display_order: parseInt(e.target.value) || 0
-                })}
+                onChange={(e) => setEditingCategory({ ...editingCategory, display_order: parseInt(e.target.value) || 0 })}
               />
-            </div>
-            <div className="modal-actions">
-              <Button onClick={handleSaveCategory}>Save</Button>
-              <Button 
+            </label>
+            <div className="form-actions end">
+              <Button
                 variant="secondary"
                 onClick={() => {
                   setEditingCategory(null);
@@ -282,78 +271,70 @@ const AdminShots: React.FC = () => {
               >
                 Cancel
               </Button>
+              <Button type="submit">Save</Button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
-      {/* Shot Form Modal */}
       {showShotForm && editingShot && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>{editingShot.id ? 'Edit Shot' : 'Add Shot'}</h3>
-            <div className="form-group">
-              <label>Category:</label>
+        <div className="dialog-backdrop">
+          <form
+            className="card dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shot-dialog-title"
+            onSubmit={(e) => { e.preventDefault(); handleSaveShot(); }}
+          >
+            <h2 id="shot-dialog-title">{editingShot.id ? 'Edit shot' : 'Add shot'}</h2>
+            <label className="field">
+              <span>Category</span>
               <select
                 value={editingShot.category_id}
-                onChange={(e) => setEditingShot({
-                  ...editingShot,
-                  category_id: e.target.value
-                })}
+                onChange={(e) => setEditingShot({ ...editingShot, category_id: e.target.value })}
               >
                 {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
+                  <option key={category.id} value={category.id}>{categoryLabel(category.name)}</option>
                 ))}
               </select>
-            </div>
-            <div className="form-group">
-              <label>Name (internal):</label>
-              <input
-                type="text"
-                value={editingShot.name}
-                onChange={(e) => setEditingShot({
-                  ...editingShot,
-                  name: e.target.value
-                })}
-              />
-            </div>
-            <div className="form-group">
-              <label>Display Name:</label>
+            </label>
+            <label className="field">
+              <span>Display name</span>
               <input
                 type="text"
                 value={editingShot.display_name}
-                onChange={(e) => setEditingShot({
-                  ...editingShot,
-                  display_name: e.target.value
-                })}
+                onChange={(e) => setEditingShot({ ...editingShot, display_name: e.target.value })}
+                required
+                autoFocus
               />
-            </div>
-            <div className="form-group">
-              <label>Description:</label>
+            </label>
+            <label className="field">
+              <span>Internal name</span>
+              <input
+                type="text"
+                value={editingShot.name}
+                onChange={(e) => setEditingShot({ ...editingShot, name: e.target.value })}
+                required
+              />
+              <span className="field-hint">Lower case with underscores. serve, service_fault and no_shot have special handling.</span>
+            </label>
+            <label className="field">
+              <span>Description</span>
               <textarea
                 value={editingShot.description}
-                onChange={(e) => setEditingShot({
-                  ...editingShot,
-                  description: e.target.value
-                })}
+                onChange={(e) => setEditingShot({ ...editingShot, description: e.target.value })}
               />
-            </div>
-            <div className="form-group">
-              <label>Display Order:</label>
+            </label>
+            <label className="field">
+              <span>Display order</span>
               <input
                 type="number"
                 value={editingShot.display_order}
-                onChange={(e) => setEditingShot({
-                  ...editingShot,
-                  display_order: parseInt(e.target.value) || 0
-                })}
+                onChange={(e) => setEditingShot({ ...editingShot, display_order: parseInt(e.target.value) || 0 })}
               />
-            </div>
-            <div className="modal-actions">
-              <Button onClick={handleSaveShot}>Save</Button>
-              <Button 
+            </label>
+            <div className="form-actions end">
+              <Button
                 variant="secondary"
                 onClick={() => {
                   setEditingShot(null);
@@ -362,11 +343,12 @@ const AdminShots: React.FC = () => {
               >
                 Cancel
               </Button>
+              <Button type="submit">Save</Button>
             </div>
-          </div>
+          </form>
         </div>
       )}
-    </div>
+    </Layout>
   );
 };
 

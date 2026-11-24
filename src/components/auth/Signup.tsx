@@ -46,62 +46,64 @@ const Signup = ({ onToggleView }: SignupProps) => {
 
   if (signupComplete) {
     return (
-      <div className="auth-form">
-        <h2>Signup Successful</h2>
+      <div className="card auth-card">
+        <h2>Check your email</h2>
         <p>
-          A confirmation email has been sent to {email}. Please check your email
-          to verify your account.
+          We've sent a confirmation link to {email}. Open it to finish creating your account.
         </p>
-        <Button onClick={onToggleView}>Back to Login</Button>
+        <Button onClick={onToggleView}>Back to sign in</Button>
       </div>
     );
   }
 
   return (
-    <div className="auth-form">
-      <h2>Sign Up</h2>
-      <form onSubmit={handleSignup}>
-        <div className="form-group">
+    <div className="card auth-card">
+      <h2>Create an account</h2>
+      <form className="form" onSubmit={handleSignup}>
+        <div className="field">
           <label htmlFor="email">Email</label>
           <input
             type="email"
             id="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
-        <div className="form-group">
+        <div className="field">
           <label htmlFor="password">Password</label>
           <input
             type="password"
             id="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
-        <div className="form-group">
-          <label htmlFor="confirmPassword">Confirm Password</label>
+        <div className="field">
+          <label htmlFor="confirmPassword">Confirm password</label>
           <input
             type="password"
             id="confirmPassword"
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
         </div>
-        {error && <div className="error-message">{error}</div>}
-        <div className="form-actions">
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Creating Account...' : 'Sign Up'}
+        {error && <div className="notice error" role="alert">{error}</div>}
+        <div className="auth-actions">
+          <Button type="submit" className="block" disabled={loading}>
+            {loading ? 'Creating your account...' : 'Create account'}
           </Button>
           <button
             type="button"
             className="link-button"
             onClick={onToggleView}
           >
-            Already have an account? Login
+            Already have an account? Sign in
           </button>
         </div>
       </form>

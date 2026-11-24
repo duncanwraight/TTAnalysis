@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import Button from '../components/ui/Button';
+import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import '../styles/components/AdminPanel.css';
 
 const AdminPanel = () => {
   const { isAdmin } = useAuth();
@@ -59,55 +58,53 @@ const AdminPanel = () => {
     }
   };
   
-  if (loading) {
-    return <div className="loading">Loading user data...</div>;
-  }
-  
   return (
-    <div className="admin-panel">
-      <h1>Admin Panel</h1>
-      
-      {error && <div className="error-message">{error}</div>}
-      
-      <div className="admin-navigation">
-        <h2>Admin Functions</h2>
-        <div className="admin-links">
-          <Link to="/admin/shots">
-            <Button>Manage Shots</Button>
-          </Link>
+    <Layout>
+      <div className="page">
+        <div className="page-head">
+          <div>
+            <h1>Users</h1>
+            <p>Everyone with an account. Admins can edit the shot list and other users' admin access.</p>
+          </div>
+          <div className="page-head-actions">
+            <Link to="/admin/shots" className="btn">Manage shots</Link>
+          </div>
         </div>
+
+        {error && <div className="notice error" role="alert">{error}</div>}
+
+        {loading ? (
+          <div className="state" role="status"><p>Loading users...</p></div>
+        ) : (
+          <div className="card table-card">
+            <table className="data-table" style={{ minWidth: 560 }}>
+              <thead>
+                <tr>
+                  <th scope="col">Email</th>
+                  <th scope="col">Joined</th>
+                  <th scope="col">Role</th>
+                  <th scope="col" className="actions"><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(user => (
+                  <tr key={user.id}>
+                    <th scope="row">{user.email}</th>
+                    <td className="muted">{new Date(user.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                    <td>{user.is_admin ? <span className="chip small">Admin</span> : <span className="muted">User</span>}</td>
+                    <td className="actions">
+                      <button type="button" className="btn small" onClick={() => toggleAdminStatus(user.id, user.is_admin)}>
+                        {user.is_admin ? 'Remove admin' : 'Make admin'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-      
-      <div className="users-management">
-        <h2>Users Management</h2>
-        <table className="users-table">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Created At</th>
-              <th>Admin Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.id}>
-                <td>{user.email}</td>
-                <td>{new Date(user.created_at).toLocaleDateString()}</td>
-                <td>{user.is_admin ? 'Admin' : 'User'}</td>
-                <td>
-                  <Button 
-                    onClick={() => toggleAdminStatus(user.id, user.is_admin)}
-                  >
-                    {user.is_admin ? 'Remove Admin' : 'Make Admin'}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </Layout>
   );
 };
 

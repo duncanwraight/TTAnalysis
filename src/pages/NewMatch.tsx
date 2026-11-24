@@ -4,7 +4,6 @@ import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../lib/useApi';
 import { MAX_EVENT, MAX_PLAYER_NAME, MAX_VIDEO_URL, cleanText, playerLabel, validateDetails } from '../lib/matchDetails';
-import '../styles/components/NewMatch.css';
 
 /**
  * NewMatch component for creating a new table tennis match
@@ -132,173 +131,177 @@ const NewMatch = () => {
     }
   };
 
+  const serverButtonLabel = playerLabel(formData.player_name, displayName ?? (saveAsMyName ? formData.player_name : null));
+
   return (
     <Layout>
-      <div className="new-match-container">
-        <h2>New Match</h2>
-        
+      <div className="page narrow">
+        <div className="page-head">
+          <div>
+            <h1>New match</h1>
+            <p>Check best of and first server carefully. They can't be changed once you start.</p>
+          </div>
+        </div>
+
         {!user && (
-          <div className="error-message">
-            You must be logged in to create a match. Please <a href="/auth">sign in</a> first.
+          <div className="notice error" role="alert">
+            You need to be signed in to create a match. <a href="/auth">Sign in</a>
           </div>
         )}
-        
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="match-form">
-          <div className="form-group">
-            <label htmlFor="player_name">Player</label>
-            <input
-              type="text"
-              id="player_name"
-              name="player_name"
-              value={formData.player_name}
-              onChange={handleChange}
-              maxLength={MAX_PLAYER_NAME}
-              placeholder="Your name, or a friend's"
-              autoComplete="off"
-              disabled={isSubmitting}
-            />
-            {!displayName && (
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', marginTop: '0.5rem', fontWeight: 400, minHeight: '44px', textAlign: 'left' }}>
-                <input
-                  type="checkbox"
-                  style={{ width: '1.2rem', height: '1.2rem', flex: 'none', margin: 0 }}
-                  checked={saveAsMyName}
-                  onChange={e => setSaveAsMyName(e.target.checked)}
+
+        <form onSubmit={handleSubmit} className="card form">
+          <div className="fields">
+            <div className="field">
+              <label htmlFor="player_name">Player</label>
+              <input
+                type="text"
+                id="player_name"
+                name="player_name"
+                value={formData.player_name}
+                onChange={handleChange}
+                maxLength={MAX_PLAYER_NAME}
+                placeholder="Your name, or a friend's"
+                autoComplete="off"
+                disabled={isSubmitting}
+              />
+              {!displayName && (
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={saveAsMyName}
+                    onChange={e => setSaveAsMyName(e.target.checked)}
+                    disabled={isSubmitting}
+                  />
+                  This is me. Fill it in on new matches.
+                </label>
+              )}
+            </div>
+
+            <div className="field">
+              <label htmlFor="opponent_name">Opponent</label>
+              <input
+                type="text"
+                id="opponent_name"
+                name="opponent_name"
+                value={formData.opponent_name}
+                onChange={handleChange}
+                required
+                autoComplete="off"
+                placeholder="Their name"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="date">Date</label>
+              <input
+                type="date"
+                id="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="event">Event <span className="optional">(optional)</span></label>
+              <input
+                type="text"
+                id="event"
+                name="event"
+                value={formData.event}
+                onChange={handleChange}
+                maxLength={MAX_EVENT}
+                placeholder="e.g. Winter 2026/27 league"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="field wide">
+              <span id="best_of_label">Best of</span>
+              <div className="segmented" role="group" aria-labelledby="best_of_label">
+                {[1, 3, 5, 7].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-pressed={Number(formData.best_of) === n}
+                    onClick={() => setFormData(prev => ({ ...prev, best_of: n }))}
+                    disabled={isSubmitting}
+                  >
+                    {n === 1 ? '1 set' : `${n} sets`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="field wide">
+              <span id="initial_server_label">First server</span>
+              <div className="segmented" role="group" aria-labelledby="initial_server_label">
+                <button
+                  type="button"
+                  aria-pressed={formData.initial_server === 'player'}
+                  onClick={() => setFormData(prev => ({ ...prev, initial_server: 'player' }))}
                   disabled={isSubmitting}
-                />
-                This is me: use it as my name on new matches
-              </label>
-            )}
-          </div>
+                >
+                  {serverButtonLabel}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={formData.initial_server === 'opponent'}
+                  onClick={() => setFormData(prev => ({ ...prev, initial_server: 'opponent' }))}
+                  disabled={isSubmitting}
+                >
+                  {cleanText(formData.opponent_name) || 'Opponent'}
+                </button>
+              </div>
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="opponent_name">Opponent Name</label>
-            <input
-              type="text"
-              id="opponent_name"
-              name="opponent_name"
-              value={formData.opponent_name}
-              onChange={handleChange}
-              required
-              placeholder="Enter opponent's name"
-              disabled={isSubmitting}
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="date">Match Date</label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="event">Event <span style={{ fontWeight: 400 }}>(optional)</span></label>
-            <input
-              type="text"
-              id="event"
-              name="event"
-              value={formData.event}
-              onChange={handleChange}
-              maxLength={MAX_EVENT}
-              placeholder="e.g. Winter 2026/27 league"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="video_url">Video link <span style={{ fontWeight: 400 }}>(optional)</span></label>
-            <input
-              type="url"
-              id="video_url"
-              name="video_url"
-              value={formData.video_url}
-              onChange={handleChange}
-              maxLength={MAX_VIDEO_URL}
-              placeholder="https://"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="best_of">Best of</label>
-            <select
-              id="best_of"
-              name="best_of"
-              value={formData.best_of}
-              onChange={handleChange}
-              required
-              disabled={isSubmitting}
-            >
-              <option value={1}>1 Set</option>
-              <option value={3}>3 Sets</option>
-              <option value={5}>5 Sets</option>
-              <option value={7}>7 Sets</option>
-            </select>
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="initial_server">First Server</label>
-            <div className="server-button-group">
-              <button
-                type="button"
-                className={`server-button ${formData.initial_server === 'player' ? 'selected' : ''}`}
-                onClick={() => setFormData(prev => ({ ...prev, initial_server: 'player' }))}
+            <div className="field wide">
+              <label htmlFor="video_url">Video link <span className="optional">(optional)</span></label>
+              <input
+                type="url"
+                id="video_url"
+                name="video_url"
+                value={formData.video_url}
+                onChange={handleChange}
+                maxLength={MAX_VIDEO_URL}
+                placeholder="https://"
                 disabled={isSubmitting}
-              >
-                {playerLabel(formData.player_name, displayName ?? (saveAsMyName ? formData.player_name : null))}
-              </button>
-              <button
-                type="button"
-                className={`server-button ${formData.initial_server === 'opponent' ? 'selected' : ''}`}
-                onClick={() => setFormData(prev => ({ ...prev, initial_server: 'opponent' }))}
+              />
+            </div>
+
+            <div className="field wide">
+              <label htmlFor="notes">Notes <span className="optional">(optional)</span></label>
+              <textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
                 disabled={isSubmitting}
-              >
-                Opponent
-              </button>
+              />
             </div>
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="notes">Notes</label>
-            <textarea
-              id="notes"
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              placeholder="Any notes about the match..."
-              rows={3}
-              disabled={isSubmitting}
-            />
-          </div>
-          
-          <div className="form-buttons">
-            <button 
-              type="button" 
-              className="secondary-btn" 
+
+          {error && <div className="notice error" role="alert">{error}</div>}
+
+          <div className="form-actions end">
+            <button
+              type="button"
+              className="btn"
               onClick={() => navigate('/matches')}
               disabled={isSubmitting}
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
-              className="primary-btn"
+            <button
+              type="submit"
+              className="btn primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Start Match'}
+              {isSubmitting ? 'Creating...' : 'Start recording'}
             </button>
           </div>
         </form>

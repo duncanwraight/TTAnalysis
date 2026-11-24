@@ -18,35 +18,22 @@ Done on 2026-11-24, in order:
 
 The user has checked the admin panel and the `/debug` removal on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. The reset link also needs `https://tt-analysis.vercel.app/reset-password` in the Supabase dashboard's allowed redirect URLs.
 
-## 1. Next: bring the whole site up to the new design
+## 1. Site-wide redesign (done, not yet shipped)
 
-The analysis page and points editor have a newer look than the rest of the site. The user is happy with that look and wants it everywhere. Do these in order.
+Done on 2026-11-24 in the working tree, checked on a local stack at desktop and 390px width. Not committed or deployed yet.
 
-### 1a. Apply the new aesthetic across the site
+- **Shared styles.** `src/index.css` holds the tokens and shared pieces: `.card`, `.btn` (plain white; `.primary` is ink, `.danger`, `.quiet`, `.small`), `.field`/`.fields`, `.segmented`, `.check`, `.data-table`, `.chip`, `.notice`, `.state` for loading/empty/error, `.page`/`.page-head`. `MatchAnalysis.css` now only holds analysis-specific pieces. `src/styles/pages.css` has small bits for home, auth, match list and admin. The old `Button.css`, `Card.css`, `Layout.css`, `Auth.css`, `NewMatch.css`, admin and tracker stylesheets are gone.
+- **Header.** White bar with the brand and nav. On `/admin` pages it turns dark purple with an "Admin" tag and its own nav (Users, Shots, Back to app). The admin pages didn't use `Layout` before, so they had no header at all. The shared analysis view now uses `Layout` too.
+- **Tracker.** Split into `components/tracker/` (`Scoreboard`, `ShotPicker`, `MatchComplete`). Each side of the score is the "who won" button, so the old 200px player panels are gone. Serving is a small labelled dot, not an emoji. Category tabs wrap rather than scroll sideways, and each picker remembers its own last category. Shots show as label + FH + BH rows, two columns of rows on wide screens. Pips shots read "Pips push" etc., using `shotLabel` from `analysis.ts`. On a phone the scoreboard shrinks while a point is being recorded and the winning shot folds into a summary once picked. Undo and End Set sit at the top and are disabled mid-point. "Back" and "No Data" became one "Cancel point". The End Match dialog went, since everything is already saved; there's a Matches link instead. "Open video" appears when the match has a video link.
+- **Other pages.** Match list cards lead with the right action (Continue recording, or Analysis once finished) and show a Won/Lost/In progress chip. New match uses segmented buttons for best of and first server. Auth and reset password reworded in sentence case with autocomplete hints. Admin users and shots use tables, and the shot forms are proper dialogs.
+- **Unforced errors.** One definition, `UNFORCED_ERROR_DEFINITION` in `analysis.ts`, shown on the analysis page, the home page steps, the points editor and as the tracker toggle's tooltip: you weren't out of position, you read the spin, you went for the right shot, and it still missed.
 
-- The new look lives in `src/styles/components/MatchAnalysis.css`, scoped under `.ma` (cards, tiles, tables, buttons, legend) with `pe-` classes for the points editor. Lift the tokens and shared pieces (cards, buttons, form fields, section headings, tables) into site-wide styles so every page uses one set, then restyle the other pages with them.
-- Tokens in use: blue `#2a78d6` for "point to the player" and orange `#eb6834` for "point to the opponent", soft fills `#cde2fb` and `#fbd9c9`, 12px card radius, 1px `--border-color` borders, Inter, tabular numbers. Blue and orange carry meaning on the analysis page, so keep them for player and opponent and don't reuse them as general accents.
-- The design canvas the analysis page came from is a useful reference: https://claude.ai/artifact/3J5Lt6syww186XcB9mHg6i
-- The app has no dark mode today. Don't add one as part of this unless the user asks.
+Still to do:
 
-### 1b. The input page: the most important page
-
-The tracker (`/matches/:id`, `src/pages/MatchTracker.tsx`, with `PlayerPanel`, `ShotSelector`, `ScoreBoard` and `PointHistory`) is where the user spends their time, recording a match from video point by point. Give it the most attention.
-
-- It's mostly inline styles and older CSS (`MatchTracker.css`, `ShotSelector.css`, `ScoreBoard.css`). The serve indicator is an emoji, which the new design avoids.
-- Recording a point is: tap who won, pick the winning shot (category tab, then FH or BH), pick the losing shot (it saves on that tap). Optional "Lucky point?" and "Unforced error?" tickboxes sit above the shot pickers. Keep that flow fast: fewer taps and less scrolling matter more than looks. Touch targets of at least 44px.
-- The user records on a laptop while watching video, so check it at desktop width as well as phone width.
-- The shot labels say "Push" twice (short game and pips/anti). The analysis page shows "Pips push" for the pips one. Make the tracker consistent.
-- The new match form (`src/pages/NewMatch.tsx`) is part of the input flow too: player, opponent, date, event, video link, best of, first server, notes.
-- `MatchTracker.tsx` is one large component. Splitting it is reasonable now that it's getting a redesign.
-
-### 1c. Full UX and UI sweep
-
-Go through every page and make styling, spacing, wording and states consistent: home, auth and reset password, match list, new match, tracker, match complete screen, analysis (owner and shared views), points editor, admin panel and admin shots. Check loading, empty and error states, and phone width. The match list card buttons were cramped (fixed by letting them wrap). Look for similar layout problems elsewhere.
-
-### 1d. Make the admin area look different
-
-The admin pages (`/admin`, `/admin/shots`) should be easy to tell apart from the normal app at a glance. Same styling system, different colours, or at least a different header bar. `Layout.tsx` renders the header for every page, so it needs a way to know it's on an admin page.
+- Commit and ship (see "Shipping changes"). No migration is needed.
+- The user hasn't seen the new tracker yet. Ask how it feels on a real match.
+- Errors in the tracker still use `alert()`. They could become an inline `.notice`.
+- Keyboard shortcuts for recording on a laptop (e.g. 1/2 for who won) would speed things up further.
 
 ## 2. Tests for the scoring rules (done)
 

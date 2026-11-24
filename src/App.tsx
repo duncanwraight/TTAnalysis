@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import MatchList from './pages/MatchList';
@@ -12,18 +11,9 @@ import AdminShots from './pages/AdminShots';
 import ResetPassword from './pages/ResetPassword';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import './index.css';
-import './styles/components/Auth.css';
-import './styles/components/Layout.css';
-import './styles/components/ShotSelector.css';
-import './styles/components/MatchTracker.css';
-import './styles/components/ScoreBoard.css';
+import './styles/pages.css';
 
 function App() {
-  // Log environment variables on startup
-  useEffect(() => {
-  }, []);
-
   return (
     <AuthProvider>
       <BrowserRouter>

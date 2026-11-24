@@ -1,13 +1,17 @@
 import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 type LayoutProps = {
   children: ReactNode;
+  // Lets the tracker use more of a wide screen
+  wide?: boolean;
 };
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children, wide = false }: LayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
+  const { pathname } = useLocation();
+  const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
 
   const handleSignOut = async () => {
     try {
@@ -43,32 +47,41 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>TT Analysis</h1>
-        <nav>
-          <Link to="/">Home</Link>
-          {user ? (
-            <>
-              <Link to="/matches">Matches</Link>
-              {isAdmin && <Link to="/admin">Admin</Link>}
-              <button onClick={handleSignOut} className="nav-button">Logout</button>
-            </>
-          ) : (
-            <Link to="/auth">Login</Link>
-          )}
-        </nav>
+    <div className="app">
+      <header className={`app-header${isAdminArea ? ' admin' : ''}`}>
+        <div className="app-header-inner">
+          <Link to={isAdminArea ? '/admin' : '/'} className="app-brand" aria-label="TT Analysis home">
+            <span className="app-brand-mark" aria-hidden="true" />
+            <span className="app-brand-text">TT Analysis</span>
+            {isAdminArea && <span className="admin-tag">Admin</span>}
+          </Link>
+          <nav className="app-nav" aria-label="Main">
+            {isAdminArea ? (
+              <>
+                <NavLink to="/admin" end>Users</NavLink>
+                <NavLink to="/admin/shots">Shots</NavLink>
+                <Link to="/matches">Back to app</Link>
+              </>
+            ) : user ? (
+              <>
+                <NavLink to="/matches" end>Matches</NavLink>
+                <NavLink to="/matches/new" className="nav-optional">New match</NavLink>
+                {isAdmin && <NavLink to="/admin">Admin</NavLink>}
+              </>
+            ) : (
+              <NavLink to="/auth">Sign in</NavLink>
+            )}
+            {user && <button type="button" onClick={handleSignOut}>Sign out</button>}
+          </nav>
+        </div>
       </header>
-      <main className="app-main">
+      <main className={`app-main${wide ? ' wide' : ''}`}>
         {children}
       </main>
       <footer className="app-footer">
-        <p>&copy; {new Date().getFullYear()} TT Analysis</p>
+        TT Analysis
         {import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA && (
-          <p style={{ fontSize: '0.8em', opacity: 0.7 }}>
-            Build: {import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)} 
-            {import.meta.env.VITE_VERCEL_GIT_COMMIT_REF && ` (${import.meta.env.VITE_VERCEL_GIT_COMMIT_REF})`}
-          </p>
+          <> · build {import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
         )}
       </footer>
     </div>

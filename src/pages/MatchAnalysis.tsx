@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import type { AnalysisData } from '../lib/api';
-import { Analysis, CategoryRow, Pattern, ShotRow, Tally, buildAnalysis, shotWithHand } from '../lib/analysis';
+import { Analysis, CategoryRow, Pattern, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
 import '../styles/components/MatchAnalysis.css';
 
@@ -43,7 +43,7 @@ const SetChart = ({ gaps, scale }: { gaps: number[]; scale: number }) => {
 };
 
 const Tile = ({ label, value, of, note, empty }: { label: string; value: string; of?: string; note: React.ReactNode; empty?: boolean }) => (
-  <div className={`ma-card ma-tile${empty ? ' dashed' : ''}`}>
+  <div className={`card ma-tile${empty ? ' dashed' : ''}`}>
     <span className="ma-tile-label">{label}</span>
     <span className={`ma-tile-value${empty ? ' empty' : ''}`}>{value}{of && <> <small>{of}</small></>}</span>
     <span className="ma-tile-note">{note}</span>
@@ -53,8 +53,8 @@ const Tile = ({ label, value, of, note, empty }: { label: string; value: string;
 const CategoryTable = ({ title, rows, yours }: { title: string; rows: CategoryRow[]; yours: boolean }) => {
   const max = Math.max(1, ...rows.map(r => Math.max(r.won, r.lost)));
   return (
-    <div className="ma-card ma-table-card">
-      <table className="ma-table" style={{ minWidth: 380 }}>
+    <div className="card table-card">
+      <table className="data-table" style={{ minWidth: 380 }}>
         <caption>{title}</caption>
         <thead>
           <tr>
@@ -84,9 +84,9 @@ const CategoryTable = ({ title, rows, yours }: { title: string; rows: CategoryRo
 };
 
 const PatternList = ({ title, patterns, yours }: { title: string; patterns: Pattern[]; yours: boolean }) => (
-  <div className="ma-card ma-list">
+  <div className="card ma-list">
     <h3>{title}</h3>
-    {patterns.length === 0 && <p className="ma-small ma-muted">No pair happened more than once.</p>}
+    {patterns.length === 0 && <p className="ma-small muted">No pair happened more than once.</p>}
     {patterns.map(p => (
       <div key={p.key} className="ma-run">
         <span className={`ma-run-badge ${yours ? 'you' : 'opp'}`} aria-label={`${p.count} times`}>{p.count}</span>
@@ -166,7 +166,7 @@ const MatchAnalysis = () => {
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const },
         // Not in html2pdf's types, but supported: keep cards and table rows whole
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['.ma-card', 'tr'] },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['.card', 'tr'] },
       };
       await html2pdf().from(contentRef.current).set(options).save();
     } catch (err) {
@@ -215,21 +215,22 @@ const MatchAnalysis = () => {
     }
   };
 
-  const wrap = (content: React.ReactNode) =>
-    isSharedView ? <div className="shared-analysis-container">{content}</div> : <Layout>{content}</Layout>;
+  const wrap = (content: React.ReactNode) => <Layout>{content}</Layout>;
 
   if (loading) {
-    return wrap(<div className="loading-container"><p>Loading analysis...</p></div>);
+    return wrap(<div className="state" role="status"><p>Loading the analysis...</p></div>);
   }
 
   if (error || !data || !analysis) {
     return wrap(
-      <div className="error-container">
-        <h2>Error</h2>
+      <div className="state">
+        <h2>{isSharedView ? 'This link no longer works' : 'The analysis did not load'}</h2>
         <p>{error ?? 'Failed to load analysis data'}</p>
-        <button className="btn secondary-btn" onClick={() => navigate(isSharedView ? '/' : '/matches')}>
-          {isSharedView ? 'Go to Home' : 'Back to Matches'}
-        </button>
+        <div className="form-actions">
+          <button className="btn primary" onClick={() => navigate(isSharedView ? '/' : '/matches')}>
+            {isSharedView ? 'Go to home' : 'Back to matches'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -256,14 +257,14 @@ const MatchAnalysis = () => {
   const [, , lateStage] = a.stages;
 
   const handRow = (label: string, t: Tally) => (
-    <div className="ma-pair-row"><span className="ma-muted">{label}</span><strong>Won {t.won} · Lost {t.lost}</strong></div>
+    <div className="ma-pair-row"><span className="muted">{label}</span><strong>Won {t.won} · Lost {t.lost}</strong></div>
   );
 
   const analysisContent = (
     <div className="ma" ref={contentRef}>
       <header className="ma-header">
         <div>
-          <p className="ma-eyebrow">Match analysis</p>
+          <p className="eyebrow">Match analysis</p>
           <h1>{cleanText(match.player_name) ? `${cleanText(match.player_name)} vs ${match.opponent_name}` : `vs ${match.opponent_name}`}</h1>
           <p className="ma-meta">
             {[formatDate(match.date), cleanText(match.event), `Best of ${match.best_of}`].filter(Boolean).join(' · ')}
@@ -277,7 +278,7 @@ const MatchAnalysis = () => {
           <p className="ma-result-text">{setsResult} {a.setsWon.won}–{a.setsWon.lost}</p>
           <div className="ma-chips">
             {a.sets.map(s => (
-              <span key={s.setNumber} className={`ma-chip ${s.playerScore > s.opponentScore ? 'won' : 'lost'}`}>
+              <span key={s.setNumber} className={`chip ${s.playerScore > s.opponentScore ? 'you' : 'opp'}`}>
                 {s.playerScore}–{s.opponentScore}
               </span>
             ))}
@@ -290,7 +291,7 @@ const MatchAnalysis = () => {
       </aside>
 
       {totalPoints === 0 ? (
-        <p className="ma-muted">No points have been recorded for this match yet.</p>
+        <p className="muted">No points have been recorded for this match yet.</p>
       ) : (
         <>
           <section aria-label="Headline numbers" className="ma-grid tiles">
@@ -311,11 +312,11 @@ const MatchAnalysis = () => {
           </section>
 
           {a.cards.length > 0 && (
-            <section aria-labelledby="ma-cards" className="ma-section">
-              <h2 id="ma-cards">What decided it</h2>
+            <section aria-labelledby="cards" className="section">
+              <h2 id="cards">What decided it</h2>
               <div className="ma-grid cards">
                 {a.cards.map(card => (
-                  <article key={card.title} className="ma-card ma-finding">
+                  <article key={card.title} className="card ma-finding">
                     <span className="ma-finding-tag">{card.tag}</span>
                     <h3>{card.title}</h3>
                     <p>{card.text}</p>
@@ -325,10 +326,11 @@ const MatchAnalysis = () => {
             </section>
           )}
 
-          <section aria-labelledby="ma-ue" className="ma-section">
-            <div className="ma-section-head">
+          <section aria-labelledby="ma-ue" className="section">
+            <div className="section-head">
               <h2 id="ma-ue">Unforced errors</h2>
               <p>Points you gave away, by losing shot. This is where practice pays off fastest.</p>
+              <p className="ma-definition">{UNFORCED_ERROR_DEFINITION} A shot that missed because the other player made it hard is forced, not unforced.</p>
             </div>
             {a.unforced.recorded ? (
               <>
@@ -340,8 +342,8 @@ const MatchAnalysis = () => {
                   <Tile label="From the 16th point on" value={`${lateStage.unforced}`} of={`of ${lateStage.lost} lost`}
                     note="Unforced, late in sets" />
                 </div>
-                <div className="ma-card ma-table-card">
-                  <table className="ma-table" style={{ minWidth: 560 }}>
+                <div className="card table-card">
+                  <table className="data-table" style={{ minWidth: 560 }}>
                     <caption>By losing shot</caption>
                     <thead>
                       <tr>
@@ -367,28 +369,28 @@ const MatchAnalysis = () => {
                             </div>
                           </td>
                           <td className="num strong">{s.unforced} of {s.lost}</td>
-                          <td className="num ma-muted">{pct(s.unforced, s.lost)}%</td>
+                          <td className="num muted">{pct(s.unforced, s.lost)}%</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <div className="ma-grid pairs">
-                  <div className="ma-card ma-list">
+                  <div className="card ma-list">
                     <h3>By stage of the set</h3>
                     {a.stages.map(st => (
-                      <div key={st.label} className="ma-pair-row"><span className="ma-muted">{st.label}</span><strong>{st.unforced} of {st.lost} lost</strong></div>
+                      <div key={st.label} className="ma-pair-row"><span className="muted">{st.label}</span><strong>{st.unforced} of {st.lost} lost</strong></div>
                     ))}
                   </div>
-                  <div className="ma-card ma-list">
+                  <div className="card ma-list">
                     <h3>Serving and receiving</h3>
-                    <div className="ma-pair-row"><span className="ma-muted">On your serve</span><strong>{a.unforced.onServe} of {a.onServe.lost} lost</strong></div>
-                    <div className="ma-pair-row"><span className="ma-muted">On their serve</span><strong>{a.unforced.onReceive} of {a.onReceive.lost} lost</strong></div>
+                    <div className="ma-pair-row"><span className="muted">On your serve</span><strong>{a.unforced.onServe} of {a.onServe.lost} lost</strong></div>
+                    <div className="ma-pair-row"><span className="muted">On their serve</span><strong>{a.unforced.onReceive} of {a.onReceive.lost} lost</strong></div>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="ma-card dashed ma-empty">
+              <div className="card dashed ma-empty">
                 <div>
                   <h3>Not recorded for this match yet</h3>
                   <p>
@@ -397,12 +399,12 @@ const MatchAnalysis = () => {
                       : 'Unforced errors haven\'t been ticked for this match.'}
                   </p>
                 </div>
-                {isOwnerView && <Link to={editorPath} className="ma-button primary">Open the points editor</Link>}
+                {isOwnerView && <Link to={editorPath} className="btn primary">Open the points editor</Link>}
               </div>
             )}
           </section>
 
-          <section aria-labelledby="ma-story" className="ma-section">
+          <section aria-labelledby="ma-story" className="section">
             <div className="ma-story-head">
               <h2 id="ma-story">How the match went</h2>
               <div className="ma-legend">
@@ -410,13 +412,13 @@ const MatchAnalysis = () => {
                 <span><span className="ma-swatch opp" />Point to opponent</span>
               </div>
             </div>
-            <p className="ma-muted" style={{ fontSize: 14 }}>The score gap through each set, point by point. Above the middle line, you were ahead.</p>
+            <p className="muted" style={{ fontSize: 14 }}>The score gap through each set, point by point. Above the middle line, you were ahead.</p>
             <div className="ma-grid sets">
               {a.sets.map(s => (
-                <figure key={s.setNumber} className="ma-card ma-set">
+                <figure key={s.setNumber} className="card ma-set">
                   <figcaption>
                     <span>Set {s.setNumber}</span>
-                    <span>{s.playerScore}–{s.opponentScore} <span className="ma-muted" style={{ fontWeight: 500 }}>{s.playerScore > s.opponentScore ? 'won' : 'lost'}</span></span>
+                    <span>{s.playerScore}–{s.opponentScore} <span className="muted" style={{ fontWeight: 500 }}>{s.playerScore > s.opponentScore ? 'won' : 'lost'}</span></span>
                   </figcaption>
                   <SetChart gaps={s.gaps} scale={chartScale} />
                   <div className="ma-set-serve">
@@ -427,13 +429,13 @@ const MatchAnalysis = () => {
               ))}
             </div>
             <div className="ma-grid pairs">
-              <div className="ma-card ma-list">
+              <div className="card ma-list">
                 <h3>Points by stage of the set</h3>
                 {[...a.stages.map(st => ({ label: st.label, won: st.won, lost: st.lost })), { label: 'From 9-all', ...a.fromNineAll }]
                   .filter(st => st.won + st.lost > 0)
                   .map(st => (
                     <div key={st.label} className="ma-stage">
-                      <span className="ma-muted">{st.label}</span>
+                      <span className="muted">{st.label}</span>
                       <div className="ma-stage-bar" title={`You ${st.won}, opponent ${st.lost}`}>
                         {st.won > 0 && <div style={{ flex: `${st.won} 1 0` }} />}
                         {st.lost > 0 && <div style={{ flex: `${st.lost} 1 0` }} className={st.won === 0 ? 'ma-fill-opp' : undefined} />}
@@ -441,27 +443,27 @@ const MatchAnalysis = () => {
                       <span className="ma-right">{st.won} of {st.won + st.lost}</span>
                     </div>
                   ))}
-                <p className="ma-small ma-faint">Stages count both players' points: "points 1–6" covers 3-3, 5-1 and 6-0 alike.</p>
+                <p className="ma-small faint">Stages count both players' points: "points 1–6" covers 3-3, 5-1 and 6-0 alike.</p>
               </div>
-              <div className="ma-card ma-list">
+              <div className="card ma-list">
                 <h3>Longest runs</h3>
-                {a.runs.length === 0 && <p className="ma-small ma-muted">No runs of 3 or more.</p>}
+                {a.runs.length === 0 && <p className="ma-small muted">No runs of 3 or more.</p>}
                 {a.runs.map((r, i) => (
                   <div key={i} className="ma-run">
                     <span className={`ma-run-badge ${r.side === 'player' ? 'you' : 'opp'}`}>{r.length}</span>
                     <span>{r.side === 'player' ? 'You' : 'Opponent'}, from {r.fromPlayer}-{r.fromOpponent}</span>
-                    <span className="ma-small ma-muted">Set {r.setNumber}</span>
+                    <span className="ma-small muted">Set {r.setNumber}</span>
                   </div>
                 ))}
-                <p className="ma-small ma-faint">
+                <p className="ma-small faint">
                   Lucky points (net or edge): {a.lucky.player === a.lucky.opponent ? `${a.lucky.player} each` : `you ${a.lucky.player}, opponent ${a.lucky.opponent}`}.
                 </p>
               </div>
             </div>
           </section>
 
-          <section aria-labelledby="ma-cat" className="ma-section">
-            <div className="ma-section-head">
+          <section aria-labelledby="ma-cat" className="section">
+            <div className="section-head">
               <h2 id="ma-cat">Categories</h2>
               <p>Winning and losing shots grouped by type, for both players. Shows who was attacking and whose defence held.</p>
             </div>
@@ -471,8 +473,8 @@ const MatchAnalysis = () => {
             </div>
           </section>
 
-          <section aria-labelledby="ma-patterns" className="ma-section">
-            <div className="ma-section-head">
+          <section aria-labelledby="ma-patterns" className="section">
+            <div className="section-head">
               <h2 id="ma-patterns">Patterns</h2>
               <p>A winning shot and the losing shot it came off, when the same pair happened more than once.</p>
             </div>
@@ -482,13 +484,13 @@ const MatchAnalysis = () => {
             </div>
           </section>
 
-          <section aria-labelledby="ma-you" className="ma-section">
-            <div className="ma-section-head">
+          <section aria-labelledby="ma-you" className="section">
+            <div className="section-head">
               <h2 id="ma-you">Your winning and losing shots</h2>
               <p>Most costly first. A service fault counts as your losing shot.</p>
             </div>
-            <div className="ma-card ma-table-card">
-              <table className="ma-table" style={{ minWidth: 640 }}>
+            <div className="card table-card">
+              <table className="data-table" style={{ minWidth: 640 }}>
                 <thead>
                   <tr>
                     <th scope="col">Shot</th>
@@ -510,7 +512,7 @@ const MatchAnalysis = () => {
                       <td className="num">{s.won}</td>
                       <td className="num">{s.lost}</td>
                       <td className="num strong">{signed(s.won - s.lost)}</td>
-                      <td className={`num${a.unforced.recorded ? '' : ' ma-faint'}`}>{a.unforced.recorded ? s.unforced : '–'}</td>
+                      <td className={`num${a.unforced.recorded ? '' : ' faint'}`}>{a.unforced.recorded ? s.unforced : '–'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -520,19 +522,19 @@ const MatchAnalysis = () => {
               )}
             </div>
             <div className="ma-grid pairs">
-              <div className="ma-card">{handRow('Backhand, excluding serves', a.hands.player.bh)}</div>
-              <div className="ma-card">{handRow('Forehand, excluding serves', a.hands.player.fh)}</div>
+              <div className="card">{handRow('Backhand, excluding serves', a.hands.player.bh)}</div>
+              <div className="card">{handRow('Forehand, excluding serves', a.hands.player.fh)}</div>
             </div>
           </section>
 
-          <section aria-labelledby="ma-opp" className="ma-section">
-            <div className="ma-section-head">
+          <section aria-labelledby="ma-opp" className="section">
+            <div className="section-head">
               <h2 id="ma-opp">Scouting the opponent</h2>
               <p>Their winning and losing shots. A losing shot here is a point to you.</p>
             </div>
             <div className="ma-grid halves">
-              <div className="ma-card ma-table-card">
-                <table className="ma-table" style={{ minWidth: 380 }}>
+              <div className="card table-card">
+                <table className="data-table" style={{ minWidth: 380 }}>
                   <caption>Their shots</caption>
                   <thead>
                     <tr>
@@ -559,14 +561,14 @@ const MatchAnalysis = () => {
                 )}
               </div>
               <div className="ma-list">
-                <div className="ma-card ma-list">
+                <div className="card ma-list">
                   <h3>Their forehand and backhand</h3>
                   {handRow('Forehand, excluding serves', a.hands.opponent.fh)}
                   {handRow('Backhand, excluding serves', a.hands.opponent.bh)}
                 </div>
-                <div className="ma-card ma-list">
+                <div className="card ma-list">
                   <h3>Their serve</h3>
-                  <p className="ma-muted" style={{ fontSize: 14, lineHeight: 1.5 }}>
+                  <p className="muted" style={{ fontSize: 14, lineHeight: 1.5 }}>
                     You won {a.onReceive.won} of {a.onReceive.won + a.onReceive.lost} points on their serve.
                     {' '}The serve was their winning shot {theirServeWins === 1 ? 'once' : `${theirServeWins} times`}, and they made {theirFaults === 0 ? 'no service faults' : theirFaults === 1 ? 'one service fault' : `${theirFaults} service faults`}.
                   </p>
@@ -578,25 +580,25 @@ const MatchAnalysis = () => {
       )}
 
       <footer className="ma-footer" data-html2canvas-ignore="true">
-        <button type="button" className="ma-button primary" onClick={exportToPDF} disabled={isExporting}>
+        <button type="button" className="btn primary" onClick={exportToPDF} disabled={isExporting}>
           {isExporting ? 'Exporting PDF...' : 'Export to PDF'}
         </button>
         {isOwnerView && (
-          <button type="button" className="ma-button" onClick={handleShare} disabled={shareSuccess}>
+          <button type="button" className="btn" onClick={handleShare} disabled={shareSuccess}>
             {shareSuccess ? 'Link copied' : 'Share analysis'}
           </button>
         )}
         {isOwnerView && match.share_token && (
-          <button type="button" className="ma-button" onClick={handleStopSharing}>Stop sharing</button>
+          <button type="button" className="btn" onClick={handleStopSharing}>Stop sharing</button>
         )}
-        {isOwnerView && <Link to={editorPath} className="ma-link">Edit points</Link>}
+        {isOwnerView && <Link to={editorPath} className="btn quiet">Edit points</Link>}
         {isSharedView
-          ? <Link to="/" className="ma-link">Go to home</Link>
-          : <Link to="/matches" className="ma-link">Back to matches</Link>}
+          ? <Link to="/" className="btn quiet">Go to home</Link>
+          : <Link to="/matches" className="btn quiet">Back to matches</Link>}
       </footer>
-      {shareError && <div className="error-message">{shareError}</div>}
+      {shareError && <div className="notice error">{shareError}</div>}
       {manualShareUrl && (
-        <div className="share-link-manual">
+        <div className="field share-link-manual">
           <label htmlFor="share-link">Copy this link to share:</label>
           <input id="share-link" type="text" readOnly value={manualShareUrl} onFocus={(e) => e.target.select()} />
         </div>

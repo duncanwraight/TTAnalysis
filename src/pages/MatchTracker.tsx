@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import PlayerPanel from '../components/PlayerPanel';
-import ShotSelector from '../components/ShotSelector/index';
-import ScoreBoard from '../components/ScoreBoard';
-import PointHistory from '../components/PointHistory';
+import Scoreboard from '../components/tracker/Scoreboard';
+import ShotPicker from '../components/tracker/ShotPicker';
+import MatchComplete from '../components/tracker/MatchComplete';
 import { Match, MatchSet, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
-import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT } from '../lib/shotsApi';
-import { playerLabel } from '../lib/matchDetails';
+import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT, ShotData } from '../lib/shotsApi';
+import { isSafeVideoUrl, playerLabel } from '../lib/matchDetails';
+import { UNFORCED_ERROR_DEFINITION, shotLabel } from '../lib/analysis';
+import '../styles/components/Tracker.css';
 import {
   DEFAULT_BEST_OF,
   EMPTY_SET,
@@ -79,7 +80,11 @@ const MatchTracker = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const [showEndMatchConfirm, setShowEndMatchConfirm] = useState<boolean>(false);
+  // Shot names for the folded winning shot summary
+  const [shotData, setShotData] = useState<ShotData | null>(null);
+  useEffect(() => {
+    loadShotData().then(setShotData).catch(() => undefined);
+  }, []);
 
   const bestOf = match?.best_of ?? DEFAULT_BEST_OF;
   const initialServer: Side = match?.initial_server === 'opponent' ? 'opponent' : 'player';
@@ -165,8 +170,15 @@ const MatchTracker = () => {
     setIsWinningShotMinimized(false);
   };
 
-  // Handler for when a player panel is clicked (indicating who won the point)
+  // Who won the point. Changing your mind clears the shots, because which
+  // serve shots are allowed depends on who won.
   const handlePlayerSelect = (winner: Side) => {
+    if (savingRef.current) return;
+    if (winner !== selectedWinner) {
+      setWinningShot(null);
+      setOtherShot(null);
+      setIsWinningShotMinimized(false);
+    }
     setSelectedWinner(winner);
   };
 
@@ -215,11 +227,6 @@ const MatchTracker = () => {
   const handleUndoWinningShot = () => {
     setWinningShot(null);
     setIsWinningShotMinimized(false);
-  };
-
-  // Handler for undoing an other shot selection
-  const handleUndoOtherShot = () => {
-    setOtherShot(null);
   };
 
   /* Point Recording */
@@ -424,518 +431,178 @@ const MatchTracker = () => {
 
   // "You" on your own matches, the player's name on someone else's
   const player = playerLabel(match?.player_name, displayName);
-  const playerPossessive = player === 'You' ? 'Your' : `${player}'s`;
+  const opponent = match?.opponent_name || 'Opponent';
+  const possessive = (name: string) => (name === 'You' ? 'Your' : `${name}'s`);
 
   // Calculate who is currently serving
   const getCurrentServer = (): Side =>
     getServer(initialServer, matchState.currentSet, matchState.sets[matchState.currentSet - 1]);
 
+  const shotName = (shot: ShotInfo) => {
+    const found = shotData?.shots.find(s => s.id === shot.shotId);
+    const category = found && shotData?.categories.find(c => c.id === found.category_id);
+    const name = found && category ? shotLabel({ ...found, category: category.name, category_order: category.display_order }) : 'Shot';
+    return `${name} ${shot.hand.toUpperCase()}`;
+  };
+
   if (loading) {
     return (
       <Layout>
-        <div className="loading-container">
-          <p>Loading match...</p>
-        </div>
+        <div className="state" role="status"><p>Loading the match...</p></div>
       </Layout>
     );
   }
-  
-  if (error) {
+
+  if (error || !match) {
     return (
       <Layout>
-        <div className="error-container" style={{ 
-          margin: '1rem', 
-          padding: '1rem', 
-          backgroundColor: '#fee2e2', 
-          borderRadius: '0.5rem',
-          color: '#b91c1c',
-          border: '1px solid #ef4444'
-        }}>
-          <h3>Error Loading Match</h3>
-          <p>{error}</p>
-          <p>You can try:</p>
-          <ul>
-            <li>Refreshing the page</li>
-            <li>Checking your internet connection</li>
-            <li>Logging out and back in</li>
-          </ul>
-          <div style={{ marginTop: '1rem' }}>
-            <button 
-              className="btn primary-btn"
-              onClick={() => navigate('/matches')}
-              style={{ marginRight: '0.5rem' }}
-            >
-              Return to Matches
-            </button>
-            <button 
-              className="btn outline-btn"
-              onClick={() => window.location.reload()}
-            >
-              Refresh Page
-            </button>
+        <div className="state">
+          <h2>This match can't be recorded</h2>
+          <p>{error ?? 'The match was not found.'}</p>
+          <div className="form-actions">
+            <button className="btn primary" onClick={() => navigate('/matches')}>Back to matches</button>
+            <button className="btn" onClick={() => window.location.reload()}>Try again</button>
           </div>
         </div>
       </Layout>
     );
   }
-  
-  // If the match is complete, show the match summary
+
   if (matchState.isMatchComplete) {
     return (
       <Layout>
-        <div className="match-complete-container">
-          <h2>Match Complete</h2>
-          
-          <div className="match-result">
-            <h3>Final Score</h3>
-            <p className="final-score">
-              {player} {matchState.sets.filter(set => set.playerScore > set.opponentScore).length} - {' '}
-              {matchState.sets.filter(set => set.opponentScore > set.playerScore).length} {match?.opponent_name}
-            </p>
-          </div>
-          
-          <div className="set-scores">
-            <h3>Set Scores</h3>
-            {matchState.sets.map((set, index) => (
-              <div key={index} className="set-score-item">
-                <span>Set {index + 1}:</span>
-                <span>{set.playerScore} - {set.opponentScore}</span>
-              </div>
-            ))}
-          </div>
-          
-          {/* Point History for the final set */}
-          {matchState.points.length > 0 && (
-            <div className="match-point-history">
-              <h3>Point Flow (Last Set)</h3>
-              <PointHistory 
-                points={matchState.points}
-                currentSet={matchState.currentSet}
-                opponentName={match?.opponent_name}
-                playerName={player}
-                sets={matchState.dbSets}
-                currentSetId={matchState.currentSetId || undefined}
-              />
-            </div>
-          )}
-          
-          <div className="match-actions">
-            {canUndo && (
-              <button
-                className="btn outline-btn undo-btn"
-                onClick={undoLastPoint}
-                disabled={isSaving}
-                title={undoesEndSet ? 'Undo End Set and reopen the match' : 'Undo the last point and reopen the match'}
-              >
-                ↩️ {undoesEndSet ? 'Undo End Set' : 'Undo Last Point'}
-              </button>
-            )}
-            <button 
-              className="btn primary-btn"
-              onClick={() => navigate(`/matches/${id}/analysis`)}
-            >
-              View Analysis
-            </button>
-            <button 
-              className="btn secondary-btn"
-              onClick={() => navigate('/matches')}
-            >
-              Back to Matches
-            </button>
-          </div>
-        </div>
+        <MatchComplete
+          matchId={match.id}
+          playerName={player}
+          opponentName={opponent}
+          sets={finishedSets(matchState.sets)}
+          canUndo={canUndo}
+          undoesEndSet={undoesEndSet}
+          onUndo={undoLastPoint}
+          busy={isSaving}
+        />
       </Layout>
     );
   }
-  
+
+  const server = getCurrentServer();
+  const currentScore = matchState.sets[matchState.currentSet - 1];
+  const currentSetRow = matchState.dbSets.find(s => s.set_number === matchState.currentSet);
+  const setPoints = currentSetRow ? matchState.points.filter(p => p.set_id === currentSetRow.id) : [];
+  const winnerName = selectedWinner === 'opponent' ? opponent : player;
+  const loserName = selectedWinner === 'opponent' ? player : opponent;
+  const winnerServed = selectedWinner === server;
+  // On a phone the two pickers don't fit side by side, so the winning shot
+  // folds away into a summary once it's picked
+  const foldWinning = isMobile && winningShot !== null && isWinningShotMinimized;
+  const pointInProgress = selectedWinner !== null;
+
   return (
-    <Layout>
-      <div className="match-tracker-container">
-        <ScoreBoard 
-          currentSet={matchState.currentSet}
-          playerScore={matchState.sets[matchState.currentSet - 1].playerScore} 
-          opponentScore={matchState.sets[matchState.currentSet - 1].opponentScore}
-          opponentName={match?.opponent_name || 'Opponent'}
+    <Layout wide>
+      <div className={`tracker${pointInProgress ? ' is-recording' : ''}`}>
+        <div className="tracker-bar">
+          <div className="tracker-heading">
+            <Link to="/matches" className="back-link">Matches</Link>
+            <h1>{player === 'You' ? `vs ${opponent}` : `${player} vs ${opponent}`}</h1>
+          </div>
+          <div className="tracker-tools">
+            {isSafeVideoUrl(match.video_url) && (
+              <a className="btn quiet" href={match.video_url} target="_blank" rel="noopener noreferrer">Open video</a>
+            )}
+            {canUndo && (
+              <button
+                type="button"
+                className="btn"
+                onClick={undoLastPoint}
+                disabled={isSaving || pointInProgress}
+                title={undoesEndSet ? 'Reopen the set you just ended' : 'Remove the last point recorded'}
+              >
+                {undoesEndSet ? 'Undo End Set' : 'Undo point'}
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn"
+              onClick={handleEndSet}
+              disabled={isSaving || pointInProgress}
+              title="End this set early and award it to whoever is ahead"
+            >
+              End set
+            </button>
+          </div>
+        </div>
+
+        <Scoreboard
           playerName={player}
-          currentServer={getCurrentServer()}
-          sets={matchState.sets}
+          opponentName={opponent}
+          currentSet={matchState.currentSet}
+          bestOf={bestOf}
+          score={currentScore}
+          finishedSets={matchState.sets.slice(0, matchState.currentSet - 1)}
+          server={server}
+          setPoints={setPoints}
+          winner={selectedWinner}
+          onPickWinner={handlePlayerSelect}
+          disabled={isSaving}
         />
-        
-        {selectedWinner === null ? (
-          <>
-            {/* Step 1: Select who won the point */}
-            <div style={{
-              marginTop: '0.07rem',
-              marginBottom: '0.2rem',
-              textAlign: 'center',
-              color: 'var(--light-text-color)'
-            }}>
-              <p style={{ margin: 0, fontSize: '0.9rem' }}>Tap on who won the point</p>
-            </div>
-            
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1rem',
-              width: '100%'
-            }}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem'
-              }}>
-                {/* Player Panel with fixed height */}
-                <div style={{
-                  height: '200px'
-                }}>
-                  <PlayerPanel 
-                    type="player"
-                    name={player}
-                    onClick={() => handlePlayerSelect('player')}
-                  />
-                </div>
-              
-                {/* Set Scores Panel */}
-                <div style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.5rem',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  minHeight: '100px'
-                }}>
-                  <div style={{ 
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    marginBottom: '0.5rem',
-                    color: '#4b5563',
-                    textAlign: 'center'
-                  }}>
-                    Set Scores
-                  </div>
-                  {matchState.sets.length > 0 && (
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-                      gap: '0.75rem',
-                      marginTop: '0.5rem'
-                    }}>
-                      {matchState.sets.map((set, index) => {
-                        // Only show completed sets or current set
-                        if (index < matchState.currentSet) {
-                          const isWin = set.playerScore > set.opponentScore;
-                          const isLoss = set.playerScore < set.opponentScore;
-                          // const isTie = set.playerScore === set.opponentScore;
-                          
-                          const bgColor = isWin ? '#d1fae5' : isLoss ? '#fee2e2' : '#f3f4f6';
-                          const borderColor = isWin ? '#10b981' : isLoss ? '#ef4444' : '#d1d5db';
-                          
-                          return (
-                            <div 
-                              key={index} 
-                              style={{
-                                backgroundColor: bgColor,
-                                borderRadius: '0.5rem',
-                                border: `2px solid ${borderColor}`,
-                                padding: '0.5rem',
-                                textAlign: 'center',
-                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-                              }}
-                            >
-                              <div style={{ 
-                                fontSize: '0.875rem', 
-                                fontWeight: 600,
-                                marginBottom: '0.25rem',
-                                color: '#4b5563'
-                              }}>
-                                Set {index + 1}
-                              </div>
-                              <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                gap: '0.25rem'
-                              }}>
-                                <span style={{ 
-                                  color: '#2563eb', 
-                                  fontWeight: 700, 
-                                  fontSize: '1.125rem' 
-                                }}>
-                                  {set.playerScore}
-                                </span>
-                                <span style={{ 
-                                  color: '#6b7280', 
-                                  fontWeight: 400 
-                                }}>
-                                  -
-                                </span>
-                                <span style={{ 
-                                  color: '#111827', 
-                                  fontWeight: 700, 
-                                  fontSize: '1.125rem' 
-                                }}>
-                                  {set.opponentScore}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem'
-              }}>
-                {/* Opponent Panel with fixed height */}
-                <div style={{
-                  height: '200px'
-                }}>
-                  <PlayerPanel 
-                    type="opponent"
-                    name={match?.opponent_name || 'Opponent'}
-                    onClick={() => handlePlayerSelect('opponent')}
-                  />
-                </div>
-                
-                {/* Point History Visualization */}
-                <div style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.5rem',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  minHeight: '100px'
-                }}>
-                  {matchState.points.length > 0 ? (
-                    <PointHistory 
-                      points={matchState.points}
-                      currentSet={matchState.currentSet}
-                      opponentName={match?.opponent_name}
-                      playerName={player}
-                      sets={matchState.dbSets}
-                      currentSetId={matchState.currentSetId || undefined}
-                    />
-                  ) : (
-                    <div className="point-history-title">Point History</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
+
+        {!pointInProgress ? (
+          <p className="tracker-prompt">Who won the point? Tap their side of the score.</p>
         ) : (
-          // Step 2: Select winning shot with lucky option
-          <div style={{ marginTop: '-1rem' }}>
-            {/* Lucky Point Toggle */}
-            <div style={{
-              marginBottom: '0.5rem',
-              textAlign: 'center',
-              padding: '0.5rem',
-              backgroundColor: 'rgba(37, 99, 235, 0.05)',
-              borderRadius: '0.375rem',
-              border: 'none'
-            }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem 1.5rem' }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  gap: '0.5rem',
-                  minHeight: '44px'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={isLuckyPoint}
-                    onChange={(e) => setIsLuckyPoint(e.target.checked)}
-                    style={{
-                      width: '1.2rem',
-                      height: '1.2rem',
-                      accentColor: '#2563eb'
-                    }}
-                  />
-                  <span>Lucky Point? (hit net/edge)</span>
-                </label>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  gap: '0.5rem',
-                  minHeight: '44px'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={isUnforcedError}
-                    onChange={(e) => setIsUnforcedError(e.target.checked)}
-                    style={{
-                      width: '1.2rem',
-                      height: '1.2rem',
-                      accentColor: '#2563eb'
-                    }}
-                  />
-                  <span>Unforced error? (losing shot)</span>
-                </label>
+          <section className="card point-entry" aria-label="Record the point">
+            <div className="point-entry-head">
+              <div className="point-flags">
+                <button type="button" className="toggle" aria-pressed={isLuckyPoint} onClick={() => setIsLuckyPoint(v => !v)}>
+                  Lucky <span className="faint">net or edge</span>
+                </button>
+                <button type="button" className="toggle" aria-pressed={isUnforcedError} onClick={() => setIsUnforcedError(v => !v)} title={UNFORCED_ERROR_DEFINITION}>
+                  Unforced error <span className="faint">losing shot</span>
+                </button>
               </div>
+              <button type="button" className="btn quiet small" onClick={resetPointFlow} title="Clear this point without recording it">
+                Cancel point
+              </button>
             </div>
 
-            <div className="shot-selection-container">
-              <div className="shot-selection winning-shot">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3>{selectedWinner === 'player' ? playerPossessive : 'Opponent\'s'} Winning Shot:</h3>
-                  {winningShot && isMobile && (
-                    <button
-                      type="button"
-                      onClick={() => setIsWinningShotMinimized(!isWinningShotMinimized)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--primary-color)',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        padding: '0.25rem'
-                      }}
-                    >
-                      {isWinningShotMinimized ? 'Expand ▼' : 'Minimize ▲'}
-                    </button>
-                  )}
-                </div>
-                {(!isMobile || (!isWinningShotMinimized || !winningShot)) && (
-                  <ShotSelector
-                    onSelect={handleWinningShotSelect}
-                    shotType="winning"
-                    selected={winningShot}
-                    onUndo={handleUndoWinningShot}
-                    currentServer={getCurrentServer()}
-                    isWinningPlayer={selectedWinner === 'player'}
-                  />
-                )}
-                {isMobile && isWinningShotMinimized && winningShot && (
-                  <div style={{
-                    padding: '0.5rem',
-                    backgroundColor: 'var(--background-color)',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem',
-                    color: 'var(--text-color)'
-                  }}>
-                    Selected: {winningShot.hand.toUpperCase()} shot
+            <div className="shot-columns">
+              <div className="shot-column">
+                <h2 id="winning-shot-title">{possessive(winnerName)} winning shot</h2>
+                {foldWinning && winningShot ? (
+                  <div className="shot-summary">
+                    <span>{shotName(winningShot)}</span>
+                    <button type="button" className="btn small" onClick={handleUndoWinningShot}>Change</button>
                   </div>
+                ) : (
+                  <ShotPicker
+                    id="winning-shot"
+                    title={`${possessive(winnerName)} winning shot`}
+                    selected={winningShot}
+                    onSelect={handleWinningShotSelect}
+                    sideServed={winnerServed}
+                    disabled={isSaving}
+                  />
                 )}
               </div>
 
-              {(!isMobile || (isWinningShotMinimized && winningShot)) && (
-                <div className="shot-selection other-shot">
-                  <h3>{selectedWinner === 'opponent' ? playerPossessive : 'Opponent\'s'} Other Shot:</h3>
-                  <ShotSelector
-                    onSelect={handleOtherShotSelect}
-                    shotType="other"
+              {(!isMobile || winningShot !== null) && (
+                <div className={`shot-column${winningShot === null ? ' is-waiting' : ''}`}>
+                  <h2 id="losing-shot-title">{possessive(loserName)} losing shot</h2>
+                  <ShotPicker
+                    id="losing-shot"
+                    title={`${possessive(loserName)} losing shot`}
                     selected={otherShot}
-                    disabled={winningShot === null}
-                    onUndo={handleUndoOtherShot}
-                    currentServer={getCurrentServer()}
-                    isWinningPlayer={selectedWinner === 'player'}
+                    onSelect={handleOtherShotSelect}
+                    sideServed={!winnerServed}
+                    disabled={winningShot === null || isSaving}
                   />
                 </div>
               )}
             </div>
-          </div>
+            <p className="point-entry-note faint">
+              {winningShot === null ? 'Pick the winning shot first. ' : ''}The point saves as soon as you pick the losing shot.
+            </p>
+          </section>
         )}
-        
-        {/* End Match Confirmation */}
-        {showEndMatchConfirm && (
-          <div className="confirmation-dialog">
-            <div className="confirmation-content">
-              <h3>End Match?</h3>
-              <p>Are you sure you want to end this match? All progress will be saved.</p>
-              <div className="confirmation-actions">
-                <button 
-                  className="btn primary-btn"
-                  onClick={() => navigate('/matches')}
-                >
-                  Yes, End Match
-                </button>
-                <button 
-                  className="btn outline-btn"
-                  onClick={() => setShowEndMatchConfirm(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div className="match-controls">
-          <button 
-            className="btn secondary-btn"
-            onClick={() => setShowEndMatchConfirm(true)}
-          >
-            End Match
-          </button>
-          
-          {/* Only show the Back button when we're in the shot selection flow */}
-          {selectedWinner !== null && (
-            <>
-              <button 
-                className="btn outline-btn"
-                onClick={() => {
-                  // Step back in the point recording flow
-                  if (otherShot !== null) {
-                    setOtherShot(null);
-                  } else if (winningShot !== null) {
-                    setWinningShot(null);
-                  } else if (selectedWinner !== null) {
-                    setSelectedWinner(null);
-                  }
-                }}
-              >
-                Back
-              </button>
-              
-              {/* No Data button - skip point without recording */}
-              <button
-                className="btn outline-btn no-data-btn"
-                onClick={() => {
-                  // Skip this point without recording anything
-                  resetPointFlow();
-                }}
-                title="Skip this point without recording data"
-              >
-                No Data
-              </button>
-            </>
-          )}
-          
-          {/* Undo button for removing the last point */}
-          {canUndo && selectedWinner === null && (
-            <button 
-              className="btn outline-btn undo-btn"
-              onClick={undoLastPoint}
-              disabled={isSaving}
-              title={undoesEndSet ? 'Undo End Set' : 'Undo last point'}
-            >
-              ↩️ {undoesEndSet ? 'Undo End Set' : 'Undo'}
-            </button>
-          )}
-          
-          <button 
-            className="btn outline-btn"
-            onClick={handleEndSet}
-            disabled={isSaving}
-            title="End this set early and award it to whoever is ahead"
-          >
-            End Set
-          </button>
-        </div>
       </div>
     </Layout>
   );

@@ -47,6 +47,10 @@ export type AnalysisInput = {
 };
 
 export const SERVICE_FAULT = 'service_fault';
+
+/** What counts as an unforced error, shown wherever one can be ticked or read. */
+export const UNFORCED_ERROR_DEFINITION =
+  "An unforced error is a shot you should have made. You weren't out of position, you read the spin, you went for the right shot, and it still missed.";
 export const NO_SHOT = 'no_shot';
 const SERVE_CATEGORY = 'serve';
 const ATTACK_CATEGORY = 'attacks';

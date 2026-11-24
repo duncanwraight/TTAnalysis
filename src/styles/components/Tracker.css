@@ -1,0 +1,156 @@
+/* Match tracker. Recording a point is: tap a side of the score, pick the
+   winning shot, pick the losing shot. Every target is at least 44px. */
+
+.tracker { display: flex; flex-direction: column; gap: 16px; }
+
+.tracker-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.tracker-heading h1 { font-size: 22px; line-height: 1.2; font-weight: 700; }
+.tracker-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Scoreboard */
+.scoreboard { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.scoreboard-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.scoreboard-sets { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.score-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.score-side {
+  --side: var(--you);
+  --side-soft: var(--you-soft);
+  display: flex; flex-direction: column; gap: 4px;
+  min-height: 148px; padding: 14px 16px;
+  text-align: left;
+  border-radius: var(--radius);
+  border: 2px solid var(--line);
+  border-top: 6px solid var(--side);
+  background: var(--surface);
+  transition: background-color 0.12s, border-color 0.12s, opacity 0.12s;
+}
+.score-side.opp { --side: var(--opp); --side-soft: var(--opp-soft); }
+.score-side:hover:not(:disabled) { border-color: var(--side); border-top-color: var(--side); }
+.score-side[aria-pressed=true] { background: var(--side-soft); border-color: var(--side); }
+.score-sides:has([aria-pressed=true]) .score-side[aria-pressed=false] { opacity: 0.6; }
+.score-side:disabled { cursor: progress; }
+
+.score-side-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 24px; }
+.score-name { font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score-points { font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; }
+.score-side-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.score-picked { font-weight: 600; color: var(--ink); }
+
+.serve-tag {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  height: 24px; padding: 0 8px; border-radius: 999px;
+  background: var(--surface-2); font-size: 12px; font-weight: 600; color: var(--ink);
+}
+.serve-tag::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--side); }
+.score-side[aria-pressed=true] .serve-tag { background: var(--surface); }
+
+.point-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; min-height: 12px; font-size: 13px; }
+.point-strip > span:not(.faint) { width: 10px; height: 10px; border-radius: 2px; }
+.point-strip .you { background: var(--you); }
+.point-strip .opp { background: var(--opp); }
+
+.tracker-prompt { text-align: center; color: var(--ink-2); font-size: 15px; padding: 8px 0; }
+
+/* Recording a point */
+.point-entry { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+.point-entry-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.point-flags { display: flex; flex-wrap: wrap; gap: 8px; }
+.point-entry-note { font-size: 13px; }
+
+.toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: var(--tap); padding: 0 14px;
+  border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface);
+  font-size: 15px; font-weight: 600;
+}
+.toggle::before {
+  content: ''; width: 18px; height: 18px; flex: none; border-radius: 4px;
+  border: 2px solid var(--line-strong); background: var(--surface);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; line-height: 1; color: var(--ink);
+}
+.toggle:hover { background: var(--surface-2); }
+.toggle .faint { font-weight: 400; font-size: 13px; }
+.toggle[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.toggle[aria-pressed=true] .faint { color: rgba(255, 255, 255, 0.75); }
+.toggle[aria-pressed=true]::before { content: '\2713'; border-color: #fff; background: #fff; }
+
+.shot-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.shot-column { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.shot-column h2 { font-size: 16px; font-weight: 600; }
+.shot-column.is-waiting .shot-picker { opacity: 0.45; }
+
+.shot-picker { display: flex; flex-direction: column; gap: 10px; }
+.shot-picker-loading { padding: 24px 0; color: var(--ink-3); }
+
+.shot-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.shot-tabs button {
+  min-height: var(--tap); padding: 0 14px;
+  border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface);
+  font-size: 14px; font-weight: 600; color: var(--ink-2);
+}
+.shot-tabs button:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.shot-tabs button[aria-selected=true], .shot-tabs button[aria-selected=true]:hover:not(:disabled) { background: var(--surface-2); border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+
+.shot-rows { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 6px; }
+.shot-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
+}
+.shot-row.is-selected { border-color: var(--ink); background: var(--surface-2); }
+.shot-row.is-unavailable .shot-row-label { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.shot-row-label { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; }
+.shot-row-empty { padding: 12px 0; font-size: 14px; }
+
+.shot-hand {
+  flex: none; width: 56px; min-height: var(--tap);
+  border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface);
+  font-size: 14px; font-weight: 700; letter-spacing: 0.02em;
+}
+.shot-hand:hover:not(:disabled) { background: var(--surface-2); border-color: var(--ink-3); }
+.shot-hand[aria-pressed=true], .shot-hand[aria-pressed=true]:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: #fff; }
+.shot-hand:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.shot-summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 6px 6px 6px 14px; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--ink); font-weight: 600;
+}
+
+/* Match complete */
+.match-complete { display: flex; flex-direction: column; gap: 12px; padding: 28px; }
+.match-complete h1 { font-size: 32px; line-height: 1.15; }
+.match-complete-sets { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.match-complete-sets .chip { height: 32px; gap: 6px; }
+.match-complete-sets .faint { font-weight: 500; }
+.match-complete-undo { font-size: 14px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+
+@media (max-width: 768px) {
+  .shot-columns { grid-template-columns: 1fr; gap: 16px; }
+}
+
+@media (max-width: 640px) {
+  .tracker { gap: 12px; }
+  .tracker-bar { align-items: center; }
+  .tracker-heading h1 { font-size: 18px; }
+  .tracker-tools .btn { min-height: var(--tap); padding: 0 12px; font-size: 14px; }
+  .scoreboard { padding: 12px; }
+  .score-sides { gap: 8px; }
+  .score-side { min-height: 120px; padding: 10px 12px; }
+  .score-name { font-size: 15px; }
+  .score-points { font-size: 52px; }
+  .point-entry { padding: 12px; margin: 0 -4px; }
+  .shot-tabs button { padding: 0 10px; font-size: 13px; }
+  .match-complete { padding: 20px; }
+
+  /* Mid-point, the score shrinks so the shot pickers start higher up */
+  .toggle .faint, .score-picked { display: none; }
+  .is-recording .score-side { min-height: 0; padding: 8px 12px; }
+  .is-recording .score-points { font-size: 36px; }
+  .is-recording .score-side-bottom, .is-recording .point-strip, .is-recording .scoreboard-head { display: none; }
+  .is-recording .tracker-tools { display: none; }
+  .match-complete h1 { font-size: 26px; }
+}

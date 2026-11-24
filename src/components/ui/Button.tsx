@@ -1,6 +1,6 @@
 import React from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'quiet';
 
 type ButtonProps = {
   variant?: ButtonVariant;
@@ -24,13 +24,13 @@ const Button: React.FC<ButtonProps> = ({
   children,
   type = 'button',
 }) => {
-  const baseClass = 'btn';
-  const variantClass = `${variant}-btn`;
-  
+ // Secondary is the plain white button, so it adds no class
+  const variantClass = variant === 'secondary' ? '' : ` ${variant}`;
+
   return (
     <button
       type={type}
-      className={`${baseClass} ${variantClass} ${className}`}
+      className={`btn${variantClass}${className ? ` ${className}` : ''}`}
       onClick={onClick}
       disabled={disabled}
       title={title}

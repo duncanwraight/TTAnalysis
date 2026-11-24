@@ -6,6 +6,18 @@ import type { Match } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 
+const formatDate = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** "Won 3–1" in blue, "Lost 1–3" in orange, or "In progress" while recording. */
+const matchResult = (match: Match): { label: string; tone: string } => {
+  const [won, lost] = (match.match_score ?? '0-0').split('-').map(n => Number(n) || 0);
+  if (!match.is_complete) return { label: won + lost > 0 ? `In progress ${won}–${lost}` : 'Not started', tone: '' };
+  if (won > lost) return { label: `Won ${won}–${lost}`, tone: 'you' };
+  if (lost > won) return { label: `Lost ${won}–${lost}`, tone: 'opp' };
+  return { label: `${won}–${lost}`, tone: '' };
+};
+
 const MatchList = () => {
   const api = useApi();
   const [matches, setMatches] = useState<Match[]>([]);
@@ -36,14 +48,14 @@ const MatchList = () => {
     event.preventDefault();
     event.stopPropagation();
     
-    if (window.confirm('Are you sure you want to delete this match? This action cannot be undone.')) {
+    if (window.confirm('Delete this match and all its points? This can\'t be undone.')) {
       try {
         setIsDeleting(true);
         await api.match.deleteMatch(id);
         // Refresh the match list after deletion
         fetchMatches();
       } catch (err) {
-        alert('Failed to delete match. Please try again.');
+        alert('The match could not be deleted. Please try again.');
       } finally {
         setIsDeleting(false);
       }
@@ -56,66 +68,80 @@ const MatchList = () => {
 
   return (
     <Layout>
-      <div className="match-list-container">
-        <div className="match-list-header">
-          <h2>Your Matches</h2>
-          <Link to="/matches/new" className="btn primary-btn">
-            New Match
-          </Link>
+      <div className="page">
+        <div className="page-head">
+          <div>
+            <h1>Your matches</h1>
+            {!loading && !error && matches.length > 0 && (
+              <p>{matches.length === 1 ? '1 match' : `${matches.length} matches`}, newest first.</p>
+            )}
+          </div>
+          <div className="page-head-actions">
+            <Link to="/matches/new" className="btn primary">New match</Link>
+          </div>
         </div>
 
         {loading ? (
-          <p>Loading matches...</p>
+          <div className="state" role="status"><p>Loading your matches...</p></div>
         ) : error ? (
-          <div className="error-message">
+          <div className="state">
+            <h2>Your matches did not load</h2>
             <p>{error}</p>
-            <button onClick={() => window.location.reload()} className="btn secondary-btn">
-              Try Again
-            </button>
+            <div className="form-actions">
+              <button onClick={fetchMatches} className="btn primary">Try again</button>
+            </div>
           </div>
         ) : matches.length === 0 ? (
-          <div className="no-matches">
-            <p>You haven't recorded any matches yet.</p>
-            <Link to="/matches/new" className="btn primary-btn">
-              Record Your First Match
-            </Link>
+          <div className="card dashed state">
+            <h2>No matches yet</h2>
+            <p>Create a match, then record it point by point from the video.</p>
+            <div className="form-actions">
+              <Link to="/matches/new" className="btn primary">Record your first match</Link>
+            </div>
           </div>
         ) : (
-          <div className="match-cards">
-            {matches.map((match) => (
-              <div key={match.id} className="match-card">
-                <div className="match-card-header">
-                  <h3>{cleanText(match.player_name) ? `${cleanText(match.player_name)} vs ${match.opponent_name}` : `vs. ${match.opponent_name}`}</h3>
-                  <span className="match-date">{new Date(`${match.date}T00:00:00`).toLocaleDateString()}</span>
-                </div>
-                <div className="match-card-body">
-                  <p className="match-score">Score: {match.match_score}</p>
-                  {cleanText(match.event) && <p className="match-notes">{match.event}</p>}
-                  {match.notes && <p className="match-notes">{match.notes}</p>}
-                </div>
-                <div className="match-card-footer">
+          <ul className="match-cards">
+            {matches.map((match) => {
+              const result = matchResult(match);
+              const player = cleanText(match.player_name);
+              return (
+                <li key={match.id} className="card match-card">
+                  <div className="match-card-head">
+                    <h2>{player ? `${player} vs ${match.opponent_name}` : `vs ${match.opponent_name}`}</h2>
+                    <span className={`chip small ${result.tone}`}>{result.label}</span>
+                  </div>
+                  <p className="match-card-meta">
+                    {formatDate(match.date)}
+                    {cleanText(match.event) && <> · {match.event}</>}
+                  </p>
+                  {match.notes && <p className="match-card-notes">{match.notes}</p>}
                   <div className="match-card-actions">
-                    <button 
-                      onClick={(e) => handleDeleteMatch(match.id, e)} 
-                      className="btn danger-btn"
+                    {match.is_complete ? (
+                      <>
+                        <Link to={`/matches/${match.id}/analysis`} className="btn primary small">Analysis</Link>
+                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points</Link>
+                        <Link to={`/matches/${match.id}`} className="btn small">Tracker</Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link to={`/matches/${match.id}`} className="btn primary small">Continue recording</Link>
+                        <Link to={`/matches/${match.id}/analysis`} className="btn small">Analysis</Link>
+                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points</Link>
+                      </>
+                    )}
+                    <button
+                      onClick={(e) => handleDeleteMatch(match.id, e)}
+                      className="btn danger small match-card-delete"
                       disabled={isDeleting}
+                      aria-label={`Delete the match against ${match.opponent_name}`}
                     >
                       Delete
                     </button>
-                    <Link to={`/matches/${match.id}`} className="btn secondary-btn">
-                      Edit
-                    </Link>
-                    <Link to={`/matches/${match.id}/points`} className="btn secondary-btn">
-                      Edit points
-                    </Link>
-                    <Link to={`/matches/${match.id}/analysis`} className="btn primary-btn">
-                      Analysis
-                    </Link>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </Layout>

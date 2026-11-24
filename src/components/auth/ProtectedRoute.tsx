@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   // lookup has finished, so an admin isn't sent away on a fresh page load
   if (loading || (requireAdmin && adminLoading)) {
     return (
-      <div className="loading-container">
+      <div className="state" role="status">
         <p>Loading...</p>
       </div>
     );

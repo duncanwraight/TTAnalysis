@@ -87,11 +87,11 @@ The database uses PostgreSQL with Supabase for Auth and Row Level Security. The 
 
 ## Code Organization
 
-- `/src/components`: Reusable UI components (Layout, PlayerPanel, ShotSelector, etc.)
+- `/src/components`: Reusable UI components. `Layout` renders the header, with a purple admin variant on `/admin` pages. `tracker/` holds the tracker's `Scoreboard` (each side is the "who won" button), `ShotPicker` and `MatchComplete`
 - `/src/pages`: Main application pages/screens
 - `/src/lib`: Utilities and external clients (Supabase)
 - `/src/types`: TypeScript definitions for database entities
-- `/src/styles`: Global CSS and stylesheets
+- `/src/styles`: Page stylesheets. Tokens and shared pieces (cards, `.btn`, fields, `.segmented`, `.data-table`, `.chip`, `.notice`, `.state`) live in `src/index.css`; blue `--you` and orange `--opp` mean player and opponent and aren't used as general accents
 - `/docs`: Project documentation
 
 ## Key Features
