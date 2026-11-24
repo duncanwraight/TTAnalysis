@@ -103,6 +103,9 @@ const MatchList = () => {
                     <Link to={`/matches/${match.id}`} className="btn secondary-btn">
                       Edit
                     </Link>
+                    <Link to={`/matches/${match.id}/points`} className="btn secondary-btn">
+                      Edit points
+                    </Link>
                     <Link to={`/matches/${match.id}/analysis`} className="btn primary-btn">
                       Analysis
                     </Link>

@@ -7,6 +7,16 @@ import { Match, MatchSet, Point } from '../types/database.types';
 import { supabase, createSharedClient } from './supabase';
 import { invalidateShotData } from './shotsApi';
 import { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
+import type { AnalysisPoint, AnalysisSet, AnalysisShot } from './analysis';
+
+export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'date' | 'best_of' | 'initial_server' | 'share_token'>;
+
+export type AnalysisData = {
+  match: AnalysisMatch;
+  sets: AnalysisSet[];
+  points: AnalysisPoint[];
+  shots: AnalysisShot[];
+};
 
 // Type guard for PostgrestError
 function isPostgrestError(error: unknown): error is PostgrestError {
@@ -109,98 +119,45 @@ export const matchApi = {
     if (error) throw error;
   },
 
-  // Get match analysis
-  getAnalysis: async (id: string, client: SupabaseClient = supabase) => {
-
-    const [
-      matchSummary,
-      shotDistribution,
-      handAnalysis,
-      shotHandAnalysis,
-      setBreakdown,
-      categoryBreakdown,
-      tacticalInsights,
-      luckyShots
-    ] = await Promise.all([
-      // Match Summary
-      client.from('match_summary')
-        .select('*')
-        .eq('match_id', id)
+  // Everything the analysis page and points editor need: the match, its sets
+  // and points in recorded order, and the shot list. Works with the shared
+  // client too, since the share token grants read access to all of them.
+  getAnalysis: async (id: string, client: SupabaseClient = supabase): Promise<AnalysisData> => {
+    const [match, sets, points, shots] = await Promise.all([
+      client.from('matches')
+        .select('id, opponent_name, date, best_of, initial_server, share_token')
+        .eq('id', id)
         .single(),
-
-      // Shot Distribution (updated to use new breakdown view)
-      client.from('player_shot_breakdown')
-        .select('*')
-        .eq('match_id', id)
-        .order('player_total', { ascending: false }),
-
-      // Hand Analysis
-      client.from('hand_analysis')
-        .select('*')
+      client.from('sets')
+        .select('id, set_number, player_score, opponent_score')
         .eq('match_id', id),
-
-      // Shot Hand Analysis
-      client.from('shot_hand_analysis')
-        .select('*')
-        .eq('match_id', id),
-
-      // Set Breakdown
-      client.from('set_breakdown')
-        .select('*')
-        .eq('match_id', id)
-        .order('set_number', { ascending: true }),
-
-      // Category Breakdown
-      client.from('category_breakdown')
-        .select('*')
-        .eq('match_id', id)
-        .order('total_shots', { ascending: false }),
-
-      // Tactical Insights
-      client.from('tactical_insights')
-        .select('*')
-        .eq('match_id', id)
-        .order('win_percentage', { ascending: false }),
-
-      // Lucky Shots - fetch all points with lucky shot flag
       client.from('points')
-        .select('winner, winning_shot_id, is_lucky_shot')
+        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error')
         .eq('match_id', id)
+        .order('created_at', { ascending: true }),
+      client.from('shots')
+        .select('id, name, display_name, shot_categories(name, display_order)'),
     ]);
 
-    // Check for errors and log results
-    const results = [
-      { name: 'Match Summary', result: matchSummary },
-      { name: 'Shot Distribution', result: shotDistribution },
-      { name: 'Hand Analysis', result: handAnalysis },
-      { name: 'Shot Hand Analysis', result: shotHandAnalysis },
-      { name: 'Set Breakdown', result: setBreakdown },
-      { name: 'Category Breakdown', result: categoryBreakdown },
-      { name: 'Tactical Insights', result: tacticalInsights },
-      { name: 'Lucky Shots', result: luckyShots }
-    ];
-
-    for (const { name, result } of results) {
+    for (const [name, result] of [['Match', match], ['Sets', sets], ['Points', points], ['Shots', shots]] as const) {
       if (result.error) {
-        if (isPostgrestError(result.error)) {
-          throw new Error(`${name} query failed: ${result.error.message}`);
-        }
-        throw new Error(`${name} query failed with unknown error`);
+        throw new Error(`${name} query failed: ${isPostgrestError(result.error) ? result.error.message : 'unknown error'}`);
       }
     }
 
-    const finalResult = {
-      matchSummary: matchSummary.data,
-      shotDistribution: shotDistribution.data,
-      handAnalysis: handAnalysis.data,
-      shotHandAnalysis: shotHandAnalysis.data,
-      setBreakdown: setBreakdown.data,
-      categoryBreakdown: categoryBreakdown.data,
-      tacticalInsights: tacticalInsights.data,
-      luckyShots: luckyShots.data
+    type ShotRow = { id: string; name: string; display_name: string; shot_categories: { name: string; display_order: number } | null };
+    return {
+      match: match.data as AnalysisMatch,
+      sets: sets.data as AnalysisSet[],
+      points: points.data as AnalysisPoint[],
+      shots: (shots.data as unknown as ShotRow[]).map(s => ({
+        id: s.id,
+        name: s.name,
+        display_name: s.display_name,
+        category: s.shot_categories?.name ?? '',
+        category_order: s.shot_categories?.display_order ?? 0,
+      })),
     };
-    
-    return finalResult;
   },
 
   // Create a new match
@@ -331,6 +288,16 @@ export const pointApi = {
 
     if (error) throw error;
     return data;
+  },
+
+  // Change the lucky and unforced flags on a recorded point
+  updatePoint: async (id: string, changes: Pick<Point, 'is_lucky_shot' | 'is_unforced_error'>) => {
+    const { error } = await supabase
+      .from('points')
+      .update(changes)
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   // Delete a point

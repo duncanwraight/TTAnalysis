@@ -1,6 +1,6 @@
 # Next steps
 
-Last updated: 2026-11-24
+Last updated: 2026-11-24 (analysis redesign)
 
 Handover notes for picking this work up in a fresh session. Work through the sections in order.
 
@@ -57,13 +57,22 @@ Still open:
 - **React Router:** two moderate advisories need v7. Neither applies here: one is SSR-only and the other needs a navigation to an attacker-controlled path, and every navigation in the app uses a literal path. Upgrade when convenient.
 - **Logout on every deploy:** `src/lib/supabase.ts` clears the stored session whenever the deployed commit changes. This isn't needed for security. It's a product decision whether to keep it.
 
-## 3. Code quality
+## 3. Analysis page redesign (done)
 
-- **`any` types:** `@typescript-eslint/no-explicit-any` is switched off in `eslint.config.js`. Type the analysis data in `MatchAnalysis.tsx` and the rest, then turn the rule back on.
-- **Duplicate "Push" shots:** there are two shots named Push (Around The Net and Pips / Anti). The tables now show category, but the summary lists ("You Won With...", shot distribution, set breakdown) show only "Push".
+Shipped 2026-11-24. The design came from a canvas worked through with the user: https://claude.ai/artifact/3J5Lt6syww186XcB9mHg6i
+
+- `src/lib/analysis.ts` builds the whole page from raw data; `src/pages/MatchAnalysis.tsx` renders it. The SQL analysis views are unused and can be dropped.
+- Unforced errors: `points.is_unforced_error`, ticked in the tracker or in the points editor at `/matches/:id/points`.
+- The page uses a newer look than the rest of the site. Bringing the other pages in line is a separate piece of work.
+- Not done yet: editing a point's winner and shots in the points editor (the user wants this, later).
+
+## 4. Code quality
+
+- **`any` types:** `@typescript-eslint/no-explicit-any` is switched off in `eslint.config.js`. The analysis page is now typed; type the rest, then turn the rule back on.
+- **Duplicate "Push" shots:** fixed on the analysis page, which prefixes pips shots ("Pips push"). The shot list in the tracker still shows both as "Push" under their categories.
 - **Supabase CLI v4 warnings:** `config.toml` uses `auth.email.enable_signup` and `auth.sms.enable_signup`, which v4 renames to `enabled`. The `--linked` flag is deprecated in favour of `--remote`.
 - **MatchTracker size:** `src/pages/MatchTracker.tsx` is still one large component. Split it only if more tracker features are planned.
-- **Bundle size:** the build warns about a chunk over 500 kB, mostly `html2pdf.js`. Lazy-load it on the Export to PDF click.
+- **Bundle size:** `html2pdf.js` is now loaded on the Export to PDF click. Its own chunk is still over 500 kB, which the build warns about.
 
 ## Testing against a local stack
 

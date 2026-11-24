@@ -56,6 +56,7 @@ export type Point = {
   other_hand?: 'fh' | 'bh';
   notes?: string;
   is_lucky_shot?: boolean; // Tracks whether the winning shot was lucky (e.g., hit net or edge)
+  is_unforced_error?: boolean; // The losing shot was a mistake the winner didn't force
   created_at: string;
 };
 

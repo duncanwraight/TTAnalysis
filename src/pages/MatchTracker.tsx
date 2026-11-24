@@ -59,6 +59,7 @@ const MatchTracker = () => {
   const [winningShot, setWinningShot] = useState<ShotInfo | null>(null);
   const [otherShot, setOtherShot] = useState<ShotInfo | null>(null);
   const [isLuckyPoint, setIsLuckyPoint] = useState<boolean>(false);
+  const [isUnforcedError, setIsUnforcedError] = useState<boolean>(false);
   const [isWinningShotMinimized, setIsWinningShotMinimized] = useState<boolean>(false);
 
   // Guards against a second tap starting another save while one is in flight
@@ -159,6 +160,7 @@ const MatchTracker = () => {
     setWinningShot(null);
     setOtherShot(null);
     setIsLuckyPoint(false);
+    setIsUnforcedError(false);
     setIsWinningShotMinimized(false);
   };
 
@@ -190,7 +192,8 @@ const MatchTracker = () => {
         return;
       }
 
-      await recordPoint(selectedWinner, shot, { shotId: noShotId, hand: 'fh' });
+      // A service fault is always an unforced error
+      await recordPoint(selectedWinner, shot, { shotId: noShotId, hand: 'fh' }, true);
     } catch (error) {
       console.error('Failed to check for service fault:', error);
     }
@@ -219,7 +222,7 @@ const MatchTracker = () => {
   };
 
   /* Point Recording */
-  const recordPoint = (winner: Side, winningShot: ShotInfo, otherShot: ShotInfo) =>
+  const recordPoint = (winner: Side, winningShot: ShotInfo, otherShot: ShotInfo, forceUnforced = false) =>
     withSaving(async () => {
       if (!match) {
         resetPointFlow();
@@ -258,6 +261,7 @@ const MatchTracker = () => {
           other_hand: otherShot.hand,
           notes: '',
           is_lucky_shot: isLuckyPoint,
+          is_unforced_error: forceUnforced || isUnforcedError,
         });
 
         let updatedSetRow: MatchSet;
@@ -730,27 +734,50 @@ const MatchTracker = () => {
               borderRadius: '0.375rem',
               border: 'none'
             }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '500',
-                gap: '0.5rem'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={isLuckyPoint}
-                  onChange={(e) => setIsLuckyPoint(e.target.checked)}
-                  style={{
-                    width: '1.2rem',
-                    height: '1.2rem',
-                    accentColor: '#2563eb'
-                  }}
-                />
-                <span>Lucky Point? (hit net/edge)</span>
-              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem 1.5rem' }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  gap: '0.5rem',
+                  minHeight: '44px'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={isLuckyPoint}
+                    onChange={(e) => setIsLuckyPoint(e.target.checked)}
+                    style={{
+                      width: '1.2rem',
+                      height: '1.2rem',
+                      accentColor: '#2563eb'
+                    }}
+                  />
+                  <span>Lucky Point? (hit net/edge)</span>
+                </label>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  gap: '0.5rem',
+                  minHeight: '44px'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={isUnforcedError}
+                    onChange={(e) => setIsUnforcedError(e.target.checked)}
+                    style={{
+                      width: '1.2rem',
+                      height: '1.2rem',
+                      accentColor: '#2563eb'
+                    }}
+                  />
+                  <span>Unforced error? (losing shot)</span>
+                </label>
+              </div>
             </div>
 
             <div className="shot-selection-container">

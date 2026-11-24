@@ -5,6 +5,7 @@ import MatchList from './pages/MatchList';
 import NewMatch from './pages/NewMatch';
 import MatchTracker from './pages/MatchTracker';
 import MatchAnalysis from './pages/MatchAnalysis';
+import PointsEditor from './pages/PointsEditor';
 import Auth from './pages/Auth';
 import AdminPanel from './pages/AdminPanel';
 import AdminShots from './pages/AdminShots';
@@ -65,6 +66,15 @@ function App() {
             } 
           />
           
+          <Route
+            path="/matches/:id/points"
+            element={
+              <ProtectedRoute>
+                <PointsEditor />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Public shared analysis route - no authentication required */}
           <Route path="/shared/:token" element={<MatchAnalysis />} />
           {/* Old-style links (match ID instead of token) now show the invalid link message */}

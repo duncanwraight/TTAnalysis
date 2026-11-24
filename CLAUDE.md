@@ -75,9 +75,11 @@ The `start-dev.sh` script handles:
 - **Shots**: id, category_id, name, display_name, description, display_order
 - **Matches**: id, user_id, opponent_name, date, match_score, notes, initial_server, best_of, is_complete, share_token (random UUID set when sharing; RLS grants public read only to requests sending it in the x-share-token header)
 - **Sets**: id, match_id, set_number, score, player_score, opponent_score
-- **Points**: id, set_id, match_id, point_number (restarts each set; order by created_at across a match), winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, notes
+- **Points**: id, set_id, match_id, point_number (restarts each set; order by created_at across a match), winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error (the losing shot was unforced; ticked in the tracker or the points editor), notes
 
-Analysis views build on `point_shots`, which attributes each shot to whoever played it: on a point the player won, the winning shot is the player's and the other shot is the opponent's, and the reverse when the opponent won. Views use `security_invoker`, so a view created without it bypasses RLS.
+Each point records two shots: the winner's winning shot and the loser's losing shot ("other shot" in the schema), which is either the shot that set up the winner or the one that missed. Rally shots aren't recorded, so the analysis page always talks about winning and losing shots, never shots played. The page is built by `buildAnalysis` in `src/lib/analysis.ts` from the raw match, sets, points and shots, and is covered by `src/lib/analysis.test.ts`. A service fault is recorded as the receiver's winning shot with `no_shot` for the server; the analysis charges it to the server as an unforced losing shot.
+
+The older SQL views (`point_shots` and the views built on it) are no longer used by the frontend. Views use `security_invoker`, so a view created without it bypasses RLS.
 
 The database uses PostgreSQL with Supabase for Auth and Row Level Security. The schema is defined in the `supabase/migrations` directory.
 
