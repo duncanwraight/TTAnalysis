@@ -17,7 +17,7 @@ dotenv.config();
 async function promoteUserToAdmin(email) {
   // Validate environment variables
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_LIVE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl) {
     console.error('❌ Error: SUPABASE_URL environment variable is required');

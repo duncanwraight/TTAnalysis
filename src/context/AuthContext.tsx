@@ -11,6 +11,8 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   isAdmin: boolean;
+  // True until the admin status for the current user has been looked up
+  adminLoading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  // The user whose admin status isAdmin reflects
+  const [adminCheckedFor, setAdminCheckedFor] = useState<string | null>(null);
 
   useEffect(() => {
     // Get initial session
@@ -64,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
+      } finally {
+        setAdminCheckedFor(session.user.id);
       }
     };
 
@@ -101,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     isAdmin,
+    adminLoading: !!session?.user && adminCheckedFor !== session.user.id,
   };
 
   return (

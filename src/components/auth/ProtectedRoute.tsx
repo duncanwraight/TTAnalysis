@@ -7,10 +7,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, adminLoading } = useAuth();
 
-  // Show loading while auth is loading
-  if (loading) {
+  // Show loading while auth is loading, and for admin pages until the admin
+  // lookup has finished, so an admin isn't sent away on a fresh page load
+  if (loading || (requireAdmin && adminLoading)) {
     return (
       <div className="loading-container">
         <p>Loading...</p>

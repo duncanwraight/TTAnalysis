@@ -26,17 +26,36 @@ Run `npm test` alongside lint and build before shipping.
 
 ## 2. Security audit
 
-The first sweep deliberately skipped security. Things already known:
+Audited 2026-11-24. Every attack below was reproduced against a local stack over the REST API, fixed, and retested.
 
-- **Debug page:** `/debug` is reachable without any admin check. Make it admin-only or delete it.
-- **Admin model:** check how admin status is stored and checked (`is_admin` function, migrations `20250526000000` and `20250526120000`, `scripts/promote-admin.js`). Make sure a user can't make themselves admin through the API, for example by updating their own profile row.
-- **RLS on every table:** list policies with `select * from pg_policies` and check each table (`matches`, `sets`, `points`, `shots`, `shot_categories`, users or profiles) for insert, update and delete as well as select. In particular check that a user can't insert a `set` or `point` pointing at someone else's `match_id`.
-- **Views:** every view must have `security_invoker = on`, otherwise it bypasses RLS. Check none were missed: `select relname, reloptions from pg_class where relkind = 'v' and relnamespace = 'public'::regnamespace`.
-- **Functions:** any `SECURITY DEFINER` function needs `SET search_path` and a reason to exist. Check grants to `anon`.
-- **Share tokens:** the owner can read `share_token` through `match_summary`, which is fine. Nothing else should expose it.
-- **Supabase advisors:** run the security advisor in the Supabase dashboard and work through what it reports.
-- **Frontend:** `src/lib/supabase.ts` clears every localStorage key containing "auth" or "supabase" on each deploy. Decide whether that is wanted. Check nothing renders user-supplied text with `dangerouslySetInnerHTML`.
-- **Dependencies:** `npm audit`, and update `html2pdf.js` if it pulls in vulnerable versions.
+Fixed in migration `20261124140000_security_hardening.sql`:
+
+- **Self-promotion to admin.** The `profiles` update policy let any signed-in user set `is_admin = true` on their own row with one PATCH, and then edit or delete the shared shot list. Sign-up is open, so anyone could do it. Users can now only read their own profile. Admins can read every profile and change `is_admin`, and no other profile column is writable through the API. Production showed no sign it was used: one admin (set 2025-05-26), no other profile edited, and no shot changes after the September 2025 migrations.
+- **Points in another user's set.** The `points` insert check only looked at `match_id`, so a point in your own match could name a set from someone else's. The set must now belong to the point's match, on insert and update.
+- **Function grants.** `anon` can no longer execute `is_admin` or `handle_new_user`, which clears the two Supabase advisor warnings for them.
+- **TRUNCATE** revoked from `anon` and `authenticated`, since it ignores RLS.
+
+Fixed in the frontend:
+
+- `/debug` deleted. It printed the visitor's access and refresh tokens on screen.
+- Admin pages no longer bounce an admin to the home page on a direct load. `ProtectedRoute` now waits for the admin lookup.
+- `npm audit fix`, and `html2pdf.js` 0.10 to 0.14 (pulls in jsPDF 4.2.1 and DOMPurify 3.5.0, clearing the critical advisories). PDF export checked in the browser.
+- `scripts/promote-admin.js` read `SUPABASE_LIVE_SERVICE_ROLE_KEY` while every doc says `SUPABASE_SERVICE_ROLE_KEY`. It now reads the documented one.
+- Unused `VITE_PG_*` entries removed from `.env.example`. Any `VITE_` variable the code reads is bundled into public JavaScript, so a database password must never go in one.
+
+Checked and fine:
+
+- RLS is on for all six tables, and all eight views have `security_invoker=on`.
+- Users can't insert sets or points into another user's match, or move a match to another user.
+- Both `SECURITY DEFINER` functions pin `search_path`. Shot deletes can't cascade into points (the foreign key is NO ACTION).
+- Share links still work with the token and return nothing without it.
+- Nothing uses `dangerouslySetInnerHTML`, `innerHTML` or `eval`.
+
+Still open:
+
+- **Supabase dashboard (by hand):** upgrade Postgres (advisor: security patches available on 15.8.1.091), shorten the email OTP expiry to under an hour, and turn on leaked password protection if the plan includes it. The minimum password length is 6 in `config.toml`; consider raising it.
+- **React Router:** two moderate advisories need v7. Neither applies here: one is SSR-only and the other needs a navigation to an attacker-controlled path, and every navigation in the app uses a literal path. Upgrade when convenient.
+- **Logout on every deploy:** `src/lib/supabase.ts` clears the stored session whenever the deployed commit changes. This isn't needed for security. It's a product decision whether to keep it.
 
 ## 3. Code quality
 

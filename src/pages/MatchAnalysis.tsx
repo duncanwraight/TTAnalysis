@@ -81,7 +81,7 @@ const MatchAnalysis = () => {
       const opt = {
         margin: 0.5,
         filename: `match-analysis-${analysisData.matchSummary.opponent_name}-${new Date(`${analysisData.matchSummary.date}T00:00:00`).toLocaleDateString().replace(/\//g, '-')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { 
           scale: 2,
           useCORS: true,
@@ -90,7 +90,7 @@ const MatchAnalysis = () => {
         jsPDF: { 
           unit: 'in', 
           format: 'a4', 
-          orientation: 'portrait' 
+          orientation: 'portrait' as const
         }
       };
       
