@@ -17,6 +17,9 @@ export type AnalysisShot = {
   display_name: string;
   category: string;
   category_order: number;
+  // Shot guide for the AI summary; see shotGuide.ts
+  check_qualities?: string[];
+  technical_notes?: string | null;
 };
 
 export type AnalysisPoint = {

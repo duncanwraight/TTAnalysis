@@ -72,7 +72,10 @@ const CoachSummary = ({ stored, stale, canGenerate, generating, error, onGenerat
                 <span className="ma-finding-tag">Work on</span>
                 <h3>{p.title}</h3>
                 <p>{p.detail}</p>
-                <p className="ma-coach-try"><strong>Try:</strong> {p.try}</p>
+                {p.tactical && <p className="ma-coach-try"><strong>Check:</strong> {p.tactical}</p>}
+                {p.technical?.trim() && <p className="ma-coach-try"><strong>If it's technical:</strong> {p.technical}</p>}
+                {/* Summaries written before the tactical and technical split */}
+                {!p.tactical && p.try && <p className="ma-coach-try"><strong>Try:</strong> {p.try}</p>}
               </article>
             ))}
           </div>

@@ -8,7 +8,7 @@ import { supabase, createSharedClient } from './supabase';
 import { invalidateShotData } from './shotsApi';
 import { FunctionsHttpError, PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { AnalysisPoint, AnalysisSet, AnalysisShot } from './analysis';
-import type { MatchSummary } from './aiSummary';
+import type { StoredMatchSummary } from './aiSummary';
 
 export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date' | 'best_of' | 'initial_server' | 'share_token'>;
 
@@ -25,7 +25,7 @@ export type AnalysisData = {
 };
 
 export type StoredSummary = {
-  summary: MatchSummary;
+  summary: StoredMatchSummary;
   input_hash: string;
   model: string;
   created_at: string;
@@ -151,7 +151,7 @@ export const matchApi = {
         .eq('match_id', id)
         .order('created_at', { ascending: true }),
       client.from('shots')
-        .select('id, name, display_name, shot_categories(name, display_order)'),
+        .select('id, name, display_name, check_qualities, technical_notes, shot_categories(name, display_order)'),
       // Readable by the owner, or with the share token on a shared client
       client.from('match_summaries')
         .select('summary, input_hash, model, created_at')
@@ -167,7 +167,10 @@ export const matchApi = {
       }
     }
 
-    type ShotRow = { id: string; name: string; display_name: string; shot_categories: { name: string; display_order: number } | null };
+    type ShotRow = {
+      id: string; name: string; display_name: string; check_qualities: string[] | null; technical_notes: string | null;
+      shot_categories: { name: string; display_order: number } | null;
+    };
     return {
       match: match.data as AnalysisMatch,
       sets: sets.data as AnalysisSet[],
@@ -178,6 +181,8 @@ export const matchApi = {
         display_name: s.display_name,
         category: s.shot_categories?.name ?? '',
         category_order: s.shot_categories?.display_order ?? 0,
+        check_qualities: s.check_qualities ?? [],
+        technical_notes: s.technical_notes,
       })),
       // A summary that fails to load shouldn't take the analysis down with it
       summary: summary.error ? null : (summary.data as StoredSummary | null),
@@ -424,7 +429,9 @@ export const shotApi = {
     name: string; 
     display_name: string; 
     description?: string; 
-    display_order: number 
+    display_order: number;
+    check_qualities?: string[];
+    technical_notes?: string | null;
   }) => {
     const { data, error } = await supabase
       .from('shots')
@@ -443,7 +450,9 @@ export const shotApi = {
     name?: string; 
     display_name?: string; 
     description?: string; 
-    display_order?: number 
+    display_order?: number;
+    check_qualities?: string[];
+    technical_notes?: string | null;
   }) => {
     const { data, error } = await supabase
       .from('shots')

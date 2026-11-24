@@ -162,7 +162,7 @@ const MatchAnalysis = () => {
   useEffect(() => {
     if (!data || !analysis) return;
     let cancelled = false;
-    hashInput(buildSummaryInput(data.match, analysis))
+    hashInput(buildSummaryInput(data.match, analysis, data.shots))
       .then(hash => { if (!cancelled) setCurrentHash(hash); })
       .catch(() => { /* Without the hash the summary just never shows as out of date */ });
     return () => { cancelled = true; };

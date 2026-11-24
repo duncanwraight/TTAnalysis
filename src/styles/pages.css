@@ -48,6 +48,11 @@
 .admin-ai-bar > div { height: 100%; background: var(--ink-2); }
 .admin-ai-bar > div.full { background: var(--danger); }
 .admin-ai-note { font-size: 13px; }
+.admin-guide { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 13px; }
+.admin-qualities { border: 0; padding: 0; margin: 0; }
+.admin-qualities legend { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-bottom: 6px; }
+.admin-qualities > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 16px; }
+.admin-quality { display: flex; align-items: center; gap: 8px; font-size: 14px; min-height: 32px; }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 
 @media (max-width: 640px) {

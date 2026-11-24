@@ -3,19 +3,30 @@
  * match-summary Edge Function, so it stays free of React, Supabase and Deno.
  *
  * The function sends the model the match details, the computed analysis and
- * one line per point. The input is hashed so the page can tell when a stored
- * summary no longer matches the points.
+ * one line per point, then the shot guide for the shots that appear. The
+ * input is hashed so the page can tell when a stored summary no longer matches
+ * the points or the guide.
  */
 
-import type { Analysis } from './analysis.ts';
+import { shotLabel, type Analysis, type AnalysisShot } from './analysis.ts';
+import { qualityLabel, sortQualities } from './shotGuide.ts';
 
 export const SUMMARY_MODEL = 'claude-opus-5-5';
 
 // Part of every input hash. Bump it when the prompt or input changes enough
 // that stored summaries should show as out of date.
-export const SUMMARY_VERSION = 1;
+export const SUMMARY_VERSION = 2;
 
-export type SummaryProblem = { title: string; detail: string; try: string };
+export type SummaryProblem = {
+  title: string;
+  detail: string;
+  // What to check and vary
+  tactical: string;
+  // What a stroke or spin-reading fault would look like on the video; empty when it doesn't apply
+  technical: string;
+};
+// Summaries from version 1 had a single "try" in place of tactical and technical
+export type StoredProblem = Omit<SummaryProblem, 'tactical' | 'technical'> & { tactical?: string; technical?: string; try?: string };
 export type SummaryNote = { title: string; detail: string };
 export type MatchSummary = {
   headline: string;
@@ -23,6 +34,7 @@ export type MatchSummary = {
   // Empty when the points show no pattern worth a note on the mental side
   mental: SummaryNote[];
 };
+export type StoredMatchSummary = Omit<MatchSummary, 'problems'> & { problems: StoredProblem[] };
 
 /** JSON schema for structured output. Every object is closed and every field required. */
 export const SUMMARY_SCHEMA = {
@@ -36,9 +48,10 @@ export const SUMMARY_SCHEMA = {
         properties: {
           title: { type: 'string' },
           detail: { type: 'string' },
-          try: { type: 'string' },
+          tactical: { type: 'string' },
+          technical: { type: 'string' },
         },
-        required: ['title', 'detail', 'try'],
+        required: ['title', 'detail', 'tactical', 'technical'],
         additionalProperties: false,
       },
     },
@@ -63,15 +76,16 @@ export const SUMMARY_SCHEMA = {
 // usually fallen apart into a run of fragments, so it's rejected rather than stored.
 export const MAX_FIELD_WORDS = 140;
 
-const isText = (v: unknown): v is string =>
-  typeof v === 'string' && v.trim().length > 0 && v.trim().split(/\s+/).length <= MAX_FIELD_WORDS;
+const isShortEnough = (v: string) => v.trim() === '' || v.trim().split(/\s+/).length <= MAX_FIELD_WORDS;
+const isText = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0 && isShortEnough(v);
+const isOptionalText = (v: unknown): v is string => typeof v === 'string' && isShortEnough(v);
 
 export const isMatchSummary = (v: unknown): v is MatchSummary => {
   if (!v || typeof v !== 'object') return false;
   const s = v as Record<string, unknown>;
   return isText(s.headline)
     && Array.isArray(s.problems)
-    && s.problems.every(p => p && isText(p.title) && isText(p.detail) && isText(p.try))
+    && s.problems.every(p => p && isText(p.title) && isText(p.detail) && isText(p.tactical) && isOptionalText(p.technical))
     && Array.isArray(s.mental)
     && s.mental.every(m => m && isText(m.title) && isText(m.detail));
 };
@@ -84,8 +98,32 @@ export type SummaryMatch = {
   best_of: number;
 };
 
-/** The user message sent to the model: match details, computed analysis, then every point. */
-export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis): string => {
+/**
+ * The shot guide for the shots in this match: what to check, and what a
+ * technical fault looks like. Shots with neither are left out.
+ */
+const buildShotGuide = (analysis: Analysis, shots: AnalysisShot[]): string[] => {
+  const used = new Set([...analysis.shots.player, ...analysis.shots.opponent].map(s => s.shot));
+  const lines: string[] = [];
+  const seen = new Set<string>();
+  for (const shot of shots) {
+    const label = shotLabel(shot);
+    if (!used.has(label) || seen.has(label)) continue;
+    seen.add(label);
+    const checks = sortQualities(shot.check_qualities ?? []).map(qualityLabel);
+    const technical = shot.technical_notes?.trim();
+    if (!checks.length && !technical) continue;
+    lines.push([
+      `${label}.`,
+      checks.length ? `Check: ${checks.join(', ')}.` : 'Check: nothing listed.',
+      technical ? `Technical: ${technical}` : 'Technical: no notes.',
+    ].join(' '));
+  }
+  return lines.sort();
+};
+
+/** The user message sent to the model: match details, computed analysis, every point, then the shot guide. */
+export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots: AnalysisShot[]): string => {
   // Ids, row keys and the page's own cards add tokens without adding information.
   // JSON.stringify leaves out the undefined fields.
   const { rows, ...rest } = analysis;
@@ -120,6 +158,9 @@ export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis): stri
     '',
     'Points in order. Columns: set, point, server, winner, score after (player-opponent), winning shot, loser\'s last shot, flags (lucky, unforced).',
     ...points,
+    '',
+    'Shot guide. For each shot in this match: the qualities worth checking, then what a technical fault looks like.',
+    ...guideOrNone(buildShotGuide(analysis, shots)),
   ].join('\n');
 };
 
@@ -133,6 +174,8 @@ export const notesMessage = (notes: string) => [
   '',
   'Rewrite the whole summary with these notes in mind. Treat their corrections of what happened as true, even where the data seems to say otherwise. Follow their other requests where the data allows, and keep to the rules you were given.',
 ].join('\n');
+
+const guideOrNone = (lines: string[]) => (lines.length ? lines : ['No guide for these shots.']);
 
 /** SHA-256 of the model, version and input, as hex. */
 export const hashInput = async (input: string): Promise<string> => {

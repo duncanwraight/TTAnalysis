@@ -3,6 +3,7 @@ import { ShotCategory, Shot } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import Button from '../components/ui/Button';
 import Layout from '../components/Layout';
+import { MAX_TECHNICAL_NOTES, QUALITIES, qualityLabel, sortQualities } from '../lib/shotGuide';
 
 interface EditingCategory {
   id?: string;
@@ -17,6 +18,9 @@ interface EditingShot {
   display_name: string;
   description: string;
   display_order: number;
+  // Shot guide for the AI summary
+  check_qualities: string[];
+  technical_notes: string;
 }
 
 const AdminShots: React.FC = () => {
@@ -115,7 +119,9 @@ const AdminShots: React.FC = () => {
           name: editingShot.name,
           display_name: editingShot.display_name,
           description: editingShot.description,
-          display_order: editingShot.display_order
+          display_order: editingShot.display_order,
+          check_qualities: sortQualities(editingShot.check_qualities),
+          technical_notes: editingShot.technical_notes.trim() || null
         });
       } else {
         await api.shot.createShot({
@@ -123,7 +129,9 @@ const AdminShots: React.FC = () => {
           name: editingShot.name,
           display_name: editingShot.display_name,
           description: editingShot.description,
-          display_order: editingShot.display_order
+          display_order: editingShot.display_order,
+          check_qualities: sortQualities(editingShot.check_qualities),
+          technical_notes: editingShot.technical_notes.trim() || null
         });
       }
       
@@ -156,13 +164,17 @@ const AdminShots: React.FC = () => {
       name: shot.name,
       display_name: shot.display_name,
       description: shot.description || '',
-      display_order: shot.display_order
+      display_order: shot.display_order,
+      check_qualities: shot.check_qualities ?? [],
+      technical_notes: shot.technical_notes ?? ''
     } : {
       category_id: targetCategoryId,
       name: '',
       display_name: '',
       description: '',
-      display_order: Math.max(...categoryShots.map(s => s.display_order), 0) + 1
+      display_order: Math.max(...categoryShots.map(s => s.display_order), 0) + 1,
+      check_qualities: [],
+      technical_notes: ''
     });
     setShowShotForm(true);
   };
@@ -204,12 +216,13 @@ const AdminShots: React.FC = () => {
                   <Button variant="danger" className="small" onClick={() => handleDeleteCategory(category.id)}>Delete</Button>
                 </div>
               </div>
-              <table className="data-table" style={{ minWidth: 560 }}>
+              <table className="data-table" style={{ minWidth: 760 }}>
                 <thead>
                   <tr>
                     <th scope="col">Shot</th>
                     <th scope="col">Internal name</th>
                     <th scope="col">Description</th>
+                    <th scope="col">AI coach</th>
                     <th scope="col" className="actions"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
@@ -219,6 +232,14 @@ const AdminShots: React.FC = () => {
                       <th scope="row">{shot.display_name}</th>
                       <td className="muted"><code>{shot.name}</code></td>
                       <td className="muted">{shot.description}</td>
+                      <td>
+                        <span className="admin-guide">
+                          {sortQualities(shot.check_qualities ?? []).map(q => <span key={q} className="chip small">{qualityLabel(q)}</span>)}
+                          {shot.technical_notes?.trim()
+                            ? <span className="chip small">Technical notes</span>
+                            : <span className="faint">No technical notes</span>}
+                        </span>
+                      </td>
                       <td className="actions">
                         <Button variant="secondary" className="small" onClick={() => startEditShot(shot)}>Edit</Button>
                         <Button variant="danger" className="small" onClick={() => handleDeleteShot(shot.id)}>Delete</Button>
@@ -324,6 +345,40 @@ const AdminShots: React.FC = () => {
                 value={editingShot.description}
                 onChange={(e) => setEditingShot({ ...editingShot, description: e.target.value })}
               />
+            </label>
+            <fieldset className="field admin-qualities">
+              <legend>What to check when this shot keeps losing points</legend>
+              <div>
+                {QUALITIES.map(q => (
+                  <label key={q.key} className="admin-quality" title={q.meaning}>
+                    <input
+                      type="checkbox"
+                      checked={editingShot.check_qualities.includes(q.key)}
+                      onChange={(e) => setEditingShot({
+                        ...editingShot,
+                        check_qualities: e.target.checked
+                          ? [...editingShot.check_qualities, q.key]
+                          : editingShot.check_qualities.filter(k => k !== q.key),
+                      })}
+                    />
+                    {q.label}
+                  </label>
+                ))}
+              </div>
+              <span className="field-hint">The AI coach only suggests checking these for this shot, on either hand.</span>
+            </fieldset>
+            <label className="field">
+              <span>Technical faults to look for</span>
+              <textarea
+                rows={5}
+                maxLength={MAX_TECHNICAL_NOTES}
+                value={editingShot.technical_notes}
+                onChange={(e) => setEditingShot({ ...editingShot, technical_notes: e.target.value })}
+                placeholder="What a fault looks like on video and what usually causes it. For example: into the net against backspin means not enough lift, or the bat closing too early."
+              />
+              <span className="field-hint">
+                The AI coach uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. {editingShot.technical_notes.length}/{MAX_TECHNICAL_NOTES}
+              </span>
             </label>
             <label className="field">
               <span>Display order</span>

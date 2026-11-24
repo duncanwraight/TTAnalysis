@@ -89,6 +89,9 @@ export type Shot = {
   display_name: string;
   display_order: number;
   description?: string;
+  // Shot guide for the AI summary; see src/lib/shotGuide.ts
+  check_qualities?: string[];
+  technical_notes?: string | null;
   created_at?: string;
   updated_at?: string;
 };
