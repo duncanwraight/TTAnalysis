@@ -255,6 +255,15 @@
 .pe-status { font-size: 13px; color: var(--ma-ink-3); min-height: 1.2em; }
 .pe-status.error { color: var(--error-color); }
 
+/* Points editor: match details */
+.pe-details { display: flex; flex-direction: column; gap: 16px; }
+.pe-details h2 { font-size: 18px; font-weight: 600; }
+.pe-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px 16px; }
+.pe-fields label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ma-ink-2); }
+.pe-fields label.wide { grid-column: 1 / -1; }
+.pe-fields input { min-height: 44px; padding: 0 12px; border: 1px solid var(--ma-line); border-radius: 8px; font: inherit; font-size: 15px; color: var(--ma-ink); background: var(--ma-card); box-sizing: border-box; width: 100%; }
+.pe-details-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
 @media (max-width: 640px) {
   .ma-header h1 { font-size: 28px; }
   .ma-tile-value { font-size: 26px; }

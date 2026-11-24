@@ -213,6 +213,36 @@ describe('unforced errors and lucky points', () => {
   });
 });
 
+describe('patterns', () => {
+  it('pairs each side\'s winning shot with the losing shot it came off, twice or more', () => {
+    const a = analyse([
+      ...many(3, 'player', 1, { win: 'loop', winHand: 'fh', lose: 'push', loseHand: 'bh' }),
+      pt({ winner: 'player', win: 'loop', winHand: 'fh', lose: 'chop', loseHand: 'bh' }),
+      ...many(2, 'opponent', 1, { win: 'loop', winHand: 'bh', lose: 'chop', loseHand: 'bh' }),
+    ]);
+    expect(a.patterns.player).toEqual([
+      { key: expect.any(String), winningShot: 'Loop', winningHand: 'fh', losingShot: 'Push', losingHand: 'bh', count: 3 },
+    ]);
+    expect(a.patterns.opponent).toMatchObject([{ winningShot: 'Loop', winningHand: 'bh', losingShot: 'Chop', losingHand: 'bh', count: 2 }]);
+  });
+
+  it('tells the hands apart', () => {
+    const a = analyse([
+      pt({ winner: 'player', win: 'loop', winHand: 'fh', lose: 'push', loseHand: 'bh' }),
+      pt({ winner: 'player', win: 'loop', winHand: 'fh', lose: 'push', loseHand: 'fh' }),
+    ]);
+    expect(a.patterns.player).toEqual([]);
+  });
+
+  it('leaves out service faults and serves that got no return', () => {
+    const a = analyse([
+      ...many(2, 'opponent', 1, { win: 'fault', lose: 'none' }),
+      ...many(2, 'player', 1, { win: 'serve', lose: 'none' }),
+    ]);
+    expect(a.patterns).toEqual({ player: [], opponent: [] });
+  });
+});
+
 describe('cards', () => {
   const titles = (points: AnalysisPoint[]) => analyse(points).cards.map(c => c.title);
 

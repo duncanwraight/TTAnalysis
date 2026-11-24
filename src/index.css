@@ -265,9 +265,14 @@ body {
 
 .match-card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   width: 100%;
   justify-content: flex-end;
+}
+
+.match-card-actions .btn {
+  white-space: nowrap;
 }
 
 /* Add styles for danger button */

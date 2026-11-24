@@ -64,6 +64,8 @@ Shipped 2026-11-24. The design came from a canvas worked through with the user: 
 - `src/lib/analysis.ts` builds the whole page from raw data; `src/pages/MatchAnalysis.tsx` renders it. The SQL analysis views are unused and can be dropped.
 - Unforced errors: `points.is_unforced_error`, ticked in the tracker or in the points editor at `/matches/:id/points`.
 - The page uses a newer look than the rest of the site. Bringing the other pages in line is a separate piece of work.
+- Matches can be for a friend: `player_name`, `event` and `video_url` on `matches`, set on the new match form or in the points editor's "Match details" form. The page always says "you" to the player being reviewed, so a share link reads naturally for them. The tracker shows "You" on your own matches and the player's name otherwise.
+- Patterns: repeated winning/losing shot pairs for both players.
 - Not done yet: editing a point's winner and shots in the points editor (the user wants this, later).
 
 ## 4. Code quality

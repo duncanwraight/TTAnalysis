@@ -9,6 +9,7 @@ import { Match, MatchSet, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT } from '../lib/shotsApi';
+import { playerLabel } from '../lib/matchDetails';
 import {
   DEFAULT_BEST_OF,
   EMPTY_SET,
@@ -38,7 +39,7 @@ const errorMessage = (error: unknown) => {
 const MatchTracker = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, displayName } = useAuth();
   const api = useApi();
   const userId = user?.id;
 
@@ -421,6 +422,10 @@ const MatchTracker = () => {
       }
     });
 
+  // "You" on your own matches, the player's name on someone else's
+  const player = playerLabel(match?.player_name, displayName);
+  const playerPossessive = player === 'You' ? 'Your' : `${player}'s`;
+
   // Calculate who is currently serving
   const getCurrentServer = (): Side =>
     getServer(initialServer, matchState.currentSet, matchState.sets[matchState.currentSet - 1]);
@@ -484,7 +489,7 @@ const MatchTracker = () => {
           <div className="match-result">
             <h3>Final Score</h3>
             <p className="final-score">
-              You {matchState.sets.filter(set => set.playerScore > set.opponentScore).length} - {' '}
+              {player} {matchState.sets.filter(set => set.playerScore > set.opponentScore).length} - {' '}
               {matchState.sets.filter(set => set.opponentScore > set.playerScore).length} {match?.opponent_name}
             </p>
           </div>
@@ -507,6 +512,7 @@ const MatchTracker = () => {
                 points={matchState.points}
                 currentSet={matchState.currentSet}
                 opponentName={match?.opponent_name}
+                playerName={player}
                 sets={matchState.dbSets}
                 currentSetId={matchState.currentSetId || undefined}
               />
@@ -550,6 +556,7 @@ const MatchTracker = () => {
           playerScore={matchState.sets[matchState.currentSet - 1].playerScore} 
           opponentScore={matchState.sets[matchState.currentSet - 1].opponentScore}
           opponentName={match?.opponent_name || 'Opponent'}
+          playerName={player}
           currentServer={getCurrentServer()}
           sets={matchState.sets}
         />
@@ -583,7 +590,7 @@ const MatchTracker = () => {
                 }}>
                   <PlayerPanel 
                     type="player"
-                    name="You"
+                    name={player}
                     onClick={() => handlePlayerSelect('player')}
                   />
                 </div>
@@ -712,6 +719,7 @@ const MatchTracker = () => {
                       points={matchState.points}
                       currentSet={matchState.currentSet}
                       opponentName={match?.opponent_name}
+                      playerName={player}
                       sets={matchState.dbSets}
                       currentSetId={matchState.currentSetId || undefined}
                     />
@@ -783,7 +791,7 @@ const MatchTracker = () => {
             <div className="shot-selection-container">
               <div className="shot-selection winning-shot">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3>{selectedWinner === 'player' ? 'Your' : 'Opponent\'s'} Winning Shot:</h3>
+                  <h3>{selectedWinner === 'player' ? playerPossessive : 'Opponent\'s'} Winning Shot:</h3>
                   {winningShot && isMobile && (
                     <button
                       type="button"
@@ -826,7 +834,7 @@ const MatchTracker = () => {
 
               {(!isMobile || (isWinningShotMinimized && winningShot)) && (
                 <div className="shot-selection other-shot">
-                  <h3>{selectedWinner === 'opponent' ? 'Your' : 'Opponent\'s'} Other Shot:</h3>
+                  <h3>{selectedWinner === 'opponent' ? playerPossessive : 'Opponent\'s'} Other Shot:</h3>
                   <ShotSelector
                     onSelect={handleOtherShotSelect}
                     shotType="other"

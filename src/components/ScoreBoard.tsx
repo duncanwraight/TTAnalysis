@@ -5,6 +5,8 @@ type ScoreBoardProps = {
   playerScore: number;
   opponentScore: number;
   opponentName: string;
+  // "You", or the player's name on someone else's match
+  playerName?: string;
   currentServer: 'player' | 'opponent';
   sets?: { playerScore: number; opponentScore: number }[];
 };
@@ -13,7 +15,8 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
   currentSet,
   playerScore,
   opponentScore,
-  currentServer
+  currentServer,
+  playerName = 'You'
 }) => {
   return (
     <div className="score-board">
@@ -30,7 +33,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({
       }}>
         {/* Player Side */}
         <div style={{ textAlign: 'center' }}>
-          <div className="score-label">You</div>
+          <div className="score-label">{playerName}</div>
           <div className={`score-value ${currentServer === 'player' ? 'player-serving' : ''}`}>
             {playerScore}
             {currentServer === 'player' && <span className="serve-icon-small" aria-label="Serving">🏓</span>}

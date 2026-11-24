@@ -73,11 +73,13 @@ The `start-dev.sh` script handles:
 - **Users**: id, email, name, preferences
 - **Shot Categories**: id, name, display_order
 - **Shots**: id, category_id, name, display_name, description, display_order
-- **Matches**: id, user_id, opponent_name, date, match_score, notes, initial_server, best_of, is_complete, share_token (random UUID set when sharing; RLS grants public read only to requests sending it in the x-share-token header)
+- **Matches**: id, user_id, player_name (who the analysis is about; empty on older matches, which are the owner's own), opponent_name, event (free text), video_url (http(s) only, enforced by a check constraint), date, match_score, notes, initial_server, best_of, is_complete, share_token (random UUID set when sharing; RLS grants public read only to requests sending it in the x-share-token header)
 - **Sets**: id, match_id, set_number, score, player_score, opponent_score
 - **Points**: id, set_id, match_id, point_number (restarts each set; order by created_at across a match), winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error (the losing shot was unforced; ticked in the tracker or the points editor), notes
 
 Each point records two shots: the winner's winning shot and the loser's losing shot ("other shot" in the schema), which is either the shot that set up the winner or the one that missed. Rally shots aren't recorded, so the analysis page always talks about winning and losing shots, never shots played. The page is built by `buildAnalysis` in `src/lib/analysis.ts` from the raw match, sets, points and shots, and is covered by `src/lib/analysis.test.ts`. A service fault is recorded as the receiver's winning shot with `no_shot` for the server; the analysis charges it to the server as an unforced losing shot.
+
+The page also lists patterns: winning/losing shot pairs that happened more than once for each side. The user's own name for defaulting the player lives in auth user metadata (`display_name`), not in `profiles`, which only admins can update.
 
 The older SQL views (`point_shots` and the views built on it) are no longer used by the frontend. Views use `security_invoker`, so a view created without it bypasses RLS.
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { cleanText } from '../lib/matchDetails';
 import type { Match } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
@@ -84,11 +85,12 @@ const MatchList = () => {
             {matches.map((match) => (
               <div key={match.id} className="match-card">
                 <div className="match-card-header">
-                  <h3>vs. {match.opponent_name}</h3>
+                  <h3>{cleanText(match.player_name) ? `${cleanText(match.player_name)} vs ${match.opponent_name}` : `vs. ${match.opponent_name}`}</h3>
                   <span className="match-date">{new Date(`${match.date}T00:00:00`).toLocaleDateString()}</span>
                 </div>
                 <div className="match-card-body">
                   <p className="match-score">Score: {match.match_score}</p>
+                  {cleanText(match.event) && <p className="match-notes">{match.event}</p>}
                   {match.notes && <p className="match-notes">{match.notes}</p>}
                 </div>
                 <div className="match-card-footer">

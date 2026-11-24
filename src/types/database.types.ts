@@ -21,6 +21,12 @@ export type Match = {
   id: string;
   user_id: string;
   opponent_name: string;
+  // Who the analysis is about. Empty on older matches, which are the account owner's own
+  player_name?: string | null;
+  // Free text, e.g. "Winter 2026/27 league"
+  event?: string | null;
+  // http(s) link to the match video
+  video_url?: string | null;
   date: string;
   match_score: string;
   notes?: string;

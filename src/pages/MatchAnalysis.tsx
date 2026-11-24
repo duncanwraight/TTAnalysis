@@ -4,7 +4,8 @@ import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import type { AnalysisData } from '../lib/api';
-import { Analysis, CategoryRow, ShotRow, Tally, buildAnalysis } from '../lib/analysis';
+import { Analysis, CategoryRow, Pattern, ShotRow, Tally, buildAnalysis, shotWithHand } from '../lib/analysis';
+import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
 import '../styles/components/MatchAnalysis.css';
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((100 * n) / d) : 0);
@@ -82,6 +83,22 @@ const CategoryTable = ({ title, rows, yours }: { title: string; rows: CategoryRo
   );
 };
 
+const PatternList = ({ title, patterns, yours }: { title: string; patterns: Pattern[]; yours: boolean }) => (
+  <div className="ma-card ma-list">
+    <h3>{title}</h3>
+    {patterns.length === 0 && <p className="ma-small ma-muted">No pair happened more than once.</p>}
+    {patterns.map(p => (
+      <div key={p.key} className="ma-run">
+        <span className={`ma-run-badge ${yours ? 'you' : 'opp'}`} aria-label={`${p.count} times`}>{p.count}</span>
+        <span>
+          {shotWithHand(p.winningShot, p.winningHand)} off {yours ? 'their' : 'your'} {shotWithHand(p.losingShot, p.losingHand).toLowerCase()}
+        </span>
+        <span />
+      </div>
+    ))}
+  </div>
+);
+
 const shotName = (s: ShotRow) => `${s.shot} ${handLabel(s.hand)}`.trim();
 const listShots = (rows: ShotRow[], count: (s: ShotRow) => number) =>
   rows.map(s => `${s.shot.toLowerCase()}${s.hand ? ` ${handLabel(s.hand)}` : ''} ${count(s)}`).join(', ');
@@ -144,7 +161,7 @@ const MatchAnalysis = () => {
       const date = new Date(`${data.match.date}T00:00:00`).toLocaleDateString().replace(/\//g, '-');
       const options = {
         margin: 0.4,
-        filename: `match-analysis-${data.match.opponent_name}-${date}.pdf`,
+        filename: `match-analysis-${cleanText(data.match.player_name) ? `${cleanText(data.match.player_name)}-` : ''}${data.match.opponent_name}-${date}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const },
@@ -247,8 +264,13 @@ const MatchAnalysis = () => {
       <header className="ma-header">
         <div>
           <p className="ma-eyebrow">Match analysis</p>
-          <h1>vs {match.opponent_name}</h1>
-          <p className="ma-meta">{formatDate(match.date)} · Best of {match.best_of}</p>
+          <h1>{cleanText(match.player_name) ? `${cleanText(match.player_name)} vs ${match.opponent_name}` : `vs ${match.opponent_name}`}</h1>
+          <p className="ma-meta">
+            {[formatDate(match.date), cleanText(match.event), `Best of ${match.best_of}`].filter(Boolean).join(' · ')}
+            {isSafeVideoUrl(match.video_url) && (
+              <> · <a href={match.video_url} target="_blank" rel="noopener noreferrer">Watch the video</a></>
+            )}
+          </p>
           {isSharedView && <span className="ma-shared-badge">Shared analysis</span>}
         </div>
         <div className="ma-result">
@@ -446,6 +468,17 @@ const MatchAnalysis = () => {
             <div className="ma-grid halves">
               <CategoryTable title="You" rows={a.categories.player} yours />
               <CategoryTable title="Opponent" rows={a.categories.opponent} yours={false} />
+            </div>
+          </section>
+
+          <section aria-labelledby="ma-patterns" className="ma-section">
+            <div className="ma-section-head">
+              <h2 id="ma-patterns">Patterns</h2>
+              <p>A winning shot and the losing shot it came off, when the same pair happened more than once.</p>
+            </div>
+            <div className="ma-grid halves">
+              <PatternList title="How you won points" patterns={a.patterns.player} yours />
+              <PatternList title="How they won points" patterns={a.patterns.opponent} yours={false} />
             </div>
           </section>
 

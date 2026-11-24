@@ -100,6 +100,16 @@ export type Run = { side: Side; length: number; setNumber: number; fromPlayer: n
 
 export type Stage = { label: string; won: number; lost: number; unforced: number };
 
+/** A winning shot and the losing shot it came off, seen more than once. */
+export type Pattern = {
+  key: string;
+  winningShot: string;
+  winningHand: Hand | null;
+  losingShot: string;
+  losingHand: Hand | null;
+  count: number;
+};
+
 export type Card = { tag: 'Match story' | 'Work on' | 'Scouting'; title: string; text: string };
 
 export type Analysis = {
@@ -126,6 +136,8 @@ export type Analysis = {
     onReceive: number;
   };
   rows: PointRow[];
+  // Repeated winning/losing shot pairs, by who won the point
+  patterns: { player: Pattern[]; opponent: Pattern[] };
   cards: Card[];
 };
 
@@ -172,6 +184,7 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   const unforced = { recorded: false, total: 0, onServe: 0, onReceive: 0 };
   const runs: Run[] = [];
   const rows: PointRow[] = [];
+  const patterns = { player: new Map<string, Pattern>(), opponent: new Map<string, Pattern>() };
   let current: Run | null = null;
 
   const tallyShot = (side: Side, shot: AnalysisShot, hand: Hand | null, result: 'won' | 'lost', isUnforced: boolean) => {
@@ -211,7 +224,17 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       tallyShot(loser, winningShot, null, 'lost', true);
     } else {
       tallyShot(winner, winningShot, point.winning_hand ?? null, 'won', false);
-      if (otherShot.name !== NO_SHOT) tallyShot(loser, otherShot, point.other_hand ?? null, 'lost', isUnforced);
+      if (otherShot.name !== NO_SHOT) {
+        tallyShot(loser, otherShot, point.other_hand ?? null, 'lost', isUnforced);
+        const winHand = point.winning_hand ?? null;
+        const loseHand = point.other_hand ?? null;
+        const key = `${winningShot.id}:${winHand ?? ''}>${otherShot.id}:${loseHand ?? ''}`;
+        const pattern = patterns[winner].get(key) ?? {
+          key, winningShot: shotLabel(winningShot), winningHand: winHand, losingShot: shotLabel(otherShot), losingHand: loseHand, count: 0,
+        };
+        pattern.count += 1;
+        patterns[winner].set(key, pattern);
+      }
     }
 
     const serveRecord = server === 'player' ? onServe : onReceive;
@@ -310,11 +333,20 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     hands,
     unforced,
     rows,
+    patterns: {
+      player: repeated(patterns.player),
+      opponent: repeated(patterns.opponent),
+    },
     cards: [],
   };
   analysis.cards = buildCards(analysis);
   return analysis;
 };
+
+const repeated = (patterns: Map<string, Pattern>) =>
+  [...patterns.values()]
+    .filter(p => p.count >= 2)
+    .sort((a, b) => b.count - a.count || a.winningShot.localeCompare(b.winningShot));
 
 const shotLabelWithHand = (shot: AnalysisShot, hand?: Hand | null) =>
   hand ? `${shotLabel(shot)} ${hand.toUpperCase()}` : shotLabel(shot);

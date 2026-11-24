@@ -9,7 +9,9 @@ import { invalidateShotData } from './shotsApi';
 import { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { AnalysisPoint, AnalysisSet, AnalysisShot } from './analysis';
 
-export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'date' | 'best_of' | 'initial_server' | 'share_token'>;
+export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date' | 'best_of' | 'initial_server' | 'share_token'>;
+
+export type MatchDetails = Pick<Match, 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date'>;
 
 export type AnalysisData = {
   match: AnalysisMatch;
@@ -125,7 +127,7 @@ export const matchApi = {
   getAnalysis: async (id: string, client: SupabaseClient = supabase): Promise<AnalysisData> => {
     const [match, sets, points, shots] = await Promise.all([
       client.from('matches')
-        .select('id, opponent_name, date, best_of, initial_server, share_token')
+        .select('id, opponent_name, player_name, event, video_url, date, best_of, initial_server, share_token')
         .eq('id', id)
         .single(),
       client.from('sets')

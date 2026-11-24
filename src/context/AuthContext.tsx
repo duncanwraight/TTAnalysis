@@ -13,6 +13,9 @@ type AuthContextType = {
   isAdmin: boolean;
   // True until the admin status for the current user has been looked up
   adminLoading: boolean;
+  // The user's own name, used as the default player on new matches
+  displayName: string | null;
+  saveDisplayName: (name: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,6 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  // Kept in the user's own auth metadata, which each user can edit for
+  // themselves without touching the locked-down profiles table
+  const saveDisplayName = async (name: string) => {
+    const { error } = await supabase.auth.updateUser({ data: { display_name: name.trim() } });
+    if (error) throw error;
+  };
+  const metadataName = session?.user?.user_metadata?.display_name;
+
   const value = {
     user: session?.user ?? null,
     session,
@@ -108,6 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetPassword,
     isAdmin,
     adminLoading: !!session?.user && adminCheckedFor !== session.user.id,
+    displayName: typeof metadataName === 'string' && metadataName.trim() ? metadataName.trim() : null,
+    saveDisplayName,
   };
 
   return (
