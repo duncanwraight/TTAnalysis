@@ -104,7 +104,7 @@ export type Run = { side: Side; length: number; setNumber: number; fromPlayer: n
 
 export type Stage = { label: string; won: number; lost: number; unforced: number };
 
-/** A winning shot and the losing shot it was played against, seen more than once. */
+/** A winning shot and the losing shot it was played against, seen three times or more, unforced errors left out. */
 export type Pattern = {
   key: string;
   winningShot: string;
@@ -241,6 +241,9 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       tallyShot(winner, winningShot, point.winning_hand ?? null, 'won', false, setNumber);
       if (otherShot.name !== NO_SHOT) {
         tallyShot(loser, otherShot, point.other_hand ?? null, 'lost', isUnforced, setNumber);
+      }
+      // An unforced error says nothing about how the winning shot beat the losing one
+      if (otherShot.name !== NO_SHOT && !isUnforced) {
         const winHand = point.winning_hand ?? null;
         const loseHand = point.other_hand ?? null;
         const key = `${winningShot.id}:${winHand ?? ''}>${otherShot.id}:${loseHand ?? ''}`;
@@ -363,9 +366,11 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   return analysis;
 };
 
+const MIN_PATTERN_COUNT = 3;
+
 const repeated = (patterns: Map<string, Pattern>) =>
   [...patterns.values()]
-    .filter(p => p.count >= 2)
+    .filter(p => p.count >= MIN_PATTERN_COUNT)
     .sort((a, b) => b.count - a.count || a.winningShot.localeCompare(b.winningShot));
 
 const shotLabelWithHand = (shot: AnalysisShot, hand?: Hand | null) =>

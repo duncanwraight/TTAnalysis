@@ -74,7 +74,7 @@ How the data works:
 - A service fault is recorded as the receiver's winning shot with `no_shot` for the server. The analysis charges it to the server as an unforced losing shot.
 - Who served each point is worked out from the scoring rules (`getServer`), not stored.
 
-What's on the page, in order: headline tiles, "What decided it" cards from fixed rules, unforced errors, how the match went (score gap per set, stages of the set, longest runs), categories for both players, patterns (winning/losing shot pairs seen twice or more), your winning and losing shots, scouting the opponent.
+What's on the page, in order: headline tiles, "What decided it" cards from fixed rules, unforced errors, how the match went (score gap per set, stages of the set, longest runs), categories for both players, patterns (winning/losing shot pairs seen three times or more, unforced errors left out), your winning and losing shots, scouting the opponent.
 
 Related features:
 

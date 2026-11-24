@@ -86,7 +86,7 @@ const CategoryTable = ({ title, rows, yours }: { title: string; rows: CategoryRo
 const PatternList = ({ title, patterns, yours }: { title: string; patterns: Pattern[]; yours: boolean }) => (
   <div className="card ma-list">
     <h3>{title}</h3>
-    {patterns.length === 0 && <p className="ma-small muted">No pair happened more than once.</p>}
+    {patterns.length === 0 && <p className="ma-small muted">No pair happened three times or more.</p>}
     {patterns.map(p => (
       <div key={p.key} className="ma-run">
         <span className={`ma-run-badge ${yours ? 'you' : 'opp'}`} aria-label={`${p.count} times`}>{p.count}</span>
@@ -476,7 +476,7 @@ const MatchAnalysis = () => {
           <section aria-labelledby="ma-patterns" className="section">
             <div className="section-head">
               <h2 id="ma-patterns">Patterns</h2>
-              <p>A winning shot and the losing shot it was played against, when the same pair happened more than once.</p>
+              <p>A winning shot and the losing shot it was played against, when the same pair happened three times or more. Unforced errors are left out.</p>
             </div>
             <div className="ma-grid halves">
               <PatternList title="How you won points" patterns={a.patterns.player} yours />
