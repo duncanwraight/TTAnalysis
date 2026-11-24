@@ -15,7 +15,7 @@ export const SUMMARY_MODEL = 'claude-opus-5-5';
 
 // Part of every input hash. Bump it when the prompt or input changes enough
 // that stored summaries should show as out of date.
-export const SUMMARY_VERSION = 2;
+export const SUMMARY_VERSION = 3;
 
 export type SummaryProblem = {
   title: string;
@@ -104,6 +104,9 @@ export type SummaryMatch = {
  */
 const buildShotGuide = (analysis: Analysis, shots: AnalysisShot[]): string[] => {
   const used = new Set([...analysis.shots.player, ...analysis.shots.opponent].map(s => s.shot));
+  // Every match has serves, and the serve guide also covers receiving, so it's
+  // always included even when no serve won or lost a point outright
+  for (const shot of shots) if (shot.name === 'serve') used.add(shotLabel(shot));
   const lines: string[] = [];
   const seen = new Set<string>();
   for (const shot of shots) {

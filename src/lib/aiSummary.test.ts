@@ -8,6 +8,8 @@ const SHOTS: AnalysisShot[] = [
     check_qualities: ['selection', 'placement'], technical_notes: 'Into the net: not enough lift.' },
   { id: 'block', name: 'block', display_name: 'Block', category: 'defence / blocks', category_order: 5 },
   { id: 'chop', name: 'chop', display_name: 'Chop', category: 'defence / blocks', category_order: 5, check_qualities: ['height'] },
+  { id: 'serve', name: 'serve', display_name: 'Serve', category: 'serve', category_order: 1,
+    check_qualities: ['spin'], technical_notes: 'Receiving: watch the ball as well as the bat.' },
 ];
 
 const point = (i: number, winner: 'player' | 'opponent', extra: Partial<AnalysisPoint> = {}): AnalysisPoint => ({
@@ -63,12 +65,14 @@ describe('summary input', () => {
   });
 
   it('ends with the guide for the shots used, in list order, leaving out shots with no guide', () => {
-    expect(input.split('\n').slice(-3)).toEqual([
+    expect(input.split('\n').slice(-4)).toEqual([
       'Shot guide. For each shot in this match: the qualities worth checking, then what a technical fault looks like.',
       'Loop. Check: Placement, Shot selection. Technical: Into the net: not enough lift.',
       'Push. Check: Length, Spin. Technical: no notes.',
+      'Serve. Check: Spin. Technical: Receiving: watch the ball as well as the bat.',
     ]);
-    // Chop has a guide but wasn't played; Block was played but has no guide
+    // Chop has a guide but wasn't played; Block was played but has no guide.
+    // Serve wasn't a winning or losing shot here, but every match has serves
     expect(input).not.toContain('Chop.');
     expect(input).not.toContain('Block.');
   });

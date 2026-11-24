@@ -368,7 +368,7 @@ const AdminShots: React.FC = () => {
               <span className="field-hint">The AI coach only suggests checking these for this shot, on either hand.</span>
             </fieldset>
             <label className="field">
-              <span>Technical faults to look for</span>
+              <span>{editingShot.name === 'serve' ? 'Technical faults to look for, serving or receiving' : 'Technical faults to look for'}</span>
               <textarea
                 rows={5}
                 maxLength={MAX_TECHNICAL_NOTES}
@@ -377,7 +377,10 @@ const AdminShots: React.FC = () => {
                 placeholder="What a fault looks like on video and what usually causes it. For example: into the net against backspin means not enough lift, or the bat closing too early."
               />
               <span className="field-hint">
-                The AI coach uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. {editingShot.technical_notes.length}/{MAX_TECHNICAL_NOTES}
+                {editingShot.name === 'serve'
+                  ? 'The AI coach uses these for problems with your serve and with receiving the opponent\'s. Say which notes are about receiving. '
+                  : 'The AI coach uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. '}
+                {editingShot.technical_notes.length}/{MAX_TECHNICAL_NOTES}
               </span>
             </label>
             <label className="field">
