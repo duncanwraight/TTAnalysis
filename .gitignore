@@ -38,6 +38,7 @@ coverage
 
 # Build
 build
+*.tsbuildinfo
 out
 .next
 
