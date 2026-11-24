@@ -91,7 +91,7 @@ const PatternList = ({ title, patterns, yours }: { title: string; patterns: Patt
       <div key={p.key} className="ma-run">
         <span className={`ma-run-badge ${yours ? 'you' : 'opp'}`} aria-label={`${p.count} times`}>{p.count}</span>
         <span>
-          {shotWithHand(p.winningShot, p.winningHand)} off {yours ? 'their' : 'your'} {shotWithHand(p.losingShot, p.losingHand).toLowerCase()}
+          {shotWithHand(p.winningShot, p.winningHand)} against {yours ? 'their' : 'your'} {shotWithHand(p.losingShot, p.losingHand).toLowerCase()}
         </span>
         <span />
       </div>
@@ -476,7 +476,7 @@ const MatchAnalysis = () => {
           <section aria-labelledby="ma-patterns" className="section">
             <div className="section-head">
               <h2 id="ma-patterns">Patterns</h2>
-              <p>A winning shot and the losing shot it came off, when the same pair happened more than once.</p>
+              <p>A winning shot and the losing shot it was played against, when the same pair happened more than once.</p>
             </div>
             <div className="ma-grid halves">
               <PatternList title="How you won points" patterns={a.patterns.player} yours />

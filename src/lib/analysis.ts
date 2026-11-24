@@ -104,7 +104,7 @@ export type Run = { side: Side; length: number; setNumber: number; fromPlayer: n
 
 export type Stage = { label: string; won: number; lost: number; unforced: number };
 
-/** A winning shot and the losing shot it came off, seen more than once. */
+/** A winning shot and the losing shot it was played against, seen more than once. */
 export type Pattern = {
   key: string;
   winningShot: string;
