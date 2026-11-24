@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import type { AnalysisData } from '../lib/api';
 import { Analysis, CategoryRow, Pattern, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
+import { buildSummaryInput, hashInput } from '../lib/aiSummary';
+import CoachSummary from '../components/analysis/CoachSummary';
 import '../styles/components/MatchAnalysis.css';
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((100 * n) / d) : 0);
@@ -108,7 +110,7 @@ const MatchAnalysis = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const api = useApi();
-  const { user } = useAuth();
+  const { user, aiSummariesEnabled } = useAuth();
   const contentRef = useRef<HTMLDivElement>(null);
 
   const [data, setData] = useState<AnalysisData | null>(null);
@@ -119,6 +121,10 @@ const MatchAnalysis = () => {
   const [shareError, setShareError] = useState<string | null>(null);
   // Shown when the link can't be copied automatically
   const [manualShareUrl, setManualShareUrl] = useState<string | null>(null);
+  // Hash of the summary input for the match as it is now, to spot a stale summary
+  const [currentHash, setCurrentHash] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const isSharedView = location.pathname.startsWith('/shared/');
   const isOwnerView = !!user && !isSharedView;
@@ -152,6 +158,32 @@ const MatchAnalysis = () => {
     points: data.points,
     shots: data.shots,
   }), [data]);
+
+  useEffect(() => {
+    if (!data || !analysis) return;
+    let cancelled = false;
+    hashInput(buildSummaryInput(data.match, analysis))
+      .then(hash => { if (!cancelled) setCurrentHash(hash); })
+      .catch(() => { /* Without the hash the summary just never shows as out of date */ });
+    return () => { cancelled = true; };
+  }, [data, analysis]);
+
+  // notes undefined keeps the saved notes; returns whether it worked
+  const generateSummary = async (notes?: string) => {
+    if (!id) return false;
+    setSummaryError(null);
+    setGenerating(true);
+    try {
+      const { notes: savedNotes, ...summary } = await api.match.generateSummary(id, notes);
+      setData(prev => (prev ? { ...prev, summary, summaryNotes: savedNotes } : prev));
+      return true;
+    } catch (err) {
+      setSummaryError(err instanceof Error ? err.message : 'The summary could not be written. Try again later.');
+      return false;
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const exportToPDF = async () => {
     if (!contentRef.current || !data) return;
@@ -324,6 +356,17 @@ const MatchAnalysis = () => {
               </div>
             </section>
           )}
+
+          <CoachSummary
+            stored={data.summary}
+            stale={!!data.summary && !!currentHash && data.summary.input_hash !== currentHash}
+            canGenerate={isOwnerView && aiSummariesEnabled}
+            generating={generating}
+            error={summaryError}
+            onGenerate={() => generateSummary()}
+            savedNotes={data.summaryNotes}
+            onRewrite={generateSummary}
+          />
 
           <section aria-labelledby="ma-ue" className="section">
             <div className="section-head">

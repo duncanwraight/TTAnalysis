@@ -3,7 +3,7 @@
  * can rely on one implementation.
  */
 
-import type { MatchSet, Point } from '../types/database.types';
+import type { MatchSet, Point } from '../types/database.types.ts';
 
 export type Side = 'player' | 'opponent';
 

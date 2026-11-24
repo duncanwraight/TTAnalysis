@@ -6,8 +6,9 @@
 import { Match, MatchSet, Point } from '../types/database.types';
 import { supabase, createSharedClient } from './supabase';
 import { invalidateShotData } from './shotsApi';
-import { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
+import { FunctionsHttpError, PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { AnalysisPoint, AnalysisSet, AnalysisShot } from './analysis';
+import type { MatchSummary } from './aiSummary';
 
 export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date' | 'best_of' | 'initial_server' | 'share_token'>;
 
@@ -18,7 +19,19 @@ export type AnalysisData = {
   sets: AnalysisSet[];
   points: AnalysisPoint[];
   shots: AnalysisShot[];
+  summary: StoredSummary | null;
+  // The owner's notes for the next rewrite; always null on a shared view
+  summaryNotes: string | null;
 };
+
+export type StoredSummary = {
+  summary: MatchSummary;
+  input_hash: string;
+  model: string;
+  created_at: string;
+};
+
+export type GeneratedSummary = StoredSummary & { notes: string | null };
 
 // Type guard for PostgrestError
 function isPostgrestError(error: unknown): error is PostgrestError {
@@ -125,7 +138,7 @@ export const matchApi = {
   // and points in recorded order, and the shot list. Works with the shared
   // client too, since the share token grants read access to all of them.
   getAnalysis: async (id: string, client: SupabaseClient = supabase): Promise<AnalysisData> => {
-    const [match, sets, points, shots] = await Promise.all([
+    const [match, sets, points, shots, summary, notes] = await Promise.all([
       client.from('matches')
         .select('id, opponent_name, player_name, event, video_url, date, best_of, initial_server, share_token')
         .eq('id', id)
@@ -139,6 +152,13 @@ export const matchApi = {
         .order('created_at', { ascending: true }),
       client.from('shots')
         .select('id, name, display_name, shot_categories(name, display_order)'),
+      // Readable by the owner, or with the share token on a shared client
+      client.from('match_summaries')
+        .select('summary, input_hash, model, created_at')
+        .eq('match_id', id)
+        .maybeSingle(),
+      // Owner only, so empty on a shared client
+      client.from('match_summary_notes').select('notes').eq('match_id', id).maybeSingle(),
     ]);
 
     for (const [name, result] of [['Match', match], ['Sets', sets], ['Points', points], ['Shots', shots]] as const) {
@@ -159,7 +179,26 @@ export const matchApi = {
         category: s.shot_categories?.name ?? '',
         category_order: s.shot_categories?.display_order ?? 0,
       })),
+      // A summary that fails to load shouldn't take the analysis down with it
+      summary: summary.error ? null : (summary.data as StoredSummary | null),
+      summaryNotes: notes.error ? null : (notes.data?.notes ?? null),
     };
+  },
+
+  // Ask the match-summary Edge Function for the AI summary. Without notes it
+  // returns the stored one if the points haven't changed. With notes it always
+  // rewrites the summary, and an empty string clears the saved notes.
+  generateSummary: async (id: string, notes?: string): Promise<GeneratedSummary> => {
+    const { data, error } = await supabase.functions.invoke('match-summary', { body: { matchId: id, notes } });
+    if (error) {
+      let message = 'The summary could not be written. Try again later.';
+      if (error instanceof FunctionsHttpError) {
+        const body = await error.context.json().catch(() => null);
+        if (typeof body?.error === 'string') message = body.error;
+      }
+      throw new Error(message);
+    }
+    return data as GeneratedSummary;
   },
 
   // Create a new match

@@ -13,6 +13,8 @@ type AuthContextType = {
   isAdmin: boolean;
   // True until the admin status for the current user has been looked up
   adminLoading: boolean;
+  // Set per user by an admin; lets the user generate AI match summaries
+  aiSummariesEnabled: boolean;
   // The user's own name, used as the default player on new matches
   displayName: string | null;
   saveDisplayName: (name: string) => Promise<void>;
@@ -24,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [aiSummariesEnabled, setAiSummariesEnabled] = useState(false);
   // The user whose admin status isAdmin reflects
   const [adminCheckedFor, setAdminCheckedFor] = useState<string | null>(null);
 
@@ -50,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAdminStatus = async () => {
       if (!session?.user) {
         setIsAdmin(false);
+        setAiSummariesEnabled(false);
         return;
       }
 
@@ -57,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Check if user has a profile and is admin
         const { data, error } = await supabase
           .from('profiles')
-          .select('is_admin')
+          .select('is_admin, ai_summaries_enabled')
           .eq('id', session.user.id)
           .single();
 
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setIsAdmin(data?.is_admin || false);
+        setAiSummariesEnabled(data?.ai_summaries_enabled || false);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
@@ -118,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     isAdmin,
+    aiSummariesEnabled,
     adminLoading: !!session?.user && adminCheckedFor !== session.user.id,
     displayName: typeof metadataName === 'string' && metadataName.trim() ? metadataName.trim() : null,
     saveDisplayName,

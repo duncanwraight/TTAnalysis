@@ -7,7 +7,7 @@
  * Every figure here is about how points ended, not every shot in a rally.
  */
 
-import { Side, getServer, otherSide } from './scoring';
+import { Side, getServer, otherSide } from './scoring.ts';
 
 export type Hand = 'fh' | 'bh';
 

@@ -37,6 +37,17 @@
 .admin-category-head h2 { font-size: 18px; }
 .admin-category-head .faint { font-weight: 400; font-size: 14px; }
 .admin-empty { font-size: 14px; padding: 8px 0; }
+.admin-actions { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.admin-ai { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.admin-ai-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.admin-ai-head h2 { font-size: 18px; margin-bottom: 4px; }
+.admin-ai-head p { font-size: 14px; }
+.admin-ai-budget { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.admin-ai-budget input { width: 96px; min-height: 36px; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
+.admin-ai-bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.admin-ai-bar > div { height: 100%; background: var(--ink-2); }
+.admin-ai-bar > div.full { background: var(--danger); }
+.admin-ai-note { font-size: 13px; }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 
 @media (max-width: 640px) {
