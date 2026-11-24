@@ -330,7 +330,7 @@ const MatchAnalysis = () => {
             <div className="section-head">
               <h2 id="ma-ue">Unforced errors</h2>
               <p>Points you gave away, by losing shot. This is where practice pays off fastest.</p>
-              <p className="ma-definition">{UNFORCED_ERROR_DEFINITION} A shot that missed because the other player made it hard is forced, not unforced.</p>
+              <p className="ma-note ma-definition"><strong>What counts as unforced.</strong> {UNFORCED_ERROR_DEFINITION} A shot that missed because the other player made it hard is forced, not unforced.</p>
             </div>
             {a.unforced.recorded ? (
               <>

@@ -46,7 +46,8 @@
 }
 
 /* Unforced error definition */
-.ma-definition { max-width: 760px; }
+/* Uses .ma-note's look, but sits inside a section heading rather than under the page header */
+.section-head .ma-note.ma-definition { margin-top: 4px; font-size: 13px; color: var(--ma-ink-3); }
 
 /* How to read note */
 .ma-note {
