@@ -4,9 +4,9 @@
  */
 
 import { Match, MatchSet, Point } from '../types/database.types';
-import { supabase } from './supabase';
+import { supabase, createSharedClient } from './supabase';
 import { invalidateShotData } from './shotsApi';
-import { PostgrestError } from '@supabase/supabase-js';
+import { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 
 // Type guard for PostgrestError
 function isPostgrestError(error: unknown): error is PostgrestError {
@@ -18,9 +18,8 @@ function isPostgrestError(error: unknown): error is PostgrestError {
  * Match API functions
  */
 export const matchApi = {
-  // Get all matches
-  // Get all matches owned by a user. The user_id filter is needed because RLS
-  // also exposes other users' shared matches.
+  // Get all matches owned by a user. Filter by user_id explicitly rather than
+  // relying on RLS to scope the results.
   getAllMatches: async (userId: string) => {
     const { data, error } = await supabase
       .from('matches')
@@ -64,9 +63,55 @@ export const matchApi = {
     };
   },
 
+  // Get the analysis for a shared match from its share token. Throws if the
+  // token is unknown or sharing has been turned off.
+  getSharedAnalysis: async (shareToken: string) => {
+    const client = createSharedClient(shareToken);
+    const { data, error } = await client
+      .from('matches')
+      .select('id')
+      .eq('share_token', shareToken)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error('Shared match not found');
+    return matchApi.getAnalysis(data.id, client);
+  },
+
+  // Turn on sharing, returning the share token (reuses an existing one)
+  enableSharing: async (id: string) => {
+    const { data: existing, error: readError } = await supabase
+      .from('matches')
+      .select('share_token')
+      .eq('id', id)
+      .single();
+
+    if (readError) throw readError;
+    if (existing.share_token) return existing.share_token as string;
+
+    const shareToken = crypto.randomUUID();
+    const { error } = await supabase
+      .from('matches')
+      .update({ share_token: shareToken })
+      .eq('id', id);
+
+    if (error) throw error;
+    return shareToken;
+  },
+
+  // Turn off sharing. The old link stops working for good.
+  disableSharing: async (id: string) => {
+    const { error } = await supabase
+      .from('matches')
+      .update({ share_token: null })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
   // Get match analysis
-  getAnalysis: async (id: string) => {
-    
+  getAnalysis: async (id: string, client: SupabaseClient = supabase) => {
+
     const [
       matchSummary,
       shotDistribution,
@@ -78,47 +123,47 @@ export const matchApi = {
       luckyShots
     ] = await Promise.all([
       // Match Summary
-      supabase.from('match_summary')
+      client.from('match_summary')
         .select('*')
         .eq('match_id', id)
         .single(),
 
       // Shot Distribution (updated to use new breakdown view)
-      supabase.from('player_shot_breakdown')
+      client.from('player_shot_breakdown')
         .select('*')
         .eq('match_id', id)
         .order('player_total', { ascending: false }),
 
       // Hand Analysis
-      supabase.from('hand_analysis')
+      client.from('hand_analysis')
         .select('*')
         .eq('match_id', id),
 
       // Shot Hand Analysis
-      supabase.from('shot_hand_analysis')
+      client.from('shot_hand_analysis')
         .select('*')
         .eq('match_id', id),
 
       // Set Breakdown
-      supabase.from('set_breakdown')
+      client.from('set_breakdown')
         .select('*')
         .eq('match_id', id)
         .order('set_number', { ascending: true }),
 
       // Category Breakdown
-      supabase.from('category_breakdown')
+      client.from('category_breakdown')
         .select('*')
         .eq('match_id', id)
         .order('total_shots', { ascending: false }),
 
       // Tactical Insights
-      supabase.from('tactical_insights')
+      client.from('tactical_insights')
         .select('*')
         .eq('match_id', id)
         .order('win_percentage', { ascending: false }),
 
       // Lucky Shots - fetch all points with lucky shot flag
-      supabase.from('points')
+      client.from('points')
         .select('winner, winning_shot_id, is_lucky_shot')
         .eq('match_id', id)
     ]);
@@ -160,7 +205,7 @@ export const matchApi = {
 
   // Create a new match
   createMatch: async (
-    match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'best_of' | 'is_shared' | 'is_complete'> & { best_of?: number },
+    match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'best_of' | 'share_token' | 'is_complete'> & { best_of?: number },
     userId?: string
   ) => {
     let user_id = userId;

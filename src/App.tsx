@@ -67,10 +67,9 @@ function App() {
           />
           
           {/* Public shared analysis route - no authentication required */}
-          <Route 
-            path="/shared/matches/:id/analysis" 
-            element={<MatchAnalysis />} 
-          />
+          <Route path="/shared/:token" element={<MatchAnalysis />} />
+          {/* Old-style links (match ID instead of token) now show the invalid link message */}
+          <Route path="/shared/matches/:token/analysis" element={<MatchAnalysis />} />
           
           {/* Admin routes requiring admin status */}
           <Route 

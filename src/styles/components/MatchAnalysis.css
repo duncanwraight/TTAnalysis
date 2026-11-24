@@ -905,6 +905,22 @@
   flex-wrap: wrap;
 }
 
+.share-link-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 32rem;
+  margin: 1rem auto 0;
+}
+
+.share-link-manual input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
 /* Loading and Error states */
 .loading-container,
 .error-container {

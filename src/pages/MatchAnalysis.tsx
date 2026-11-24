@@ -16,7 +16,7 @@ const formatText = (text: string): string => {
 };
 
 const MatchAnalysis = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, token } = useParams<{ id?: string; token?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const api = useApi();
@@ -28,6 +28,9 @@ const MatchAnalysis = () => {
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  // Shown when the link can't be copied automatically
+  const [manualShareUrl, setManualShareUrl] = useState<string | null>(null);
   
   // Sorting state for shot breakdown tables
   const [playerTableSort, setPlayerTableSort] = useState<{
@@ -43,29 +46,30 @@ const MatchAnalysis = () => {
   // Filter state for shot breakdown tables
   const [hideMinorShots, setHideMinorShots] = useState(false);
   
-  const isSharedView = location.pathname.includes('/shared/');
+  const isSharedView = location.pathname.startsWith('/shared/');
   const isAuthenticated = !!user;
   
   useEffect(() => {
     const fetchAnalysis = async () => {
-      if (!id) {
-        setError('Missing match ID');
-        setLoading(false);
-        return;
-      }
-
       try {
-        const data = await api.match.getAnalysis(id);
-        setAnalysisData(data);
+        if (isSharedView) {
+          if (!token) throw new Error('Missing share token');
+          setAnalysisData(await api.match.getSharedAnalysis(token));
+        } else {
+          if (!id) throw new Error('Missing match ID');
+          setAnalysisData(await api.match.getAnalysis(id));
+        }
       } catch (err) {
-        setError('Failed to load analysis data');
+        setError(isSharedView
+          ? 'This shared link is invalid or sharing has been turned off.'
+          : 'Failed to load analysis data');
       } finally {
         setLoading(false);
       }
     };
 
     fetchAnalysis();
-  }, [id, api]);
+  }, [id, token, isSharedView, api]);
 
   const exportToPDF = async () => {
     if (!contentRef.current || !analysisData?.matchSummary) return;
@@ -100,46 +104,46 @@ const MatchAnalysis = () => {
 
   const handleShare = async () => {
     if (!id) return;
-    
-    const shareUrl = `${window.location.origin}/shared/matches/${id}/analysis`;
+    setShareError(null);
 
-    // The shared link only works once the match is marked as shared
-    if (!analysisData?.matchSummary?.is_shared) {
-      try {
-        await api.match.updateMatch(id, { is_shared: true });
-        setAnalysisData((prev: any) => ({
-          ...prev,
-          matchSummary: { ...prev.matchSummary, is_shared: true }
-        }));
-      } catch (error) {
-        console.error('Failed to enable sharing:', error);
-        alert('Could not enable sharing for this match. Please try again.');
-        return;
-      }
+    let shareToken: string;
+    try {
+      shareToken = await api.match.enableSharing(id);
+      setAnalysisData((prev: any) => ({
+        ...prev,
+        matchSummary: { ...prev.matchSummary, share_token: shareToken }
+      }));
+    } catch (error) {
+      console.error('Failed to enable sharing:', error);
+      setShareError('Could not enable sharing for this match. Please try again.');
+      return;
     }
 
+    const shareUrl = `${window.location.origin}/shared/${shareToken}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
+      setManualShareUrl(null);
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 2000);
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-      // Fallback: show the URL in a prompt
-      prompt('Copy this link to share:', shareUrl);
+      // Clipboard access can be blocked, so show the link to copy by hand
+      setManualShareUrl(shareUrl);
     }
   };
-  
+
   const handleStopSharing = async () => {
     if (!id) return;
+    setShareError(null);
     try {
-      await api.match.updateMatch(id, { is_shared: false });
+      await api.match.disableSharing(id);
+      setManualShareUrl(null);
       setAnalysisData((prev: any) => ({
         ...prev,
-        matchSummary: { ...prev.matchSummary, is_shared: false }
+        matchSummary: { ...prev.matchSummary, share_token: null }
       }));
     } catch (error) {
       console.error('Failed to stop sharing:', error);
-      alert('Could not stop sharing this match. Please try again.');
+      setShareError('Could not stop sharing this match. Please try again.');
     }
   };
 
@@ -1010,7 +1014,7 @@ const MatchAnalysis = () => {
               {shareSuccess ? '✓ Link Copied!' : '🔗 Share Analysis'}
             </button>
           )}
-          {isAuthenticated && !isSharedView && matchSummary?.is_shared && (
+          {isAuthenticated && !isSharedView && matchSummary?.share_token && (
             <button
               className="btn outline-btn"
               onClick={handleStopSharing}
@@ -1034,6 +1038,19 @@ const MatchAnalysis = () => {
             </button>
           )}
         </div>
+        {shareError && <div className="error-message">{shareError}</div>}
+        {manualShareUrl && (
+          <div className="share-link-manual">
+            <label htmlFor="share-link">Copy this link to share:</label>
+            <input
+              id="share-link"
+              type="text"
+              readOnly
+              value={manualShareUrl}
+              onFocus={(e) => e.target.select()}
+            />
+          </div>
+        )}
       </div>
     );
 

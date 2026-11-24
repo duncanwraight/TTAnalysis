@@ -19,6 +19,28 @@ export const supabase = createClient(
   }
 )
 
+/**
+ * Client for viewing a shared match. RLS only grants read access to a match
+ * whose share_token matches the x-share-token header. It never signs in, so
+ * it doesn't touch the main client's session.
+ */
+export const createSharedClient = (shareToken: string) =>
+  createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+        storageKey: 'sb-shared-view'
+      },
+      global: {
+        headers: { 'x-share-token': shareToken }
+      }
+    }
+  );
+
 // Force session invalidation on new deployments
 const currentVersion = import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA || 'dev';
 const storedVersion = localStorage.getItem('app_version');

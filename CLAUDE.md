@@ -73,7 +73,7 @@ The `start-dev.sh` script handles:
 - **Users**: id, email, name, preferences
 - **Shot Categories**: id, name, display_order
 - **Shots**: id, category_id, name, display_name, description, display_order
-- **Matches**: id, user_id, opponent_name, date, match_score, notes, initial_server, best_of, is_complete, is_shared (opt-in public read for the shared analysis link)
+- **Matches**: id, user_id, opponent_name, date, match_score, notes, initial_server, best_of, is_complete, share_token (random UUID set when sharing; RLS grants public read only to requests sending it in the x-share-token header)
 - **Sets**: id, match_id, set_number, score, player_score, opponent_score
 - **Points**: id, set_id, match_id, point_number (restarts each set; order by created_at across a match), winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, notes
 

@@ -26,7 +26,7 @@ export type Match = {
   notes?: string;
   initial_server?: 'player' | 'opponent';
   best_of: number;
-  is_shared: boolean;
+  share_token: string | null;
   is_complete: boolean;
   created_at: string;
   updated_at: string;
