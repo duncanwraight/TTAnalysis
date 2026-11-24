@@ -9,6 +9,7 @@ import Auth from './pages/Auth';
 import AdminPanel from './pages/AdminPanel';
 import AdminShots from './pages/AdminShots';
 import Debug from './pages/Debug';
+import ResetPassword from './pages/ResetPassword';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './index.css';
@@ -29,6 +30,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Protected routes requiring authentication */}
           <Route 

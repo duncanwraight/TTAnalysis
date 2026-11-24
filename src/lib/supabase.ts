@@ -10,7 +10,8 @@ export const supabase = createClient(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false
+      // Needed for password reset and email confirmation links
+      detectSessionInUrl: true
     },
     db: {
       schema: 'public'
