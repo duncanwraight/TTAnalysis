@@ -27,6 +27,7 @@ export type Match = {
   initial_server?: 'player' | 'opponent';
   best_of: number;
   is_shared: boolean;
+  is_complete: boolean;
   created_at: string;
   updated_at: string;
 };

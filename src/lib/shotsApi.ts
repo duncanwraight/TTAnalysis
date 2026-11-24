@@ -1,10 +1,10 @@
 /**
- * Utility module for shot-related operations using the API hook
- * Provides functions for retrieving and organizing shot data
+ * Shot categories and shots, loaded once per page load and shared between
+ * every ShotSelector and the match tracker.
  */
-import { useApi } from './useApi';
 
-// Types for shot data
+import { supabase } from './supabase';
+
 export interface ShotCategory {
   id: string;
   name: string;
@@ -20,68 +20,47 @@ export interface Shot {
   description?: string;
 }
 
-/**
- * Get shots by category name
- * @param shots Array of shots to filter
- * @param categories Array of categories to search in
- * @param categoryName Category name to filter by
- * @returns Filtered array of shots that belong to the specified category
- */
-export const getShotsByCategory = (
-  shots: Shot[], 
-  categories: ShotCategory[], 
-  categoryName: string
-): Shot[] => {
-  const category = categories.find(cat => cat.name === categoryName);
-  if (!category) return [];
-  
-  return shots.filter(shot => shot.category_id === category.id);
+export type ShotData = {
+  categories: ShotCategory[];
+  shots: Shot[];
+};
+
+let shotDataPromise: Promise<ShotData> | null = null;
+
+const fetchShotData = async (): Promise<ShotData> => {
+  const [categoriesResult, shotsResult] = await Promise.all([
+    supabase.from('shot_categories').select('*').order('display_order', { ascending: true }),
+    supabase.from('shots').select('*').order('display_order', { ascending: true }),
+  ]);
+
+  if (categoriesResult.error) throw categoriesResult.error;
+  if (shotsResult.error) throw shotsResult.error;
+
+  return {
+    categories: categoriesResult.data ?? [],
+    shots: shotsResult.data ?? [],
+  };
 };
 
 /**
- * Custom hook for accessing shot data
- * @returns Object with function to fetch shot data
+ * Load shot data, reusing the in-flight or completed request. A failed request
+ * isn't cached, so the next call retries.
  */
-export const useShotData = () => {
-  const api = useApi();
-  
-  /**
-   * Fetch all shot categories and their shots
-   * @returns Object containing categories and shots arrays
-   */
-  const fetchShotsWithCategories = async (): Promise<{
-    categories: ShotCategory[];
-    shots: Shot[];
-  }> => {
-    try {
-      // Fetch categories and shots using the API hook
-      const [categories, shots] = await Promise.all([
-        api.shot.getCategories(),
-        api.shot.getShots()
-      ]);
-      
-      // If no shots were loaded, or we got a bad response, return empty arrays
-      if (!shots || !Array.isArray(shots) || shots.length === 0) {
-        return {
-          categories: [],
-          shots: []
-        };
-      }
-      
-      // Simple pass-through without modifications
-      return {
-        categories: categories || [],
-        shots: shots || []
-      };
-    } catch (error) {
-      
-      // Fallback to empty arrays
-      return {
-        categories: [],
-        shots: []
-      };
-    }
-  };
-  
-  return { fetchShotsWithCategories };
+export const loadShotData = (): Promise<ShotData> => {
+  if (!shotDataPromise) {
+    shotDataPromise = fetchShotData().catch(error => {
+      shotDataPromise = null;
+      throw error;
+    });
+  }
+  return shotDataPromise;
 };
+
+/** Drop the cached shot data, e.g. after an admin edits shots. */
+export const invalidateShotData = () => {
+  shotDataPromise = null;
+};
+
+/** Shot names with special handling in the tracker. */
+export const SERVICE_FAULT_SHOT = 'service_fault';
+export const NO_SHOT = 'no_shot';

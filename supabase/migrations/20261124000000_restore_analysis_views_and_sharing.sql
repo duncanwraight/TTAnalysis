@@ -11,6 +11,8 @@
 -- Also adds:
 --   matches.best_of   - number of sets the match is played over
 --   matches.is_shared - opt-in public read access for the shared analysis link
+--   matches.is_complete - set when a match ends, including when the last set
+--                         is ended early, so reopening it shows the result
 
 -- Match settings ------------------------------------------------------------
 
@@ -20,6 +22,9 @@ ALTER TABLE public.matches
 
 ALTER TABLE public.matches
   ADD COLUMN IF NOT EXISTS is_shared BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE public.matches
+  ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Shared analysis access ----------------------------------------------------
 

@@ -81,7 +81,9 @@ const NewMatch = () => {
         date: formData.date,
         match_score: '0-0',
         notes: formData.notes,
-        initial_server: formData.initial_server
+        initial_server: formData.initial_server,
+        // <select> values arrive as strings
+        best_of: Number(formData.best_of)
       };
       
       // Send API request to create match using our API hook

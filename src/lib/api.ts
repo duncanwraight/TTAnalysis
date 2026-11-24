@@ -5,6 +5,7 @@
 
 import { Match, MatchSet, Point } from '../types/database.types';
 import { supabase } from './supabase';
+import { invalidateShotData } from './shotsApi';
 import { PostgrestError } from '@supabase/supabase-js';
 
 // Type guard for PostgrestError
@@ -48,7 +49,8 @@ export const matchApi = {
     const [matchResult, setsResult, pointsResult] = await Promise.all([
       supabase.from('matches').select('*').eq('id', id).single(),
       supabase.from('sets').select('*').eq('match_id', id).order('set_number', { ascending: true }),
-      supabase.from('points').select('*').eq('match_id', id).order('point_number', { ascending: true })
+      // Recording order; point_number restarts every set
+      supabase.from('points').select('*').eq('match_id', id).order('created_at', { ascending: true })
     ]);
 
     if (matchResult.error) throw matchResult.error;
@@ -158,7 +160,7 @@ export const matchApi = {
 
   // Create a new match
   createMatch: async (
-    match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'best_of' | 'is_shared'> & { best_of?: number },
+    match: Omit<Match, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'best_of' | 'is_shared' | 'is_complete'> & { best_of?: number },
     userId?: string
   ) => {
     let user_id = userId;
@@ -232,6 +234,16 @@ export const setApi = {
 
     if (error) throw error;
     return data;
+  },
+
+  // Delete a set
+  deleteSet: async (id: string) => {
+    const { error } = await supabase
+      .from('sets')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   // Update a set
@@ -323,6 +335,7 @@ export const shotApi = {
       .single();
 
     if (error) throw error;
+    invalidateShotData();
     return data;
   },
 
@@ -336,6 +349,7 @@ export const shotApi = {
       .single();
 
     if (error) throw error;
+    invalidateShotData();
     return data;
   },
 
@@ -347,6 +361,7 @@ export const shotApi = {
       .eq('id', id);
 
     if (error) throw error;
+    invalidateShotData();
     return { message: 'Category deleted successfully', id };
   },
 
@@ -365,6 +380,7 @@ export const shotApi = {
       .single();
 
     if (error) throw error;
+    invalidateShotData();
     return data;
   },
 
@@ -384,6 +400,7 @@ export const shotApi = {
       .single();
 
     if (error) throw error;
+    invalidateShotData();
     return data;
   },
 
@@ -395,6 +412,7 @@ export const shotApi = {
       .eq('id', id);
 
     if (error) throw error;
+    invalidateShotData();
     return { message: 'Shot deleted successfully', id };
   }
 };

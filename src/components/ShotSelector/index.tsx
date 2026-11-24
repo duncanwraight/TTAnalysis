@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ShotCategory from './ShotCategory';
 import ShotList from './ShotList';
-import { useShotData, ShotCategory as DbShotCategory, Shot } from '../../lib/shotsApi';
+import { loadShotData, ShotCategory as DbShotCategory, Shot, NO_SHOT, SERVICE_FAULT_SHOT } from '../../lib/shotsApi';
 import { ShotInfo } from '../../types/database.types';
 import '../../styles/components/ShotSelector.css';
 
@@ -27,8 +27,6 @@ type ShotSelectorProps = {
 /* Persistent State Variables */
 // These variables persist between component renders
 let lastSelectedCategory = 'serve';
-let cachedCategories: DbShotCategory[] = [];
-let cachedShots: Shot[] = [];
 
 const ShotSelector: React.FC<ShotSelectorProps> = ({ 
   onSelect, 
@@ -40,18 +38,15 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   isWinningPlayer = true
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>(lastSelectedCategory);
-  const [dbCategories, setDbCategories] = useState<DbShotCategory[]>(cachedCategories);
-  const [dbShots, setDbShots] = useState<Shot[]>(cachedShots);
-  const [loading, setLoading] = useState<boolean>(cachedCategories.length === 0);
+  const [dbCategories, setDbCategories] = useState<DbShotCategory[]>([]);
+  const [dbShots, setDbShots] = useState<Shot[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
   const [canScrollRight, setCanScrollRight] = useState<boolean>(false);
 
   const categoriesRef = useRef<HTMLDivElement>(null);
   
-  /* Data Fetching */
-  const { fetchShotsWithCategories } = useShotData();
-
   /* Scroll Detection */
   const updateScrollState = useCallback(() => {
     const container = categoriesRef.current;
@@ -81,28 +76,27 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
   
   /* Data Loading on Component Mount */
   useEffect(() => {
-    const loadShotData = async () => {
-      try {
-        if (cachedCategories.length === 0 || cachedShots.length === 0) {
-          setLoading(true);
-          const { categories, shots } = await fetchShotsWithCategories();
-          
-          // Cache the data
-          cachedCategories = categories;
-          cachedShots = shots;
-          
-          setDbCategories(categories);
-          setDbShots(shots);
-        }
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load shots');
-        setLoading(false);
-      }
+    let cancelled = false;
+
+    loadShotData()
+      .then(({ categories, shots }) => {
+        if (cancelled) return;
+        setDbCategories(categories);
+        // no_shot is a placeholder recorded automatically on service faults
+        setDbShots(shots.filter(s => s.name !== NO_SHOT));
+        setError(null);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load shots');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-    
-    loadShotData();
-  }, [fetchShotsWithCategories]);
+  }, []);
 
   // When a category is clicked
   const handleCategoryClick = (categoryId: string) => {
@@ -180,8 +174,8 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     
     const shotName = shot.name.toLowerCase();
     
-    // If the shot is not serve related, it's never disabled by server status
-    if (!shotName.includes('serve')) {
+    // Only serve and service fault depend on who is serving
+    if (shotName !== 'serve' && shotName !== SERVICE_FAULT_SHOT) {
       return false;
     }
 
@@ -203,7 +197,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
     if (shotName === 'serve') {
       // Can only use 'serve' shot if this player IS the server
       return !playerIsServer; // Disable if the player is not the server
-    } else if (shotName.includes('service_fault')) {
+    } else if (shotName === SERVICE_FAULT_SHOT) {
       // Can only use 'service_fault' shot if this player is NOT the server
       return playerIsServer; // Disable if the player is the server
     }
@@ -240,7 +234,7 @@ const ShotSelector: React.FC<ShotSelectorProps> = ({
       >
         {dbCategories.length > 0 ? (
           // Use database categories if available
-          dbCategories
+          [...dbCategories]
             .sort((a, b) => a.display_order - b.display_order)
             .map((category) => (
               <ShotCategory 

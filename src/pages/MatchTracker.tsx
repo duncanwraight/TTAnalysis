@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PlayerPanel from '../components/PlayerPanel';
@@ -8,21 +8,89 @@ import PointHistory from '../components/PointHistory';
 import { Match, MatchSet, Point, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
-import { useShotData } from '../lib/shotsApi';
-
+import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT } from '../lib/shotsApi';
+import {
+  DEFAULT_BEST_OF,
+  SetScore,
+  Side,
+  finishedSets,
+  getServer,
+  isMatchOver,
+  isSetOver,
+  matchScoreString,
+  setLeader,
+  setScoreString,
+} from '../lib/scoring';
 
 type MatchState = {
   currentSet: number;
-  sets: {
-    playerScore: number;
-    opponentScore: number;
-  }[];
+  sets: SetScore[];
   points: Point[];
   isMatchComplete: boolean;
-  // Adding an array of database sets for mapping set_number to set_id
+  // Database rows for the sets that exist so far, ordered by set_number
   dbSets: MatchSet[];
-  // Track the current set's ID
+  // ID of the current set's row, or null if it hasn't been created yet
   currentSetId: string | null;
+};
+
+const EMPTY_SET: SetScore = { playerScore: 0, opponentScore: 0 };
+
+// Supabase errors are plain objects with a message, not Error instances
+const errorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return 'Unknown error';
+};
+
+/**
+ * Build tracker state from what's in the database. Set rows hold the scores;
+ * the current set is the last row unless that set is over, in which case the
+ * next set starts (its row is created when its first point is recorded).
+ */
+const buildMatchState = (
+  dbSetsIn: MatchSet[],
+  points: Point[],
+  bestOf: number,
+  markedComplete: boolean
+): MatchState => {
+  const dbSets = [...dbSetsIn].sort((a, b) => a.set_number - b.set_number);
+
+  if (dbSets.length === 0) {
+    return {
+      currentSet: 1,
+      sets: [{ ...EMPTY_SET }],
+      points,
+      isMatchComplete: false,
+      dbSets: [],
+      currentSetId: null,
+    };
+  }
+
+  const sets: SetScore[] = dbSets.map(s => ({ playerScore: s.player_score, opponentScore: s.opponent_score }));
+  const last = dbSets[dbSets.length - 1];
+  const isMatchComplete = markedComplete || isMatchOver(finishedSets(sets), bestOf);
+
+  if (!isMatchComplete && isSetOver(sets[sets.length - 1])) {
+    return {
+      currentSet: last.set_number + 1,
+      sets: [...sets, { ...EMPTY_SET }],
+      points,
+      isMatchComplete,
+      dbSets,
+      currentSetId: null,
+    };
+  }
+
+  return {
+    currentSet: last.set_number,
+    sets,
+    points,
+    isMatchComplete,
+    dbSets,
+    currentSetId: last.id,
+  };
 };
 
 const MatchTracker = () => {
@@ -30,26 +98,30 @@ const MatchTracker = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const api = useApi();
-  const { fetchShotsWithCategories } = useShotData();
-  
+  const userId = user?.id;
+
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [matchState, setMatchState] = useState<MatchState>({
     currentSet: 1,
-    sets: [{ playerScore: 0, opponentScore: 0 }],
+    sets: [{ ...EMPTY_SET }],
     points: [],
     isMatchComplete: false,
     dbSets: [],
     currentSetId: null
   });
-  
+
   /* Point Recording State */
-  const [selectedWinner, setSelectedWinner] = useState<'player' | 'opponent' | null>(null);
+  const [selectedWinner, setSelectedWinner] = useState<Side | null>(null);
   const [winningShot, setWinningShot] = useState<ShotInfo | null>(null);
   const [otherShot, setOtherShot] = useState<ShotInfo | null>(null);
   const [isLuckyPoint, setIsLuckyPoint] = useState<boolean>(false);
   const [isWinningShotMinimized, setIsWinningShotMinimized] = useState<boolean>(false);
+
+  // Guards against a second tap starting another save while one is in flight
+  const savingRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Mobile detection hook
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth <= 768);
@@ -62,129 +134,82 @@ const MatchTracker = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
-  // State for tracking if we can undo the last point
-  const [canUndo, setCanUndo] = useState<boolean>(false);
-  
-  // State for end match confirmation
+
   const [showEndMatchConfirm, setShowEndMatchConfirm] = useState<boolean>(false);
-  
-  /* Server Tracking */
-  // Initial server is tracked separately from current server
-  // Default to 'player' but will be overridden by match data if available
-  const [initialServer, setInitialServer] = useState<'player' | 'opponent'>('player');
+
+  const bestOf = match?.best_of ?? DEFAULT_BEST_OF;
+  const initialServer: Side = match?.initial_server === 'opponent' ? 'opponent' : 'player';
+  const canUndo = matchState.points.length > 0;
 
   /* Match Data Loading */
   useEffect(() => {
+    let cancelled = false;
+
     const loadMatchData = async () => {
+      setLoading(true);
+      setError(null);
+
+      if (!id) {
+        setError('No match ID provided');
+        setLoading(false);
+        return;
+      }
+
+      if (!userId) {
+        setError('You need to be signed in to record a match');
+        setLoading(false);
+        return;
+      }
+
       try {
-        setLoading(true);
-        setError(null); // Reset any previous errors
-        
-        if (!id) {
-          const errorMsg = 'No match ID provided';
-          setError(errorMsg);
-          setLoading(false);
+        const { match, sets, points } = await api.match.getFullMatchById(id);
+        if (cancelled) return;
+
+        if (match.user_id !== userId) {
+          setError('This match belongs to another account. You can view its analysis but not record points.');
           return;
         }
-        
-        // Check user authentication
-        if (!user) {
-          const errorMsg = 'User not authenticated, cannot load match';
-          setError(errorMsg);
-          setLoading(false);
-          return;
-        }
-        
-        try {
-          // Use the API hook to fetch match data - token handling is automatic
-          const matchData = await api.match.getFullMatchById(id);
-          // Match exists in the database
-          const { match, sets, points } = matchData;
-          
-          // Set match data
-          setMatch(match);
-          
-          // Set initial server
-          setInitialServer(match.initial_server || 'player');
-          
-          // Convert sets to the format used in state
-          const matchSets = sets.map(set => ({
-            playerScore: set.player_score,
-            opponentScore: set.opponent_score
-          }));
-          
-          // Ensure we have at least one set
-          if (matchSets.length === 0) {
-            matchSets.push({ playerScore: 0, opponentScore: 0 });
-          }
-          
-          // Set the current set to the last one
-          const currentSet = sets.length > 0 ? sets[sets.length - 1].set_number : 1;
-          
-          // Find the current set ID
-          const currentSetId = sets.length > 0 ? sets[sets.length - 1].id : null;
-          
-          setMatchState({
-            currentSet,
-            sets: matchSets,
-            points,
-            isMatchComplete: false, // We'll calculate this based on sets later
-            dbSets: sets, // Store the database sets for ID mapping
-            currentSetId
-          });
-          
-          // Set canUndo based on whether there are points
-          setCanUndo(points.length > 0);
-          
-        } catch (err) {
-          // Match doesn't exist in database or couldn't be loaded
-          
-          // Create a default match
-          const defaultMatch = {
-            opponent_name: 'Opponent',
-            date: new Date().toISOString().split('T')[0],
-            match_score: '0-0',
-            notes: '',
-            initial_server: 'player' as 'player' | 'opponent'
-          };
-          
-          // Try to get data from localStorage for backward compatibility
-          try {
-            const storedMatch = localStorage.getItem(`match_${id}`);
-            if (storedMatch) {
-              const parsedMatch = JSON.parse(storedMatch);
-              
-              // Override default values with stored ones
-              defaultMatch.opponent_name = parsedMatch.opponent_name || defaultMatch.opponent_name;
-              defaultMatch.date = parsedMatch.date || defaultMatch.date;
-              defaultMatch.notes = parsedMatch.notes || defaultMatch.notes;
-              defaultMatch.initial_server = parsedMatch.initial_server || defaultMatch.initial_server;
-            }
-          } catch (e) {
-          }
-          
-          // Create the match in database using the API hook
-          try {
-            const newMatch = await api.match.createMatch(defaultMatch);
-            setMatch(newMatch);
-            setInitialServer(defaultMatch.initial_server);
-          } catch (createError) {
-            setError(`Failed to create match: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
-            throw createError;
-          }
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        setError(`Failed to load match: ${error instanceof Error ? error instanceof Error ? error.message : "Unknown error" : 'Unknown error'}`);
-        setLoading(false);
+
+        setMatch(match);
+        setMatchState(buildMatchState(sets, points, match.best_of ?? DEFAULT_BEST_OF, match.is_complete));
+      } catch (err) {
+        if (!cancelled) setError(`Failed to load match: ${errorMessage(err)}`);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
-    
+
     loadMatchData();
-  }, [id, user]);
-  
+    return () => {
+      cancelled = true;
+    };
+  }, [id, userId, api]);
+
+  /* Saving helpers */
+
+  // Run a database operation with the double-tap guard held
+  const withSaving = async (operation: () => Promise<void>) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+    try {
+      await operation();
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  // Write the match score and completion flag, keeping local state in step
+  const syncMatchResult = async (sets: SetScore[], allSetsFinished: boolean, isComplete: boolean) => {
+    if (!match) return;
+    const finished = allSetsFinished ? sets : finishedSets(sets);
+    const updates = { match_score: matchScoreString(finished), is_complete: isComplete };
+    if (updates.match_score === match.match_score && updates.is_complete === match.is_complete) return;
+    await api.match.updateMatch(match.id, updates);
+    setMatch(prev => (prev ? { ...prev, ...updates } : prev));
+  };
+
   /* Point Flow Management */
   const resetPointFlow = () => {
     setSelectedWinner(null);
@@ -193,472 +218,246 @@ const MatchTracker = () => {
     setIsLuckyPoint(false);
     setIsWinningShotMinimized(false);
   };
-  
+
   // Handler for when a player panel is clicked (indicating who won the point)
-  const handlePlayerSelect = (winner: 'player' | 'opponent') => {
+  const handlePlayerSelect = (winner: Side) => {
     setSelectedWinner(winner);
   };
-  
+
   // Handler for when a winning shot is selected
   const handleWinningShotSelect = async (shot: ShotInfo) => {
     if (!shot || !shot.shotId) return;
-    // Apply the lucky point state to the shot
-    const shotWithLucky: ShotInfo = {
-      ...shot,
-      isLucky: isLuckyPoint
-    };
-    setWinningShot(shotWithLucky);
 
-    // Auto-minimize the winning shot selector to show the other shot selector (mobile only)
+    setWinningShot(shot);
+
+    // Auto-minimize winning shot section on mobile after selection
     if (isMobile) {
       setIsWinningShotMinimized(true);
     }
 
-    // Check if this is a service fault - if so, record point immediately without other shot
+    // A service fault ends the point with no shot from the other player
     try {
-      const { shots } = await fetchShotsWithCategories();
-      if (shots.some(s => s.id === shot.shotId && s.name === 'service_fault')) {
-        if (selectedWinner) {
-          // Use the "no_shot" entry for service fault scenarios
-          const noShotId = shots.find(s => s.name === 'no_shot')?.id;
-          if (noShotId) {
-            const noOtherShot: ShotInfo = {
-              shotId: noShotId,
-              hand: 'fh', // Default hand (not relevant for no_shot)
-              isLucky: false
-            };
+      const { shots } = await loadShotData();
+      const isServiceFault = shots.some(s => s.id === shot.shotId && s.name === SERVICE_FAULT_SHOT);
+      if (!isServiceFault || !selectedWinner) return;
 
-            // Record the point immediately
-            await recordPoint(selectedWinner, shotWithLucky, noOtherShot);
-          }
-        }
+      const noShotId = shots.find(s => s.name === NO_SHOT)?.id;
+      if (!noShotId) {
+        alert('The "no shot" entry is missing from the shot list, so this service fault can\'t be recorded automatically. Pick the other shot manually.');
+        return;
       }
+
+      await recordPoint(selectedWinner, shot, { shotId: noShotId, hand: 'fh' });
     } catch (error) {
-      // If we can't fetch shots data, just continue with normal flow
       console.error('Failed to check for service fault:', error);
     }
   };
-  
+
   // Handler for when the other shot is selected
   const handleOtherShotSelect = (shot: ShotInfo) => {
     if (!shot || !shot.shotId) return;
-    
-    // Save the shot info in state
+
     setOtherShot(shot);
-    
-    // Always record the point immediately after other shot is selected
+
     if (winningShot && selectedWinner) {
       recordPoint(selectedWinner, winningShot, shot);
     }
   };
-  
+
   // Handler for undoing a winning shot selection
   const handleUndoWinningShot = () => {
     setWinningShot(null);
     setIsWinningShotMinimized(false);
   };
-  
+
   // Handler for undoing an other shot selection
   const handleUndoOtherShot = () => {
     setOtherShot(null);
   };
-  
-  // Record a point with all the data collected
-  const recordPoint = async (winner: 'player' | 'opponent', winningShot: ShotInfo, otherShot: ShotInfo) => {
-    if (!match) {
-      resetPointFlow();
-      return;
-    }
-    
-    // API calls are now handled by the useApi hook with automatic token handling
-    
-    try {
-      // Update local state first for immediate UI feedback
-      const pointNumber = getTotalPoints() + 1;
-      
-      // Update scores in local state
-      const updatedSets = [...matchState.sets];
-      const currentSetIndex = matchState.currentSet - 1;
-      
-      if (winner === 'player') {
-        updatedSets[currentSetIndex].playerScore += 1;
-      } else {
-        updatedSets[currentSetIndex].opponentScore += 1;
+
+  /* Point Recording */
+  const recordPoint = (winner: Side, winningShot: ShotInfo, otherShot: ShotInfo) =>
+    withSaving(async () => {
+      if (!match) {
+        resetPointFlow();
+        return;
       }
-      
-      // Get or create set in database
-      let currentSetData;
-      
-      // If we already have a currentSetId, use that
-      if (matchState.currentSetId) {
-        // Update existing set
-        const setUpdateData = {
-          score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
-          player_score: updatedSets[currentSetIndex].playerScore,
-          opponent_score: updatedSets[currentSetIndex].opponentScore
-        };
-        
-        try {
-          currentSetData = await api.set.updateSet(matchState.currentSetId, setUpdateData);
-        } catch (error) {
-          throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
-        }
-      } else {
-        // Get sets for this match
-        let sets;
-        try {
-          sets = await api.set.getSetsByMatchId(match.id);
-        } catch (error) {
-          throw new Error(`Failed to fetch sets: ${error instanceof Error ? error.message : "Unknown error"}`);
-        }
-        const existingSet = sets.find(s => s.set_number === matchState.currentSet);
-        
-        if (existingSet) {
-          // Update existing set
-          const setUpdateData = {
-            score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
-            player_score: updatedSets[currentSetIndex].playerScore,
-            opponent_score: updatedSets[currentSetIndex].opponentScore
-          };
-          
-          try {
-            currentSetData = await api.set.updateSet(existingSet.id, setUpdateData);
-          } catch (error) {
-            throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
-          }
-        } else {
-          // Create new set in database
-          const newSetData = {
+
+      const setIndex = matchState.currentSet - 1;
+      const current = matchState.sets[setIndex];
+      const newScore: SetScore = {
+        playerScore: current.playerScore + (winner === 'player' ? 1 : 0),
+        opponentScore: current.opponentScore + (winner === 'opponent' ? 1 : 0),
+      };
+
+      try {
+        // Find or create the current set's row
+        const findOrCreateSet = async (): Promise<MatchSet> => {
+          const existing = (await api.set.getSetsByMatchId(match.id)).find(s => s.set_number === matchState.currentSet);
+          return existing ?? api.set.createSet({
             match_id: match.id,
             set_number: matchState.currentSet,
-            score: `${updatedSets[currentSetIndex].playerScore}-${updatedSets[currentSetIndex].opponentScore}`,
-            player_score: updatedSets[currentSetIndex].playerScore,
-            opponent_score: updatedSets[currentSetIndex].opponentScore
-          };
-          
-          try {
-            currentSetData = await api.set.createSet(newSetData);
-          } catch (error) {
-            throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
-          }
-        }
-      }
-      
-      // Create point in database
-      // Use direct shot IDs and hands from the ShotInfo objects
-      const pointData = {
-        set_id: currentSetData.id,
-        match_id: match.id,
-        point_number: pointNumber,
-        winner,
-        winning_shot_id: winningShot.shotId,
-        winning_hand: winningShot.hand,
-        other_shot_id: otherShot.shotId,
-        other_hand: otherShot.hand,
-        notes: '',
-        is_lucky_shot: winningShot.isLucky || false
-      };
-      
-      // Create the point in the database
-      
-      let newPoint;
-      try {
-        // Creating point with API hook (automatic token handling)
-        newPoint = await api.point.createPoint(pointData);
-      } catch (error) {
-        throw new Error(`Failed to create point: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
-      
-      // Check if current set is complete
-      const currentSet = updatedSets[currentSetIndex];
-      const isSetComplete = isSetOver(currentSet.playerScore, currentSet.opponentScore);
-      
-      if (isSetComplete) {
-        // Determine if match is over (best of X, where X is an odd number)
-        const bestOf = 5; // This should come from match settings later
-        const playerSetsWon = updatedSets.filter(set => set.playerScore > set.opponentScore).length;
-        const opponentSetsWon = updatedSets.filter(set => set.opponentScore > set.playerScore).length;
-        const isMatchComplete = playerSetsWon > bestOf / 2 || opponentSetsWon > bestOf / 2;
-        
-        // Update match score in database
+            score: setScoreString(EMPTY_SET),
+            player_score: 0,
+            opponent_score: 0,
+          });
+        };
+        const setRow = matchState.dbSets.find(s => s.id === matchState.currentSetId) ?? await findOrCreateSet();
+
+        const newPoint = await api.point.createPoint({
+          set_id: setRow.id,
+          match_id: match.id,
+          point_number: current.playerScore + current.opponentScore + 1,
+          winner,
+          winning_shot_id: winningShot.shotId,
+          winning_hand: winningShot.hand,
+          other_shot_id: otherShot.shotId,
+          other_hand: otherShot.hand,
+          notes: '',
+          is_lucky_shot: isLuckyPoint,
+        });
+
+        let updatedSetRow: MatchSet;
         try {
-          await api.match.updateMatch(match.id, {
-            match_score: `${playerSetsWon}-${opponentSetsWon}`
+          updatedSetRow = await api.set.updateSet(setRow.id, {
+            score: setScoreString(newScore),
+            player_score: newScore.playerScore,
+            opponent_score: newScore.opponentScore,
           });
         } catch (error) {
-          // Continue execution even if match score update fails
+          // Keep the point and the set score in step
+          await api.point.deletePoint(newPoint.id).catch(() => undefined);
+          throw error;
         }
-        
-        if (!isMatchComplete) {
-          // Start next set
-          updatedSets.push({ playerScore: 0, opponentScore: 0 });
-          
-          // Create a new set in the database
-          let nextSetData;
-          try {
-            nextSetData = await api.set.createSet({
-              match_id: match.id,
-              set_number: matchState.currentSet + 1,
-              score: '0-0',
-              player_score: 0,
-              opponent_score: 0
-            });
-          } catch (error) {
-            throw new Error(`Failed to create next set: ${error instanceof Error ? error.message : "Unknown error"}`);
-          }
-          
-          setMatchState({
-            currentSet: matchState.currentSet + 1,
-            sets: updatedSets,
-            points: [...matchState.points, newPoint],
-            isMatchComplete: false,
-            dbSets: [...matchState.dbSets, nextSetData],
-            currentSetId: nextSetData.id
-          });
-        } else {
-          // Match is complete
-          setMatchState({
-            currentSet: matchState.currentSet,
-            sets: updatedSets,
-            points: [...matchState.points, newPoint],
-            isMatchComplete: true,
-            dbSets: matchState.dbSets,
-            currentSetId: matchState.currentSetId
-          });
-        }
-      } else {
-        // Continue current set
-        // Update dbSets with the current set data if needed
-        let updatedDbSets = [...matchState.dbSets];
-        
-        // If currentSetData isn't in dbSets yet, add it
-        if (!updatedDbSets.some(set => set.id === currentSetData.id)) {
-          // Find the index where this set should go (by set_number)
-          const insertIndex = updatedDbSets.findIndex(set => set.set_number > currentSetData.set_number);
-          
-          if (insertIndex === -1) {
-            // Add to end if no higher set_number found
-            updatedDbSets.push(currentSetData);
-          } else {
-            // Insert at the correct position
-            updatedDbSets.splice(insertIndex, 0, currentSetData);
-          }
-        } else {
-          // Update the existing set in dbSets
-          updatedDbSets = updatedDbSets.map(set => 
-            set.id === currentSetData.id ? currentSetData : set
+
+        const otherRows = matchState.dbSets.filter(s => s.id !== updatedSetRow.id);
+        const dbSets = [...otherRows, updatedSetRow].sort((a, b) => a.set_number - b.set_number);
+        const points = [...matchState.points, newPoint];
+        const sets = matchState.sets.map((s, i) => (i === setIndex ? newScore : s));
+
+        if (isSetOver(newScore)) {
+          const isComplete = isMatchOver(sets, bestOf);
+          await syncMatchResult(sets, true, isComplete).catch(err =>
+            console.error('Failed to update match score:', err)
           );
+
+          setMatchState(isComplete
+            ? { currentSet: matchState.currentSet, sets, points, isMatchComplete: true, dbSets, currentSetId: updatedSetRow.id }
+            : {
+                currentSet: matchState.currentSet + 1,
+                sets: [...sets, { ...EMPTY_SET }],
+                points,
+                isMatchComplete: false,
+                dbSets,
+                currentSetId: null,
+              });
+        } else {
+          setMatchState({ ...matchState, sets, points, dbSets, currentSetId: updatedSetRow.id });
         }
-        
-        setMatchState({
-          ...matchState,
-          sets: updatedSets,
-          points: [...matchState.points, newPoint],
-          dbSets: updatedDbSets,
-          currentSetId: currentSetData.id
-        });
+      } catch (error) {
+        alert(`Failed to record point: ${errorMessage(error)}`);
+      } finally {
+        resetPointFlow();
       }
-      
-      // Enable undo after recording a point
-      setCanUndo(true);
-      
-      // Reset the point flow
-      resetPointFlow();
-      
-    } catch (error) {
-      alert('Failed to record point. Please try again.');
-      resetPointFlow();
-    }
-  };
-  
-  // Undo the last recorded point
-  const undoLastPoint = async () => {
-    if (!match || matchState.points.length === 0) {
-      return; // Nothing to undo
-    }
-    
-    try {
-      // Get the most recent point
-      // Filter points that belong to the current match
-      const matchPoints = matchState.points.filter(point => {
-        // Find the set this point belongs to
-        const pointSet = matchState.dbSets.find(set => set.id === point.set_id);
-        return pointSet && pointSet.match_id === match.id;
-      });
-      
-      if (matchPoints.length === 0) {
+    });
+
+  /* Point Undo */
+  const undoLastPoint = () =>
+    withSaving(async () => {
+      if (!match || matchState.points.length === 0) return;
+
+      // Points are kept in the order they were recorded
+      const lastPoint = matchState.points[matchState.points.length - 1];
+      const setRow = matchState.dbSets.find(s => s.id === lastPoint.set_id);
+      if (!setRow) {
+        alert('Could not find the set for the last point. Please refresh and try again.');
         return;
       }
-      
-      // Sort by date created, most recent first
-      const sortedPoints = [...matchPoints].sort((a, b) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return dateB - dateA;
-      });
-      
-      const lastPoint = sortedPoints[0];
-      
-      // Delete point from database
+
       try {
         await api.point.deletePoint(lastPoint.id);
+
+        const newScore: SetScore = {
+          playerScore: Math.max(0, setRow.player_score - (lastPoint.winner === 'player' ? 1 : 0)),
+          opponentScore: Math.max(0, setRow.opponent_score - (lastPoint.winner === 'opponent' ? 1 : 0)),
+        };
+        const updatedSetRow = await api.set.updateSet(setRow.id, {
+          score: setScoreString(newScore),
+          player_score: newScore.playerScore,
+          opponent_score: newScore.opponentScore,
+        });
+
+        // Any later sets have no points left in them (the undone point was the
+        // most recent), so remove them and return to the undone point's set
+        const laterSets = matchState.dbSets.filter(s => s.set_number > setRow.set_number);
+        for (const later of laterSets) {
+          await api.set.deleteSet(later.id);
+        }
+
+        const dbSets = matchState.dbSets
+          .filter(s => s.set_number < setRow.set_number)
+          .concat(updatedSetRow);
+        const points = matchState.points.slice(0, -1);
+        const newState = buildMatchState(dbSets, points, bestOf, false);
+
+        await syncMatchResult(newState.sets, false, false);
+        setMatchState(newState);
       } catch (error) {
-        throw new Error(`Failed to delete point: ${error instanceof Error ? error.message : "Unknown error"}`);
+        alert(`Failed to undo the last point: ${errorMessage(error)}. Refresh the page to see the saved state.`);
       }
-      
-      // Find the set this point belongs to
-      const setData = matchState.dbSets.find(set => set.id === lastPoint.set_id);
-      
-      if (!setData) {
+    });
+
+  /* Set Management */
+
+  // End the current set early, awarding it to whoever is ahead
+  const handleEndSet = () =>
+    withSaving(async () => {
+      if (!match) return;
+
+      const setIndex = matchState.currentSet - 1;
+      const current = matchState.sets[setIndex];
+
+      if (setLeader(current) === null) {
+        alert('Cannot end set - scores are tied!');
         return;
       }
-      
-      // Copy current state
-      const updatedSets = [...matchState.sets];
-      
-      // Check if we're undoing a point that completed a set
-      // This happens when:
-      // 1. The point being undone is from a previous set, AND
-      // 2. The current set has no other points (meaning it was just created)
-      const remainingPointsInCurrentSet = matchState.points
-        .filter(p => p.id !== lastPoint.id)
-        .filter(p => p.set_id === matchState.currentSetId)
-        .length;
-      
-      const isUndoingSetCompletingPoint = setData.set_number < matchState.currentSet && remainingPointsInCurrentSet === 0;
-      
-      if (isUndoingSetCompletingPoint) {
-        // We're undoing a point that completed a set, go back to previous set
-        updatedSets.pop(); // Remove the current empty set
-        
-        // Get updated dbSets without the current set
-        const updatedDbSets = matchState.dbSets.filter(set => set.set_number < matchState.currentSet);
-        
-        // Find the new current set ID (the last one in the list)
-        const newCurrentSetId = updatedDbSets.length > 0 ? updatedDbSets[updatedDbSets.length - 1].id : null;
-        
-        // Remove the point from our points array
-        const updatedPoints = matchState.points.filter(p => p.id !== lastPoint.id);
-        
-        setMatchState({
-          currentSet: matchState.currentSet - 1,
-          sets: updatedSets,
-          points: updatedPoints,
-          isMatchComplete: false, // If we can undo, the match is not complete
-          dbSets: updatedDbSets,
-          currentSetId: newCurrentSetId
-        });
-      } else {
-        // Normal undo within the current set
-        const setIndex = matchState.sets.findIndex((_, index) => index + 1 === setData.set_number);
-        
-        if (setIndex >= 0) {
-          // Decrement the score based on who won the point
-          if (lastPoint.winner === 'player') {
-            updatedSets[setIndex].playerScore -= 1;
-          } else {
-            updatedSets[setIndex].opponentScore -= 1;
-          }
-          
-          // Update set in database
-          try {
-            await api.set.updateSet(setData.id, {
-              score: `${updatedSets[setIndex].playerScore}-${updatedSets[setIndex].opponentScore}`,
-              player_score: updatedSets[setIndex].playerScore,
-              opponent_score: updatedSets[setIndex].opponentScore
-            });
-          } catch (error) {
-            throw new Error(`Failed to update set: ${error instanceof Error ? error.message : "Unknown error"}`);
-          }
-          
-          // Update the matching set in dbSets
-          const updatedDbSets = matchState.dbSets.map(set => {
-            if (set.id === setData.id) {
-              return {
-                ...set,
-                score: `${updatedSets[setIndex].playerScore}-${updatedSets[setIndex].opponentScore}`,
-                player_score: updatedSets[setIndex].playerScore,
-                opponent_score: updatedSets[setIndex].opponentScore
-              };
-            }
-            return set;
-          });
-          
-          // Remove the point from our points array
-          const updatedPoints = matchState.points.filter(p => p.id !== lastPoint.id);
-          
-          setMatchState({
-            ...matchState,
-            sets: updatedSets,
-            points: updatedPoints,
-            dbSets: updatedDbSets
-          });
+
+      try {
+        const isComplete = isMatchOver(matchState.sets, bestOf);
+        await syncMatchResult(matchState.sets, true, isComplete);
+
+        if (isComplete) {
+          setMatchState({ ...matchState, isMatchComplete: true });
+          return;
         }
+
+        // Create the next set's row now so a reload knows this set was ended
+        const nextSetNumber = matchState.currentSet + 1;
+        const nextSet = matchState.dbSets.find(s => s.set_number === nextSetNumber) ?? await api.set.createSet({
+          match_id: match.id,
+          set_number: nextSetNumber,
+          score: setScoreString(EMPTY_SET),
+          player_score: 0,
+          opponent_score: 0,
+        });
+
+        setMatchState({
+          currentSet: nextSetNumber,
+          sets: [...matchState.sets, { ...EMPTY_SET }],
+          points: matchState.points,
+          isMatchComplete: false,
+          dbSets: [...matchState.dbSets.filter(s => s.id !== nextSet.id), nextSet],
+          currentSetId: nextSet.id,
+        });
+      } catch (error) {
+        alert(`Failed to end set: ${errorMessage(error)}`);
       }
-      
-      // Disable undo if no more points to undo
-      setCanUndo(matchState.points.length > 1);
-    } catch (error) {
-    }
-  };
-  
-  // Helper to check if a set is over
-  const isSetOver = (playerScore: number, opponentScore: number) => {
-    const pointsToWin = 11;
-    const minPointDifference = 2;
-    
-    if (playerScore >= pointsToWin && playerScore - opponentScore >= minPointDifference) {
-      return true;
-    }
-    
-    if (opponentScore >= pointsToWin && opponentScore - playerScore >= minPointDifference) {
-      return true;
-    }
-    
-    return false;
-  };
-  
-  // Get total points in current set
-  const getTotalPoints = () => {
-    const currentSetIndex = matchState.currentSet - 1;
-    const currentSet = matchState.sets[currentSetIndex];
-    return currentSet.playerScore + currentSet.opponentScore;
-  };
-  
+    });
+
   // Calculate who is currently serving
-  const getCurrentServer = (): 'player' | 'opponent' => {
-    const totalPoints = getTotalPoints();
-    const currentSetIndex = matchState.currentSet - 1;
-    const currentSet = matchState.sets[currentSetIndex];
-    
-    // Determine the initial server for this set
-    // The initial server alternates each set
-    const setInitialServer = (matchState.currentSet % 2 === 1) ? 
-      initialServer : 
-      (initialServer === 'player' ? 'opponent' : 'player');
-    
-    // Check if we're in deuce (both players at 10+ points)
-    const isInDeuce = currentSet.playerScore >= 10 && currentSet.opponentScore >= 10;
-    
-    if (isInDeuce) {
-      // In deuce, service changes every 1 point
-      const serverChangeCount = totalPoints - 20; // Points since deuce started
-      const currentServer = serverChangeCount % 2 === 0 ? 
-        setInitialServer : 
-        (setInitialServer === 'player' ? 'opponent' : 'player');
-      
-      return currentServer;
-    } else {
-      // Normal play: service changes every 2 points
-      const serverChangeCount = Math.floor(totalPoints / 2);
-      const currentServer = serverChangeCount % 2 === 0 ? 
-        setInitialServer : 
-        (setInitialServer === 'player' ? 'opponent' : 'player');
-      
-      return currentServer;
-    }
-  };
-  
+  const getCurrentServer = (): Side =>
+    getServer(initialServer, matchState.currentSet, matchState.sets[matchState.currentSet - 1]);
+
   if (loading) {
     return (
       <Layout>
@@ -748,6 +547,16 @@ const MatchTracker = () => {
           )}
           
           <div className="match-actions">
+            {canUndo && (
+              <button
+                className="btn outline-btn undo-btn"
+                onClick={undoLastPoint}
+                disabled={isSaving}
+                title="Undo the last point and reopen the match"
+              >
+                ↩️ Undo Last Point
+              </button>
+            )}
             <button 
               className="btn primary-btn"
               onClick={() => navigate(`/matches/${id}/analysis`)}
@@ -1113,6 +922,7 @@ const MatchTracker = () => {
             <button 
               className="btn outline-btn undo-btn"
               onClick={undoLastPoint}
+              disabled={isSaving}
               title="Undo last point"
             >
               ↩️ Undo
@@ -1121,139 +931,11 @@ const MatchTracker = () => {
           
           <button 
             className="btn outline-btn"
-            onClick={async () => {
-              // End current set - award to player with highest score
-              if (!match) {
-                return;
-              }
-              
-              const currentSetIndex = matchState.currentSet - 1;
-              const currentSet = matchState.sets[currentSetIndex];
-              
-              // Check if there's a clear winner
-              if (currentSet.playerScore === currentSet.opponentScore) {
-                alert("Cannot end set - scores are tied!");
-                return;
-              }
-              
-              try {
-                // Update the current set in database to mark it as complete
-                if (matchState.currentSetId) {
-                  await api.set.updateSet(matchState.currentSetId, {
-                    score: `${currentSet.playerScore}-${currentSet.opponentScore}`,
-                    player_score: currentSet.playerScore,
-                    opponent_score: currentSet.opponentScore
-                  });
-                }
-                
-                // Check if match is over (best of 5)
-                const bestOf = 5;
-                const playerSetsWon = matchState.sets.filter(set => set.playerScore > set.opponentScore).length + 
-                  (currentSet.playerScore > currentSet.opponentScore ? 1 : 0);
-                const opponentSetsWon = matchState.sets.filter(set => set.opponentScore > set.playerScore).length + 
-                  (currentSet.opponentScore > currentSet.playerScore ? 1 : 0);
-                const isMatchComplete = playerSetsWon > bestOf / 2 || opponentSetsWon > bestOf / 2;
-                
-                // Update match score in database
-                await api.match.updateMatch(match.id, {
-                  match_score: `${playerSetsWon}-${opponentSetsWon}`
-                });
-                
-                if (!isMatchComplete) {
-                  // Start next set
-                  const updatedSets = [...matchState.sets];
-                  updatedSets.push({ playerScore: 0, opponentScore: 0 });
-                  
-                  // Check if next set already exists in database
-                  const nextSetNumber = matchState.currentSet + 1;
-                  let newSet = matchState.dbSets.find(set => set.set_number === nextSetNumber);
-                  
-                  if (!newSet) {
-                    // Create a new set in the database only if it doesn't exist
-                    newSet = await api.set.createSet({
-                      match_id: match.id,
-                      set_number: nextSetNumber,
-                      score: '0-0',
-                      player_score: 0,
-                      opponent_score: 0
-                    });
-                  }
-                  
-                  const updatedDbSets = matchState.dbSets.find(set => set.set_number === nextSetNumber) 
-                    ? matchState.dbSets 
-                    : [...matchState.dbSets, newSet!];
-                    
-                  setMatchState({
-                    currentSet: matchState.currentSet + 1,
-                    sets: updatedSets,
-                    points: matchState.points,
-                    isMatchComplete: false,
-                    dbSets: updatedDbSets,
-                    currentSetId: newSet!.id
-                  });
-                } else {
-                  // Match is complete
-                  setMatchState({
-                    ...matchState,
-                    isMatchComplete: true
-                  });
-                }
-              } catch (error) {
-                alert(`Failed to end set: ${error instanceof Error ? error.message : 'Unknown error'}`);
-              }
-            }}
+            onClick={handleEndSet}
+            disabled={isSaving}
+            title="End this set early and award it to whoever is ahead"
           >
             End Set
-          </button>
-          
-          <button 
-            className="btn outline-btn"
-            onClick={async () => {
-              // Force next set (manual override)
-              if (!match) {
-                return;
-              }
-              
-              try {
-                const updatedSets = [...matchState.sets];
-                updatedSets.push({ playerScore: 0, opponentScore: 0 });
-                
-                // Check if next set already exists in database
-                const nextSetNumber = matchState.currentSet + 1;
-                let newSet = matchState.dbSets.find(set => set.set_number === nextSetNumber);
-                
-                if (!newSet) {
-                  // Create a new set in the database only if it doesn't exist
-                  try {
-                    newSet = await api.set.createSet({
-                      match_id: match.id,
-                      set_number: nextSetNumber,
-                      score: '0-0',
-                      player_score: 0,
-                      opponent_score: 0
-                    });
-                  } catch (error) {
-                    throw new Error(`Failed to create set: ${error instanceof Error ? error.message : "Unknown error"}`);
-                  }
-                }
-                
-                const updatedDbSets = matchState.dbSets.find(set => set.set_number === nextSetNumber) 
-                  ? matchState.dbSets 
-                  : [...matchState.dbSets, newSet!];
-                  
-                setMatchState({
-                  currentSet: matchState.currentSet + 1,
-                  sets: updatedSets,
-                  points: matchState.points,
-                  isMatchComplete: false,
-                  dbSets: updatedDbSets,
-                  currentSetId: newSet!.id
-                });
-              } catch (error) {
-              }
-            }}
-          >
-            Next Set
           </button>
         </div>
       </div>
