@@ -4,10 +4,10 @@ import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import type { AnalysisData, MatchDetails } from '../lib/api';
 import { MAX_EVENT, MAX_PLAYER_NAME, MAX_VIDEO_URL, cleanText, validateDetails } from '../lib/matchDetails';
-import { UNFORCED_ERROR_DEFINITION, buildAnalysis } from '../lib/analysis';
+import { UNFORCED_ERROR_DEFINITION, buildAnalysis, type PointRow } from '../lib/analysis';
+import { ATTACK_DEFINITION, SWEEPS, SWEEP_TAGS, answerChanges, isTicked, sweepPoints, sweepStatus, type SweepProgress, type SweepTag } from '../lib/sweeps';
 import '../styles/components/MatchAnalysis.css';
-
-type Flag = 'is_lucky_shot' | 'is_unforced_error';
+import '../styles/sweep.css';
 
 type DetailsForm = { player_name: string; opponent_name: string; date: string; event: string; video_url: string };
 
@@ -54,27 +54,48 @@ const PointsEditor = () => {
     sets: data.sets,
     points: data.points,
     shots: data.shots,
+    confirmed: data.match.confirmed_tags ?? [],
   }), [data]);
 
-  const toggle = async (pointId: string, flag: Flag) => {
+  const toggle = async (row: PointRow, tag: SweepTag) => {
     if (!data) return;
-    const point = data.points.find(p => p.id === pointId);
+    const point = data.points.find(p => p.id === row.id);
     if (!point) return;
-    const value = !point[flag];
-    const setFlag = (v: boolean) => setData(prev => prev && {
+    const changes = answerChanges(tag, !isTicked(tag, row));
+    const setValues = (values: object) => setData(prev => prev && {
       ...prev,
-      points: prev.points.map(p => (p.id === pointId ? { ...p, [flag]: v } : p)),
+      points: prev.points.map(p => (p.id === row.id ? { ...p, ...values } : p)),
     });
 
     // Show the change at once, and put it back if the save fails
-    setFlag(value);
+    setValues(changes);
     setSaving(n => n + 1);
     setSaveError(null);
     try {
-      await api.point.updatePoint(pointId, { [flag]: value });
+      await api.point.updatePoint(row.id, changes);
     } catch (err) {
       console.error('Failed to save point:', err);
-      setFlag(!value);
+      setValues(point);
+      setSaveError('Could not save that change. Check your connection and try again.');
+    } finally {
+      setSaving(n => n - 1);
+    }
+  };
+
+  // "That's all of them": the ticks for a tag are complete without a sweep
+  const confirmTag = async (tag: SweepTag) => {
+    if (!data) return;
+    const before = data.match.confirmed_tags ?? [];
+    const confirmed = [...new Set([...before, tag])];
+    const setConfirmed = (tags: string[]) => setData(prev => prev && { ...prev, match: { ...prev.match, confirmed_tags: tags } });
+    setConfirmed(confirmed);
+    setSaving(n => n + 1);
+    setSaveError(null);
+    try {
+      await api.match.updateMatch(data.match.id, { confirmed_tags: confirmed });
+    } catch (err) {
+      console.error('Failed to confirm the ticks:', err);
+      setConfirmed(before);
       setSaveError('Could not save that change. Check your connection and try again.');
     } finally {
       setSaving(n => n - 1);
@@ -131,6 +152,9 @@ const PointsEditor = () => {
   }
 
   const { match } = data;
+  const confirmedTags = match.confirmed_tags ?? [];
+  const progress = (match.sweep_progress ?? {}) as SweepProgress;
+  const thirdBallIds = new Set(sweepPoints('third_ball', analysis.rows).map(r => r.id));
   const setNumbers = analysis.sets.map(s => s.setNumber);
   const rows = analysis.rows.filter(r =>
     (setFilter === 0 || r.setNumber === setFilter) && (!onlyLost || r.winner === 'opponent'));
@@ -156,6 +180,43 @@ const PointsEditor = () => {
             </span>
           </div>
         </header>
+
+        <section className="card sw-list" aria-labelledby="pe-sweeps-h">
+          <div>
+            <h2 id="pe-sweeps-h">Sweeps</h2>
+            <p className="muted">Go through the match one point at a time and answer one question. Next means no, so you only tap for the points that count. Sweeps you don't use stay off the analysis page.</p>
+          </div>
+          <ul>
+            {SWEEP_TAGS.map(tag => {
+              const s = sweepStatus(tag, analysis.rows, confirmedTags, progress);
+              const path = `/matches/${match.id}/sweep/${tag}`;
+              return (
+                <li key={tag}>
+                  <div className="sw-list-name">
+                    <strong>{SWEEPS[tag].name}</strong>
+                    <span>{SWEEPS[tag].scope}, {s.total}</span>
+                  </div>
+                  <div className="sw-list-status">
+                    {s.kind === 'done' && <><span className="sw-badge">Done</span> {s.ticks} marked</>}
+                    {s.kind === 'stopped' && <>Stopped at set {s.at.setNumber}, point {s.at.number} · {s.ticks} marked</>}
+                    {s.kind === 'ticked' && <>{s.ticks} ticked, not confirmed</>}
+                    {s.kind === 'new' && <span className="faint">Not started</span>}
+                  </div>
+                  <div className="sw-list-actions">
+                    {s.kind === 'ticked' && (
+                      <button type="button" className="btn quiet small" onClick={() => confirmTag(tag)}>That's all of them</button>
+                    )}
+                    {s.total > 0 && (
+                      <Link to={path} className={`btn small${s.kind === 'done' ? '' : ' primary'}`}>
+                        {s.kind === 'done' ? 'Sweep again' : s.kind === 'stopped' ? 'Carry on' : 'Start sweep'}
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
         <form className="card pe-details" onSubmit={saveDetails} aria-labelledby="pe-details-h">
           <h2 id="pe-details-h">Match details</h2>
@@ -191,8 +252,9 @@ const PointsEditor = () => {
           </div>
         </form>
 
+
         <p className="muted" style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 860 }}>
-          Tick <strong>Unforced</strong> when the losing shot was an unforced error. {UNFORCED_ERROR_DEFINITION} It applies to whoever lost the point, but only your own count towards the analysis. A service fault always counts as unforced. Lucky is the same tickbox as in the tracker.
+          You can also tick any point by hand, which doesn't mark a sweep as done. Tick <strong>Unforced</strong> when the losing shot was an unforced error. {UNFORCED_ERROR_DEFINITION} It applies to whoever lost the point, but only your own count towards the analysis. A service fault always counts as unforced. Tick <strong>Attacked first</strong> when you played the first attacking shot. {ATTACK_DEFINITION} <strong>Third ball</strong> is only for your serves that went past the receive, and ticks Attacked first too.
         </p>
 
         <div className="pe-toolbar" role="toolbar" aria-label="Filter points">
@@ -210,7 +272,7 @@ const PointsEditor = () => {
         </div>
 
         <div className="card table-card">
-          <table className="data-table" style={{ minWidth: 760 }}>
+          <table className="data-table" style={{ minWidth: 960 }}>
             <caption className="sr-only">
               Points in this match
             </caption>
@@ -222,8 +284,10 @@ const PointsEditor = () => {
                 <th scope="col">Point to</th>
                 <th scope="col">Winning shot</th>
                 <th scope="col">Losing shot</th>
-                <th scope="col" className="pe-check">Lucky</th>
                 <th scope="col" className="pe-check">Unforced</th>
+                <th scope="col" className="pe-check">Attacked first</th>
+                <th scope="col" className="pe-check">Third ball</th>
+                <th scope="col" className="pe-check">Lucky</th>
               </tr>
             </thead>
             <tbody>
@@ -238,17 +302,37 @@ const PointsEditor = () => {
                     <td>{r.winningShot ?? '–'}</td>
                     <td>{r.losingShot ?? '–'}</td>
                     <td className="pe-check">
-                      <input type="checkbox" checked={r.isLucky} onChange={() => toggle(r.id, 'is_lucky_shot')} aria-label={`Lucky, ${desc}`} />
-                    </td>
-                    <td className="pe-check">
                       <input
                         type="checkbox"
                         checked={r.isUnforced}
                         disabled={r.isServiceFault}
-                        onChange={() => toggle(r.id, 'is_unforced_error')}
+                        onChange={() => toggle(r, 'unforced')}
                         aria-label={`Unforced error, ${desc}`}
                         title={r.isServiceFault ? 'A service fault always counts as unforced' : 'The losing shot was unforced'}
                       />
+                    </td>
+                    <td className="pe-check">
+                      <input
+                        type="checkbox"
+                        checked={r.isAttackedFirst}
+                        disabled={r.isServiceFault || r.isThirdBall}
+                        onChange={() => toggle(r, 'attacked_first')}
+                        aria-label={`Attacked first, ${desc}`}
+                        title={r.isThirdBall ? 'A third-ball attack is always an attack first' : 'You played the first attacking shot'}
+                      />
+                    </td>
+                    <td className="pe-check">
+                      <input
+                        type="checkbox"
+                        checked={r.isThirdBall}
+                        disabled={!thirdBallIds.has(r.id)}
+                        onChange={() => toggle(r, 'third_ball')}
+                        aria-label={`Third-ball attack, ${desc}`}
+                        title={thirdBallIds.has(r.id) ? 'You attacked the ball after their receive' : 'Only your serves that went past the receive'}
+                      />
+                    </td>
+                    <td className="pe-check">
+                      <input type="checkbox" checked={r.isLucky} onChange={() => toggle(r, 'lucky')} aria-label={`Lucky, ${desc}`} />
                     </td>
                   </tr>
                 );

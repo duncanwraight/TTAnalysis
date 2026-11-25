@@ -5,6 +5,7 @@ import NewMatch from './pages/NewMatch';
 import MatchTracker from './pages/MatchTracker';
 import MatchAnalysis from './pages/MatchAnalysis';
 import PointsEditor from './pages/PointsEditor';
+import PointSweep from './pages/PointSweep';
 import Auth from './pages/Auth';
 import AdminPanel from './pages/AdminPanel';
 import AdminShots from './pages/AdminShots';
@@ -70,6 +71,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <PointsEditor />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/matches/:id/sweep/:tag"
+            element={
+              <ProtectedRoute>
+                <PointSweep />
               </ProtectedRoute>
             }
           />

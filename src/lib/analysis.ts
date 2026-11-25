@@ -39,6 +39,9 @@ export type AnalysisPoint = {
   other_hand?: Hand | null;
   is_lucky_shot?: boolean | null;
   is_unforced_error?: boolean | null;
+  // Ticked in a sweep; see sweeps.ts
+  is_attacked_first?: boolean | null;
+  is_third_ball_attack?: boolean | null;
 };
 
 export type AnalysisSet = {
@@ -54,6 +57,8 @@ export type AnalysisInput = {
   // In the order they were recorded
   points: AnalysisPoint[];
   shots: AnalysisShot[];
+  // Sweep tags the owner has confirmed are complete for the match; see sweeps.ts
+  confirmed?: string[];
 };
 
 export const SERVICE_FAULT = 'service_fault';
@@ -96,6 +101,8 @@ export type PointRow = {
   isServiceFault: boolean;
   isLucky: boolean;
   isUnforced: boolean;
+  isAttackedFirst: boolean;
+  isThirdBall: boolean;
   // 'serve' when the serve won the point (the receive missed or wasn't returned),
   // 'receive' when the receive won it outright; null otherwise, including service faults
   decidedBy: 'serve' | 'receive' | null;
@@ -177,6 +184,24 @@ export type ServeStats = {
   rally: Tally;
 };
 
+/**
+ * Who played the first attacking shot, from the attacked-first tag. Only the
+ * player's attack first is ticked. On an unticked point, an attacking shot in
+ * the last two means the opponent attacked first; with none, either nobody
+ * attacked or the opponent attacked earlier in the rally. Tallies are the
+ * player's points won and lost.
+ */
+export type AttackFirst = {
+  // False until the owner confirms every point was checked
+  confirmed: boolean;
+  player: Tally;
+  opponent: Tally;
+  unclear: Tally;
+};
+
+/** The player's serves that went past the receive, split by whether they attacked the third ball. */
+export type ThirdBall = { confirmed: boolean; attacked: Tally; other: Tally };
+
 export type Card = { tag: 'Match story' | 'Work on' | 'Scouting'; title: string; text: string };
 
 export type Analysis = {
@@ -199,9 +224,14 @@ export type Analysis = {
   // Winning and losing shots by hand, serves left out
   hands: { player: { fh: Tally; bh: Tally }; opponent: { fh: Tally; bh: Tally } };
   attacksBySet: SetAttacks[];
+  // Null when the tag hasn't been used for this match
+  attackFirst: AttackFirst | null;
+  thirdBall: ThirdBall | null;
   unforced: {
-    // False until at least one of the player's unforced errors has been ticked
+    // False until at least one of the player's unforced errors has been ticked, or the owner confirms there are none
     recorded: boolean;
+    // The owner confirmed every point was checked
+    confirmed: boolean;
     total: number;
     onServe: number;
     onReceive: number;
@@ -251,7 +281,7 @@ const byCount = (counts: Map<string, ShotCount>) =>
 const pct = (n: number, d: number) => (d > 0 ? Math.round((100 * n) / d) : 0);
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisInput): Analysis => {
+export const buildAnalysis = ({ initialServer, sets, points, shots, confirmed = [] }: AnalysisInput): Analysis => {
   const shotById = new Map(shots.map(s => [s.id, s]));
   const setById = new Map(sets.map(s => [s.id, s]));
 
@@ -270,7 +300,11 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   const onReceive = emptyRecord();
   const fromEightAll = { ...emptyRecord(), unforced: 0 };
   const lucky = { player: 0, opponent: 0 };
-  const unforced = { recorded: false, total: 0, onServe: 0, onReceive: 0, bunchedLate: false };
+  const unforced = { recorded: false, confirmed: confirmed.includes('unforced'), total: 0, onServe: 0, onReceive: 0, bunchedLate: false };
+  const attackFirst: AttackFirst = { confirmed: confirmed.includes('attacked_first'), player: emptyRecord(), opponent: emptyRecord(), unclear: emptyRecord() };
+  const thirdBall: ThirdBall = { confirmed: confirmed.includes('third_ball'), attacked: emptyRecord(), other: emptyRecord() };
+  let attackFirstTicks = 0;
+  let thirdBallTicks = 0;
   const serveReceive = { player: emptyServe(), opponent: emptyServe() };
   const runs: Run[] = [];
   const rows: PointRow[] = [];
@@ -383,6 +417,28 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     }
     if (!playerWon && point.is_unforced_error) unforced.recorded = true;
 
+    // Who attacked first, and the third ball on the player's serve. Nobody
+    // played a shot on a service fault.
+    const result = playerWon ? 'won' : 'lost';
+    if (!isServiceFault) {
+      if (point.is_attacked_first) {
+        attackFirstTicks += 1;
+        attackFirst.player[result] += 1;
+      } else if (winningShot.role === 'attack' || (otherShot.role === 'attack' && otherShot.name !== NO_SHOT)) {
+        attackFirst.opponent[result] += 1;
+      } else {
+        attackFirst.unclear[result] += 1;
+      }
+      if (server === 'player' && decidedBy === null) {
+        if (point.is_third_ball_attack) {
+          thirdBallTicks += 1;
+          thirdBall.attacked[result] += 1;
+        } else {
+          thirdBall.other[result] += 1;
+        }
+      }
+    }
+
     if (current && current.side === winner && current.setNumber === setNumber) {
       current.length += 1;
     } else {
@@ -409,6 +465,8 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       isServiceFault,
       isLucky: !!point.is_lucky_shot,
       isUnforced,
+      isAttackedFirst: !!point.is_attacked_first,
+      isThirdBall: !!point.is_third_ball_attack,
       decidedBy,
     });
   }
@@ -439,6 +497,9 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     if (s.playerScore > s.opponentScore) setsWon.won += 1;
     else if (s.opponentScore > s.playerScore) setsWon.lost += 1;
   }
+
+  // Confirming there are none counts as recording them
+  if (unforced.confirmed) unforced.recorded = true;
 
   // Nerves show as unforced errors bunched at the close of sets
   const closePoints = fromEightAll.won + fromEightAll.lost;
@@ -477,6 +538,8 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       points: s.playerScore + s.opponentScore,
       ...(attacksBySet.get(s.setNumber) ?? { player: emptyRecord(), opponent: emptyRecord() }),
     })),
+    attackFirst: attackFirstTicks > 0 || attackFirst.confirmed ? attackFirst : null,
+    thirdBall: thirdBallTicks > 0 || thirdBall.confirmed ? thirdBall : null,
     unforced,
     rows,
     patterns: {
@@ -636,6 +699,21 @@ export const buildCards = (a: Analysis): Card[] => {
       title: `Came back in set ${won.s.setNumber}`,
       text: `Down ${scoreAt(won.s.gaps, won.best.index)}, won ${won.s.playerScore}-${won.s.opponentScore}.`,
     });
+  }
+
+  // Getting in first: a clear gap between points won when the player attacked
+  // first and when the opponent did
+  const af = a.attackFirst;
+  if (af) {
+    const yours = af.player.won + af.player.lost;
+    const theirs = af.opponent.won + af.opponent.lost;
+    if (yours >= 5 && theirs >= 5 && pct(af.player.won, yours) - pct(af.opponent.won, theirs) >= 25) {
+      story.push({
+        tag: 'Match story',
+        title: 'Getting in first paid off',
+        text: `You won ${af.player.won} of ${yours} points when you attacked first, and ${af.opponent.won} of ${theirs} when they did.`,
+      });
+    }
   }
 
   // An attack drop-off: far fewer attacking winners in a later set than an

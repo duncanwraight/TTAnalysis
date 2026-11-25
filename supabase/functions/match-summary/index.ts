@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
 
     const { data: match, error: matchError } = await asUser
       .from('matches')
-      .select('id, user_id, player_name, opponent_name, event, date, best_of, initial_server')
+      .select('id, user_id, player_name, opponent_name, event, date, best_of, initial_server, confirmed_tags')
       .eq('id', matchId)
       .maybeSingle();
     if (matchError) throw matchError;
@@ -88,13 +88,13 @@ Deno.serve(async (req) => {
     const [sets, points, shots] = await Promise.all([
       asUser.from('sets').select('id, set_number, player_score, opponent_score').eq('match_id', matchId),
       asUser.from('points')
-        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error')
+        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_third_ball_attack')
         .eq('match_id', matchId)
         .order('created_at', { ascending: true }),
       asUser.from('shots').select('id, name, display_name, check_qualities, technical_notes, role, shot_categories(name, display_order)'),
     ]);
     for (const result of [sets, points, shots]) if (result.error) throw result.error;
-    if (!points.data?.length) return fail(400, 'Record some points before asking for a summary.');
+    if (!points.data?.length) return fail(400, 'Enter some points before asking for a summary.');
 
     type ShotRow = {
       id: string; name: string; display_name: string; check_qualities: string[] | null; technical_notes: string | null;
@@ -116,6 +116,7 @@ Deno.serve(async (req) => {
       sets: sets.data ?? [],
       points: points.data,
       shots: shotList,
+      confirmed: match.confirmed_tags ?? [],
     });
     const input = buildSummaryInput(match, analysis, shotList);
     const inputHash = await hashInput(input);

@@ -1,6 +1,6 @@
 # Next steps
 
-Last updated: 2026-11-25
+Last updated: 2026-11-26
 
 Handover notes for picking this work up in a fresh session. Section 1 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
 
@@ -30,6 +30,8 @@ Done on 2026-11-25:
 8. **Shot balance** (section 7): a new section on the analysis page in place of Categories, a role per shot on `/admin/shots`, and two new cards.
 9. **Shot balance in the coach's summary** (section 2), shipped in `76c4035`. Function deployed to production.
 10. **Analysis page and prompt review** (`docs/ANALYSIS_REVIEW.md`): close finishes from 8-all, a Serve and receive section, a new page order, problem kinds and receive guidance in the prompt, and an eval script. `SUMMARY_VERSION` is now 6, so every stored summary shows as out of date until it's regenerated.
+
+Built on 2026-11-26, **not yet shipped** (see *Sweeps* in section 7): sweeps, attacked first and third-ball attack. Migration `20261126090000_point_sweeps.sql` is applied locally only, and the function changes aren't deployed. `SUMMARY_VERSION` is now 7.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
 
@@ -182,6 +184,21 @@ Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/
 - **What stands out**, at most three, in this order: a role share 20 points or more apart (both sides with 10+ shots); a shot and hand the opponent had 5+ times that you never had; a shot one side had 1.5x as often with 10+; a shot you had 5+ times that they never had.
 - **Cards.** "They/You did more attacking" now counts attack-role shots, falling back to "did more defending". "No backhand blocks" (or whichever shot) appears for the biggest shot you never had. "Attacking dropped off" (`attacksBySet`) counts attack-role shots too, so a pips attack filed under another category counts.
 - **In the coach's summary** since 2026-11-25 (section 2). `categories` is gone from the analysis.
+### Sweeps, attacked first and third ball (built, not shipped)
+
+Designed with the user on 2026-11-26 on this canvas: https://claude.ai/artifact/5LK1fv2xobgWtKuLGWRpT9
+
+- **The idea.** Entering two shots a point is already hard work, so other tags get their own pass afterwards: one question per point, Yes or Next. Next means no. The user found that quicker and more accurate than tagging everything while entering. Saving video timestamps was considered and dropped: too slow to enter, and jumping around YouTube is finicky.
+- **Tags.** Unforced errors (points the player lost, not service faults), attacked first (every point except third-ball attacks), third-ball attack (the player's serves that went past the receive) and lucky shots. Definitions and scopes are in `src/lib/sweeps.ts`. Any attack-role shot counts as an attack, including a flick on the receive.
+- **Attacked first is one tickbox for the player.** Unticked with an attack-role shot in the last two means the opponent attacked first, which is exact if the ticks are right. Unticked with no attack is "unclear" (nobody attacked, or the opponent attacked mid-rally), shown as its own row and never counted as the opponent's.
+- **Unticked isn't "no" until confirmed.** A tag counts once it has a tick or is in `matches.confirmed_tags`. Finishing a sweep confirms it, and so does "That's all of them" on the points editor or on the owner's analysis-page warning. The migration confirmed unforced errors on every match with at least one of the player's own ticked, so old matches don't all ask. Lucky shots never ask.
+- **The sweep page** (`PointSweep`, `/matches/:id/sweep/:tag`): score before the point (what the video shows when the rally starts), the two shots, a list of the set's points to stay in step with the video, keys Y, N or Space and Backspace. Each answer writes the point only when it changes, plus the position in `sweep_progress`, queued so the last answer is the last write. On a phone the instructions fold away and the buttons stick to the bottom.
+- **Analysis page.** A "Who attacked first" section before Shot balance, "Attacking after your serve" under Serve and receive, and a "Getting in first paid off" card (5+ points each way and a 25-point gap in win rate).
+- **Coach's summary.** The input now carries `attackFirst`, `thirdBall`, `unforced.confirmed` and "attacked first" and "third ball" point flags. The prompt has a "Who attacked first" section: use it over shot balance when present, treat unconfirmed counts as "in the points you marked", and never count unclear points as the opponent's. Not yet tried on a real model call.
+- **Checked** locally in Chrome on the Sam Carter sample match: a sweep by keyboard, Back, finishing, the end screen, the warning and its button, both new sections, and the sweep at 390px wide. The local test user's password was set to `sweep-test-2026` for this.
+
+To ship: the usual steps in *Shipping changes*, with the migration first, then `supabase functions deploy match-summary --use-api --yes`, then push. Then try a summary on a match with attacked first ticked (about $0.10), and check its banner clears after "Update the summary".
+
 ## 8. Code quality
 
 - **`any` types:** `@typescript-eslint/no-explicit-any` is switched off in `eslint.config.js`. Type the rest, then turn the rule back on.

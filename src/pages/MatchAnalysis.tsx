@@ -5,6 +5,7 @@ import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import type { AnalysisData } from '../lib/api';
 import { Analysis, Pattern, ServeStats, ShotCount, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
+import { ATTACK_DEFINITION, SWEEPS, unconfirmedTags, type SweepTag } from '../lib/sweeps';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
 import { buildSummaryInput, hashInput } from '../lib/aiSummary';
 import CoachSummary from '../components/analysis/CoachSummary';
@@ -93,6 +94,25 @@ const ServeCard = ({ title, stats, yours }: { title: string; stats: ServeStats; 
   );
 };
 
+/** Points won and lost as one bar, scaled to the biggest row. Won is blue, lost orange. */
+const SplitRow = ({ label, tally, max, quiet }: { label: string; tally: Tally; max: number; quiet?: boolean }) => {
+  const total = tally.won + tally.lost;
+  return (
+    <div className={`ma-split-row${quiet ? ' quiet' : ''}`}>
+      <span className="ma-split-label">{label}</span>
+      <div className="ma-split-track">
+        {total > 0 && (
+          <div className="ma-split" style={{ width: `${(100 * total) / Math.max(max, 1)}%` }} title={`Won ${tally.won}, lost ${tally.lost}`}>
+            <div className="ma-fill-you" style={{ flexGrow: tally.won }} />
+            <div className="ma-fill-opp" style={{ flexGrow: tally.lost }} />
+          </div>
+        )}
+      </div>
+      <span className="ma-split-count">Won <strong>{tally.won}</strong> of {total}</span>
+    </div>
+  );
+};
+
 const shotName = (s: ShotRow) => `${s.shot} ${handLabel(s.hand)}`.trim();
 const listShots = (rows: ShotRow[], count: (s: ShotRow) => number) =>
   rows.map(s => `${s.shot.toLowerCase()}${s.hand ? ` ${handLabel(s.hand)}` : ''} ${count(s)}`).join(', ');
@@ -153,7 +173,23 @@ const MatchAnalysis = () => {
     sets: data.sets,
     points: data.points,
     shots: data.shots,
+    confirmed: data.match.confirmed_tags ?? [],
   }), [data]);
+
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  // "That's all of them": the owner says every point for a tag is ticked
+  const confirmTag = async (tag: SweepTag) => {
+    if (!data) return;
+    setConfirmError(null);
+    const confirmed = [...new Set([...(data.match.confirmed_tags ?? []), tag])];
+    try {
+      await api.match.updateMatch(data.match.id, { confirmed_tags: confirmed });
+      setData(prev => prev && { ...prev, match: { ...prev.match, confirmed_tags: confirmed } });
+    } catch (err) {
+      console.error('Failed to confirm the ticks:', err);
+      setConfirmError('That did not save. Check your connection and try again.');
+    }
+  };
 
   useEffect(() => {
     if (!data || !analysis) return;
@@ -343,6 +379,23 @@ const MatchAnalysis = () => {
         <strong>How to read this page.</strong> Each point has two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Rally shots aren't entered, so the numbers only cover the last two shots of each point.
       </aside>
 
+      {isOwnerView && unconfirmedTags(a.rows, match.confirmed_tags ?? []).map(({ tag, ticks }) => (
+        <div key={tag} className="card ma-confirm" role="note" data-html2canvas-ignore="true">
+          <div>
+            <strong>
+              {tag === 'unforced' ? `${ticks} unforced ${ticks === 1 ? 'error is' : 'errors are'} ticked`
+                : `${ticks} ${ticks === 1 ? 'point is' : 'points are'} marked: ${SWEEPS[tag].name.toLowerCase()}`}. Is that all of them?
+            </strong>
+            <span>No sweep has been done for these, so some could be missing. Only you see this.</span>
+            {confirmError && <span className="status error">{confirmError}</span>}
+          </div>
+          <div className="ma-confirm-actions">
+            <button type="button" className="btn small" onClick={() => confirmTag(tag)}>That's all of them</button>
+            <Link to={`/matches/${match.id}/sweep/${tag}`} className="btn small primary">Do a sweep</Link>
+          </div>
+        </div>
+      ))}
+
       {totalPoints === 0 ? (
         <p className="muted">No points have been entered for this match yet.</p>
       ) : (
@@ -388,6 +441,19 @@ const MatchAnalysis = () => {
               <ServeCard title="Your serve" stats={a.serveReceive.player} yours />
               <ServeCard title="Their serve" stats={a.serveReceive.opponent} yours={false} />
             </div>
+            {a.thirdBall && (
+              <div className="card ma-list">
+                <h3>Attacking after your serve</h3>
+                <p className="ma-small muted">
+                  Your serves that went past the receive. You attacked the third ball after {a.thirdBall.attacked.won + a.thirdBall.attacked.lost} of {a.thirdBall.attacked.won + a.thirdBall.attacked.lost + a.thirdBall.other.won + a.thirdBall.other.lost}.
+                  {!a.thirdBall.confirmed && ' Not every point has been checked, so some may be missing.'}
+                </p>
+                <SplitRow label="Third-ball attack" tally={a.thirdBall.attacked}
+                  max={Math.max(a.thirdBall.attacked.won + a.thirdBall.attacked.lost, a.thirdBall.other.won + a.thirdBall.other.lost)} />
+                <SplitRow label="Other serve points" tally={a.thirdBall.other}
+                  max={Math.max(a.thirdBall.attacked.won + a.thirdBall.attacked.lost, a.thirdBall.other.won + a.thirdBall.other.lost)} />
+              </div>
+            )}
           </section>
 
           <section aria-labelledby="ma-you" className="section">
@@ -487,6 +553,28 @@ const MatchAnalysis = () => {
               <PatternList title="How they won points" patterns={a.patterns.opponent} yours={false} />
             </div>
           </section>
+
+          {a.attackFirst && (() => {
+            const af = a.attackFirst;
+            const max = Math.max(...[af.player, af.opponent, af.unclear].map(t => t.won + t.lost));
+            return (
+              <section aria-labelledby="ma-first" className="section">
+                <div className="section-head">
+                  <h2 id="ma-first">Who attacked first</h2>
+                  <p>
+                    Points where you played the first attacking shot, against the rest. {ATTACK_DEFINITION} Points you won are blue, points you lost orange.
+                    {!af.confirmed && ' Not every point has been checked, so some may be missing.'}
+                  </p>
+                </div>
+                <div className="card ma-list">
+                  <SplitRow label="You attacked first" tally={af.player} max={max} />
+                  <SplitRow label="They attacked first" tally={af.opponent} max={max} />
+                  <SplitRow label="No attack in the last two shots" tally={af.unclear} max={max} quiet />
+                  <p className="ma-small muted">Only the last two shots of each point are entered. In the last group, nobody attacked, or they attacked earlier in the rally and it ended with a push or a block.</p>
+                </div>
+              </section>
+            );
+          })()}
 
           {(a.balance.player.total > 0 || a.balance.opponent.total > 0) && (
             <section aria-labelledby="ma-balance" className="section">

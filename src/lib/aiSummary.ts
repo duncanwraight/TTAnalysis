@@ -15,7 +15,7 @@ export const SUMMARY_MODEL = 'claude-opus-5-5';
 
 // Part of every input hash. Bump it when the prompt or input changes enough
 // that stored summaries should show as out of date.
-export const SUMMARY_VERSION = 6;
+export const SUMMARY_VERSION = 7;
 
 /**
  * What a problem is about, which decides the advice it gets: unforced errors get
@@ -195,6 +195,8 @@ export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots
     const flags = [
       r.isLucky && 'lucky',
       r.isUnforced && 'unforced',
+      r.isAttackedFirst && 'attacked first',
+      r.isThirdBall && 'third ball',
       r.decidedBy === 'serve' && 'serve won',
       r.decidedBy === 'receive' && 'receive won',
     ].filter(Boolean).join(' ');
@@ -208,7 +210,7 @@ export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots
     'Computed analysis (player = the player named above):',
     JSON.stringify(computed),
     '',
-    'Points in order. Columns: set, point, server, winner, score after (player-opponent), winning shot, loser\'s last shot, flags (lucky, unforced, serve won, receive won).',
+    'Points in order. Columns: set, point, server, winner, score after (player-opponent), winning shot, loser\'s last shot, flags (lucky, unforced, attacked first, third ball, serve won, receive won).',
     ...points,
     '',
     'Shot guide. For each shot in this match: the qualities worth checking, then what a technical fault looks like.',

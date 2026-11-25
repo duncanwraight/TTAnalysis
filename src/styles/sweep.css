@@ -1,0 +1,140 @@
+/* Sweeps: one point at a time, one question. Built to sit on a laptop or phone
+   while the video plays on another screen, so the answers are big and the
+   score before the point is the largest thing on the page. */
+
+.sw { display: flex; flex-direction: column; gap: 18px; }
+
+.sw-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.sw-head h1 { font-size: 28px; line-height: 1.2; }
+.sw-head p { font-size: 15px; }
+.sw-head-actions { display: flex; align-items: center; gap: 12px; }
+
+.sw-instruction { font-size: 15px; color: var(--ink-2); max-width: 860px; line-height: 1.5; }
+.sw-instruction summary { cursor: pointer; font-weight: 600; color: var(--ink); width: fit-content; min-height: 32px; display: flex; align-items: center; }
+.sw-instruction[open] summary { display: none; }
+
+.sw-progress { display: flex; flex-direction: column; gap: 6px; }
+.sw-progress-text { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--ink-2); }
+.sw-progress-text strong { color: var(--ink); }
+.sw-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.sw-bar > div { height: 100%; border-radius: 999px; background: var(--ink); transition: width 0.15s; }
+
+.sw-body { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.sw-main { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.sw-point { display: flex; flex-direction: column; gap: 18px; padding: 24px; }
+.sw-point-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
+.sw-score { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sw-score-label { font-size: 13px; color: var(--ink-3); }
+.sw-score-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 24px; width: 100%; }
+.sw-score-value { font-size: 64px; font-weight: 700; line-height: 1; }
+.sw-name { font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.sw-name.you { text-align: right; color: var(--you); }
+.sw-name.opp { color: #c2410c; }
+
+.sw-shots {
+  display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px 16px;
+  border-top: 1px solid var(--line); padding-top: 16px; font-size: 16px;
+}
+.sw-shots dt { color: var(--ink-3); }
+.sw-current { font-size: 14px; color: var(--ink-2); background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 12px; }
+
+.sw-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sw-answer {
+  min-height: 76px; border-radius: var(--radius); border: 1px solid var(--line-strong);
+  background: var(--surface); color: var(--ink); font-size: 19px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 16px;
+}
+.sw-answer:hover { background: var(--surface-2); border-color: var(--ink-3); }
+.sw-answer.yes { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+.sw-answer.yes:hover { background: #0f172a; }
+.sw-answer.current { box-shadow: 0 0 0 3px var(--you-soft); }
+
+.sw kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px;
+  border-radius: 6px; border: 1px solid currentColor; opacity: 0.75;
+  font: inherit; font-size: 12px; font-weight: 600;
+}
+
+.sw-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.sw-hint { font-size: 14px; color: var(--ink-2); }
+
+.sw-rail { flex: 1 1 280px; max-width: 360px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sw-rail-head { display: flex; justify-content: space-between; align-items: baseline; }
+.sw-rail-head h2 { font-size: 16px; }
+.sw-rail-head span { font-size: 13px; }
+.sw-rail ol { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.sw-rail button {
+  width: 100%; min-height: 44px; padding: 6px 10px; border-radius: var(--radius-sm);
+  border: 1px solid transparent; background: none; text-align: left; font-size: 14px;
+  display: grid; grid-template-columns: 26px 44px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+}
+.sw-rail button:hover { background: var(--surface-2); }
+.sw-rail button.now { background: var(--surface-2); border-color: var(--ink); }
+.sw-rail .strong { font-weight: 600; }
+.sw-rail-shot { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sw-rail-state { font-size: 12px; }
+.sw-yes { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 600; }
+.sw-rail-note { font-size: 13px; }
+
+/* End of a sweep */
+.sw-done { display: flex; flex-direction: column; gap: 18px; padding: 28px; }
+.sw-done-head { display: flex; gap: 14px; align-items: flex-start; }
+.sw-done-head h1 { font-size: 22px; line-height: 1.25; }
+.sw-done-head p { font-size: 15px; color: var(--ink-2); margin-top: 4px; }
+.sw-done-mark {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--success-soft); border: 1px solid var(--success-line); color: var(--success);
+}
+.sw-others h2 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.sw-others ul { list-style: none; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.sw-others li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; }
+.sw-others li + li { border-top: 1px solid var(--line); }
+.sw-others li > div { display: flex; flex-direction: column; }
+.sw-others li span { font-size: 13px; color: var(--ink-3); }
+
+/* On a phone the answers sit at the bottom, in reach of a thumb */
+@media (max-width: 640px) {
+  .sw { gap: 12px; }
+  .sw-head { align-items: center; }
+  .sw-head h1 { font-size: 22px; }
+  .sw-meta, .sw-saved { display: none; }
+  .sw-instruction[open] summary { display: flex; }
+  .sw-head-actions .btn { min-height: 40px; }
+  .sw-point { padding: 16px; gap: 14px; }
+  .sw-score-value { font-size: 48px; }
+  .sw-score-row { gap: 14px; }
+  .sw-name { font-size: 15px; }
+  .sw-shots { grid-template-columns: 104px minmax(0, 1fr); font-size: 15px; }
+  .sw-actions {
+    position: sticky; bottom: 0; z-index: 5; grid-template-columns: 1fr;
+    background: var(--bg); padding: 10px 0 14px; gap: 10px;
+  }
+  .sw-answer { min-height: 60px; font-size: 18px; }
+  .sw kbd, .sw-hint { display: none; }
+  .sw-rail { max-width: none; }
+}
+
+/* The list of sweeps on the points editor */
+.sw-list { display: flex; flex-direction: column; gap: 14px; }
+.sw-list h2 { margin-bottom: 4px; }
+.sw-list p { font-size: 14px; max-width: 760px; }
+.sw-list ul { list-style: none; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.sw-list li {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) auto; gap: 16px; align-items: center;
+  padding: 12px 16px;
+}
+.sw-list li + li { border-top: 1px solid var(--line); }
+.sw-list-name { display: flex; flex-direction: column; }
+.sw-list-name span { font-size: 13px; color: var(--ink-3); }
+.sw-list-status { font-size: 14px; color: var(--ink-2); }
+.sw-list-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.sw-badge {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px; margin-right: 6px; border-radius: 999px;
+  background: var(--success-soft); border: 1px solid var(--success-line); color: var(--success); font-size: 13px; font-weight: 600;
+}
+@media (max-width: 640px) {
+  .sw-list li { grid-template-columns: 1fr; gap: 6px; }
+  .sw-list-actions { justify-content: flex-start; }
+}

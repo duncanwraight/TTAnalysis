@@ -22,6 +22,8 @@ type Spec = {
   loseHand?: 'fh' | 'bh';
   lucky?: boolean;
   unforced?: boolean;
+  attackedFirst?: boolean;
+  thirdBall?: boolean;
 };
 
 let nextId = 0;
@@ -35,6 +37,8 @@ const pt = (s: Spec): AnalysisPoint => ({
   other_hand: s.loseHand ?? 'bh',
   is_lucky_shot: s.lucky ?? false,
   is_unforced_error: s.unforced ?? false,
+  is_attacked_first: s.attackedFirst ?? s.thirdBall ?? false,
+  is_third_ball_attack: s.thirdBall ?? false,
 });
 
 // n points in a row to one side, all in the same set
@@ -43,8 +47,8 @@ const many = (n: number, winner: Side, set = 1, extra: Partial<Spec> = {}) =>
 
 const SETS = [1, 2, 3, 4, 5].map(n => ({ id: `set-${n}`, set_number: n, player_score: 0, opponent_score: 0 }));
 
-const analyse = (points: AnalysisPoint[], initialServer: Side = 'player') =>
-  buildAnalysis({ initialServer, sets: SETS, points, shots: SHOTS });
+const analyse = (points: AnalysisPoint[], initialServer: Side = 'player', confirmed: string[] = []) =>
+  buildAnalysis({ initialServer, sets: SETS, points, shots: SHOTS, confirmed });
 
 describe('shot labels', () => {
   it('prefixes pips shots so they differ from inverted ones', () => {
@@ -492,5 +496,79 @@ describe('shot balance', () => {
   it('notes a shot they kept having that you never did', () => {
     const a = analyse(many(6, 'opponent', 1, { win: 'block', winHand: 'bh', lose: 'loop', loseHand: 'fh' }));
     expect(a.cards).toContainEqual({ tag: 'Match story', title: 'No backhand blocks', text: 'A backhand block was never your winning or losing shot. It was theirs in 6 points.' });
+  });
+});
+
+describe('who attacked first', () => {
+  it('is left out until a point is ticked or the tag is confirmed', () => {
+    const points = [pt({ winner: 'player', win: 'loop', lose: 'push' })];
+    expect(analyse(points).attackFirst).toBeNull();
+    expect(analyse(points, 'player', ['attacked_first'])?.attackFirst).toMatchObject({ confirmed: true });
+  });
+
+  it('puts an unticked point with an attack in the last two shots down to the opponent', () => {
+    const a = analyse([
+      pt({ winner: 'player', win: 'loop', lose: 'push', attackedFirst: true }),
+      // You won with a loop but didn't attack first, so they did
+      pt({ winner: 'player', win: 'loop', lose: 'loop' }),
+      pt({ winner: 'opponent', win: 'loop', lose: 'block' }),
+      // No attack in the last two shots
+      pt({ winner: 'opponent', win: 'push', lose: 'push' }),
+    ]);
+    expect(a.attackFirst).toEqual({
+      confirmed: false,
+      player: { won: 1, lost: 0 },
+      opponent: { won: 1, lost: 1 },
+      unclear: { won: 0, lost: 1 },
+    });
+    expect(a.rows[0]).toMatchObject({ isAttackedFirst: true, isThirdBall: false });
+  });
+
+  it('leaves service faults out', () => {
+    const a = analyse([
+      pt({ winner: 'player', win: 'loop', lose: 'push', attackedFirst: true }),
+      pt({ winner: 'opponent', win: 'fault', lose: 'none' }),
+    ]);
+    const af = a.attackFirst!;
+    expect(af.player.won + af.player.lost + af.opponent.won + af.opponent.lost + af.unclear.won + af.unclear.lost).toBe(1);
+  });
+
+  it('adds a card when getting in first clearly paid off', () => {
+    const a = analyse([
+      ...many(5, 'player', 1, { win: 'loop', lose: 'push', attackedFirst: true }),
+      ...many(5, 'opponent', 1, { win: 'loop', lose: 'block' }),
+    ]);
+    expect(a.cards.find(c => c.title === 'Getting in first paid off')?.text)
+      .toBe('You won 5 of 5 points when you attacked first, and 0 of 5 when they did.');
+  });
+});
+
+describe('third-ball attack', () => {
+  it('only counts the player\'s serves that went past the receive', () => {
+    const a = analyse([
+      // Player serves points 1 and 2
+      pt({ winner: 'player', win: 'loop', lose: 'push', thirdBall: true }),
+      pt({ winner: 'player', win: 'serve', lose: 'push' }),
+      // Opponent serves points 3 and 4
+      pt({ winner: 'opponent', win: 'loop', lose: 'push' }),
+      pt({ winner: 'player', win: 'loop', lose: 'push' }),
+      // Player serves again
+      pt({ winner: 'opponent', win: 'loop', lose: 'block' }),
+    ]);
+    expect(a.thirdBall).toEqual({ confirmed: false, attacked: { won: 1, lost: 0 }, other: { won: 0, lost: 1 } });
+    expect(a.rows[0]).toMatchObject({ isAttackedFirst: true, isThirdBall: true });
+    expect(a.attackFirst?.player).toEqual({ won: 1, lost: 0 });
+  });
+
+  it('is left out until a point is ticked or the tag is confirmed', () => {
+    expect(analyse([pt({ winner: 'player', win: 'loop', lose: 'push' })]).thirdBall).toBeNull();
+  });
+});
+
+describe('confirmed unforced errors', () => {
+  it('counts as recorded with none ticked once confirmed', () => {
+    const points = [pt({ winner: 'opponent', win: 'loop', lose: 'push' })];
+    expect(analyse(points).unforced).toMatchObject({ recorded: false, confirmed: false });
+    expect(analyse(points, 'player', ['unforced']).unforced).toMatchObject({ recorded: true, confirmed: true, total: 0 });
   });
 });

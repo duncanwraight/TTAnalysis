@@ -10,7 +10,7 @@ import { FunctionsHttpError, PostgrestError, SupabaseClient } from '@supabase/su
 import type { AnalysisPoint, AnalysisSet, AnalysisShot, Role } from './analysis';
 import type { StoredMatchSummary } from './aiSummary';
 
-export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date' | 'best_of' | 'initial_server' | 'share_token'>;
+export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date' | 'best_of' | 'initial_server' | 'share_token' | 'confirmed_tags' | 'sweep_progress'>;
 
 export type MatchDetails = Pick<Match, 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date'>;
 
@@ -140,14 +140,14 @@ export const matchApi = {
   getAnalysis: async (id: string, client: SupabaseClient = supabase): Promise<AnalysisData> => {
     const [match, sets, points, shots, summary, notes] = await Promise.all([
       client.from('matches')
-        .select('id, opponent_name, player_name, event, video_url, date, best_of, initial_server, share_token')
+        .select('id, opponent_name, player_name, event, video_url, date, best_of, initial_server, share_token, confirmed_tags, sweep_progress')
         .eq('id', id)
         .single(),
       client.from('sets')
         .select('id, set_number, player_score, opponent_score')
         .eq('match_id', id),
       client.from('points')
-        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error')
+        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_third_ball_attack')
         .eq('match_id', id)
         .order('created_at', { ascending: true }),
       client.from('shots')
@@ -338,8 +338,8 @@ export const pointApi = {
     return data;
   },
 
-  // Change the lucky and unforced flags on a recorded point
-  updatePoint: async (id: string, changes: Pick<Point, 'is_lucky_shot' | 'is_unforced_error'>) => {
+  // Change the ticks on a recorded point: lucky, unforced, attacked first, third ball
+  updatePoint: async (id: string, changes: Partial<Pick<Point, 'is_lucky_shot' | 'is_unforced_error' | 'is_attacked_first' | 'is_third_ball_attack'>>) => {
     const { error } = await supabase
       .from('points')
       .update(changes)

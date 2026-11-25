@@ -33,6 +33,9 @@ export type Match = {
   initial_server?: 'player' | 'opponent';
   best_of: number;
   share_token: string | null;
+  // Sweep tags confirmed as complete, and where an unfinished sweep stopped; see src/lib/sweeps.ts
+  confirmed_tags?: string[];
+  sweep_progress?: Record<string, string>;
   is_complete: boolean;
   created_at: string;
   updated_at: string;
@@ -63,6 +66,8 @@ export type Point = {
   notes?: string;
   is_lucky_shot?: boolean; // Tracks whether the winning shot was lucky (e.g., hit net or edge)
   is_unforced_error?: boolean; // The losing shot was a mistake the winner didn't force
+  is_attacked_first?: boolean; // The player played the first attacking shot
+  is_third_ball_attack?: boolean; // The player served and attacked the ball after the receive
   created_at: string;
 };
 
