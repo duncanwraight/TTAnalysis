@@ -22,6 +22,7 @@ Done on 2026-11-25:
 
 1. **Signed-out homepage brochure** (section 1), shipped in `b8d8a1e`.
 2. **Wording sweep** (section 1): "film" and "enter" used consistently across the whole site, shipped in the commit after it.
+3. **Tactical and technical** (section 2): both terms are now named and defined on `/admin/shots` and in the coach's summary.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. The reset link also needs `https://tt-analysis.vercel.app/reset-password` in the Supabase dashboard's allowed redirect URLs.
 
@@ -73,8 +74,16 @@ Decisions worth keeping:
 - No server-side fallback to another model on refusal. A refusal is very unlikely on table tennis data, and a fallback would complicate the cost tracking.
 - It uses the API, not a Claude subscription. A subscription can't power a server function used by other people.
 
+Tactical and technical, added 2026-11-25: **tactical** is something a player can change during a match to influence it (placement, variation, shot choice). **Technical** is something in the stroke or in reading spin that they work on in practice. The definitions are `TACTICAL_DEFINITION` and `TECHNICAL_DEFINITION` in `src/lib/shotGuide.ts`. `/admin/shots` labels the qualities as tactical and the notes as technical, and the summary's problem panels read "Tactical" and "Technical" (they used to say "Check" and "If it's technical"), with both definitions under "Work on". The prompt uses the same definitions. `SUMMARY_VERSION` was not bumped, so existing summaries aren't marked out of date.
+
 Still open:
 
+- **Player and match-up insights (needs a design).** Let the coach's summary use what's known about the player and the kind of opponent, as well as the one match. Examples: things a player is working on or tends to fail with, and things to look for against particular styles of play, each split into tactical and technical. Questions for the design:
+  - Where the knowledge lives: per player (the user and the friends whose matches they enter), per opponent, per style of play, or a mix. Who writes it: the user, the coach's summary across past matches, or both.
+  - How a style of play is described: a fixed list (chopper, pips blocker, two-winged looper, penhold and so on), free text, or both, and whether it's set on the match or on the opponent.
+  - How it reaches the prompt without the model treating it as evidence. The rule that only the counts are stated as fact has to hold, so player and style notes can only shape what to check.
+  - Privacy on share links: notes about a player's weaknesses probably shouldn't be visible, like the correction notes today.
+  - Effect on the input hash, cost and the token budget.
 - The technical notes are the user's to write and refine. My drafts from the A/B test were never put on production.
 - There's no eval set. Prompt changes have been judged by reading outputs for the Duncan and James matches. If changes become frequent, build a small eval: a handful of matches, plus a checklist covering counts with every claim, no placement guesses, no invented technical faults, and the length limits.
 - Possibly let the user choose Sonnet 5.5 for half the cost, if quality holds on a side-by-side.

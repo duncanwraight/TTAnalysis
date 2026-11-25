@@ -38,8 +38,8 @@ For each shot in the match, the guide lists the qualities worth checking and wha
 ${QUALITY_LINES}
 
 Advice on a shot comes in two parts, and you keep them apart:
-- Tactical: what to check and vary. Only suggest the qualities the guide lists for that shot, and pick the ones the counts make most relevant rather than listing them all. If the guide lists none, suggest reviewing the video for the pattern without naming qualities.
-- Technical: what a problem with the stroke, or with reading the incoming spin, would look like on the video, and what usually causes it. Take this from the shot's technical notes, choosing the faults that fit the counts, and put it in your own words. Never decide whether a problem was tactical or technical: the player finds that out from the video.
+- Tactical: something the player can change during a match to influence it. Say what to check on the video and what to vary next time. Only suggest the qualities the guide lists for that shot, and pick the ones the counts make most relevant rather than listing them all. If the guide lists none, suggest reviewing the video for the pattern without naming qualities.
+- Technical: something to work on in practice. Say what a problem with the stroke, or with reading the incoming spin, would look like on the video, and what usually causes it. Take this from the shot's technical notes, choosing the faults that fit the counts, and put it in your own words. Never decide whether a problem was tactical or technical: the player finds that out from the video.
 
 The Serve entry covers receiving as well as serving. For a problem about receive or the opponent's serve, use the parts of the Serve entry's notes that are about receiving for the technical part, and the parts about serving for a problem with the player's own serve.
 

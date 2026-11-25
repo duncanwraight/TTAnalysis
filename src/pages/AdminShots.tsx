@@ -3,7 +3,7 @@ import { ShotCategory, Shot } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import Button from '../components/ui/Button';
 import Layout from '../components/Layout';
-import { MAX_TECHNICAL_NOTES, QUALITIES, qualityLabel, sortQualities } from '../lib/shotGuide';
+import { MAX_TECHNICAL_NOTES, QUALITIES, TACTICAL_DEFINITION, TECHNICAL_DEFINITION, qualityLabel, sortQualities } from '../lib/shotGuide';
 
 interface EditingCategory {
   id?: string;
@@ -347,7 +347,7 @@ const AdminShots: React.FC = () => {
               />
             </label>
             <fieldset className="field admin-qualities">
-              <legend>What to check when this shot keeps losing points</legend>
+              <legend>Tactical: what to check when this shot keeps losing points</legend>
               <div>
                 {QUALITIES.map(q => (
                   <label key={q.key} className="admin-quality" title={q.meaning}>
@@ -365,10 +365,10 @@ const AdminShots: React.FC = () => {
                   </label>
                 ))}
               </div>
-              <span className="field-hint">The coach's summary only suggests checking these for this shot, on either hand.</span>
+              <span className="field-hint">{TACTICAL_DEFINITION} The coach's summary only suggests checking these for this shot, on either hand.</span>
             </fieldset>
             <label className="field">
-              <span>{editingShot.name === 'serve' ? 'Technical faults to look for, serving or receiving' : 'Technical faults to look for'}</span>
+              <span>{editingShot.name === 'serve' ? 'Technical: faults to look for, serving or receiving' : 'Technical: faults to look for'}</span>
               <textarea
                 rows={5}
                 maxLength={MAX_TECHNICAL_NOTES}
@@ -377,6 +377,7 @@ const AdminShots: React.FC = () => {
                 placeholder="What a fault looks like on video and what usually causes it. For example: into the net against backspin means not enough lift, or the bat closing too early."
               />
               <span className="field-hint">
+                {TECHNICAL_DEFINITION}{' '}
                 {editingShot.name === 'serve'
                   ? 'The coach\'s summary uses these for problems with your serve and with receiving the opponent\'s. Say which notes are about receiving. '
                   : 'The coach\'s summary uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. '}

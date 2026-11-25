@@ -24,3 +24,7 @@ export const qualityLabel = (key: string): string =>
 /** Keys in the list's order, with anything unknown dropped. */
 export const sortQualities = (keys: readonly string[]): QualityKey[] =>
   QUALITIES.filter(q => keys.includes(q.key)).map(q => q.key);
+
+/** What tactical and technical mean on the shot guide and in the coach's summary. */
+export const TACTICAL_DEFINITION = 'Tactical: something you can change during a match to influence it, such as where you place the ball, how you vary it or which shot you choose.';
+export const TECHNICAL_DEFINITION = 'Technical: something in the stroke itself, or in reading spin, that you work on in practice.';

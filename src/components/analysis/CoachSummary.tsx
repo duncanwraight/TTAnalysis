@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { StoredSummary } from '../../lib/api';
 import { MAX_NOTES_LENGTH } from '../../lib/aiSummary';
+import { TACTICAL_DEFINITION, TECHNICAL_DEFINITION } from '../../lib/shotGuide';
 
 type Props = {
   stored: StoredSummary | null;
@@ -104,11 +105,12 @@ const CoachSummary = ({
 
         <section aria-labelledby="cs-work-on">
           <h2 id="cs-work-on" className="cs-label">Work on · {summary.problems.length}</h2>
+          <p className="cs-terms muted">{TACTICAL_DEFINITION} {TECHNICAL_DEFINITION}</p>
           <ol className="cs-problems">
             {summary.problems.map((p, i) => {
               const panels = [
-                p.tactical && { kind: 'check', label: 'Check', text: p.tactical },
-                p.technical?.trim() && { kind: 'technical', label: "If it's technical", text: p.technical },
+                p.tactical && { kind: 'check', label: 'Tactical', text: p.tactical },
+                p.technical?.trim() && { kind: 'technical', label: 'Technical', text: p.technical },
                 // Summaries written before the tactical and technical split
                 !p.tactical && p.try && { kind: 'check', label: 'Try', text: p.try },
               ].filter((x): x is { kind: string; label: string; text: string } => !!x);
