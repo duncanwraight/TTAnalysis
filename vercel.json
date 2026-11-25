@@ -4,14 +4,25 @@
   "framework": "vite",
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/",
       "has": [
         {
           "type": "host",
           "value": "tt-analysis.vercel.app"
         }
       ],
-      "destination": "https://ttanalysis.app/:path*",
+      "destination": "https://ttanalysis.app/",
+      "permanent": true
+    },
+    {
+      "source": "/:path+",
+      "has": [
+        {
+          "type": "host",
+          "value": "tt-analysis.vercel.app"
+        }
+      ],
+      "destination": "https://ttanalysis.app/:path+",
       "permanent": true
     }
   ],
