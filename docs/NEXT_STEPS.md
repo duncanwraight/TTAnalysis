@@ -6,7 +6,7 @@ Handover notes for picking this work up in a fresh session. Section 1 is the mos
 
 ## Where things stand
 
-Everything below is merged to `main`, migrated on production Supabase (project `ztozinueuucrdlfwusen`) and deployed to https://ttanalysis.app (bought on Cloudflare on 2026-11-25). The old https://tt-analysis.vercel.app redirects there from `vercel.json`, so old share links still work.
+Everything below is merged to `main`, migrated on production Supabase (project `ztozinueuucrdlfwusen`) and deployed to https://ttanalysis.app. See *Domain and hosting* for how the domain is set up.
 
 Done on 2026-11-24, in order:
 
@@ -25,10 +25,12 @@ Done on 2026-11-25:
 3. **Tactical and technical** (section 2): both terms are now named and defined on `/admin/shots` and in the coach's summary.
 4. **Homepage facts, redirect and prerendering** (section 1).
 5. **Unforced errors in the coach's summary** (section 2): technical advice only, and a mental note when they bunch up late in sets. Function deployed to production.
+6. **No out-of-date banner on share links** (section 2), shipped in `bf523cc`.
+7. **Own domain** (*Domain and hosting*): the app moved to ttanalysis.app in `f6eaa13`. The user has checked it works.
 
 Next piece of work to design: **shot balance on the analysis page** (section 7), showing which shots a player leaned on or barely used.
 
-The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. The reset link also needs `https://ttanalysis.app/**` in the Supabase dashboard's allowed redirect URLs, and the Site URL set to `https://ttanalysis.app`.
+The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. It depends on the Supabase URL settings in *Domain and hosting*, which haven't been confirmed.
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
 
@@ -57,7 +59,7 @@ How it works:
 - **The function.** `supabase/functions/match-summary` checks the flag and that the caller owns the match. It loads the match as the caller, so RLS applies, and rebuilds the analysis with `buildAnalysis`. Then it sends the analysis, every point and the shot guide to `claude-opus-5-5` (effort `medium`, structured output). The service role is only used for the flag, the budget, and writing the summary and usage rows.
 - **Shared code.** `src/lib/aiSummary.ts` (input builder, hash, cost sum, output schema, validator) and `src/lib/shotGuide.ts` (the quality list and what each means to the model) are used by both the page and the function. That's why `src/lib` imports carry `.ts` extensions. The prompt is `supabase/functions/match-summary/prompt.ts`.
 - **Storage.** `match_summaries` holds the latest summary per match, readable by the owner and by share-token requests. `match_summary_notes` holds the owner's correction notes, owner-only, so a share link never shows them. `ai_usage` logs every call's tokens and cost, and is kept when a match is deleted. `ai_settings` holds the monthly budget, $20.
-- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 4. The page computes the same hash, and shows an "Update the summary" banner and a dot on the tab when they differ. Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a shot's guide also changes the hash for matches that use that shot.
+- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 4. The page computes the same hash, and shows the owner an "Update the summary" banner and a dot on the tab when they differ. Share links never see either, and the banner is left out of PDF exports (`data-html2canvas-ignore`), because only the owner can act on it. Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a shot's guide also changes the hash for matches that use that shot.
 - **Notes.** "Correct this summary" sends the owner's notes with the previous summary. Corrections of fact are treated as true. Saved notes are reapplied on every rewrite.
 - **Shot guide.** Each shot has `check_qualities` (tickboxes on `/admin/shots`) and free-text `technical_notes`. The output splits each problem into `tactical` and `technical`, shown as the "Tactical" and "Technical" panels. The technical part is empty when the shot has no notes, or the problem isn't about one shot. The tactical part is empty for unforced errors. The validator accepts either part empty, but not both. Serve is always in the guide, and its notes cover receiving as well as serving.
 - **The tab.** The summary lives at `/matches/:id/summary` and `/shared/:token/summary` (`src/components/analysis/CoachSummary.tsx`). Share links only show the tab when a summary exists. PDF export prints whichever tab is open.
@@ -190,6 +192,18 @@ VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_ANON_KEY=<ANON_KEY from s
 For an isolated stack instead, copy `supabase/` to a scratch directory, change the ports in its `config.toml` (earlier sessions used 553xx and project id `TTAnalysisScoringTest`), and run `supabase start --workdir <scratch dir>`. Stop it with `supabase stop --workdir <scratch dir> --no-backup`. Never run `supabase db reset` against the linked project. Apply new migrations locally with `supabase migration up --local`.
 
 The production shot list has been edited through the admin page, so it no longer matches the migrations. On production, `around_the_net` is `short_game`, `defence` is `defence / blocks`, and there are extra `block` shots (defence and pips) and a pips `chop_block`. Shots are publicly readable, so the production list and its guide can be read with the public anon key. Read anything else on production with `supabase db query --remote --read-only`.
+
+## Domain and hosting
+
+Set up on 2026-11-25.
+
+- **Domain:** ttanalysis.app, bought by the user on Cloudflare, which is also its DNS (zone id `2c5b935257d4c1dad92fc33448ec4cdc`). Chosen over tabletennisanalysis.app because it matches the app's name and is short enough to say out loud. A domain name has no real effect on search ranking. The page text does.
+- **DNS:** two A records for the apex (`216.198.79.1` and `64.29.17.1`) and a CNAME for `www` (`f69dd25ba55bb6fb.vercel-dns-017.com`), all DNS only. Turning on the Cloudflare proxy stops Vercel renewing the certificate, and a .app domain only works over HTTPS. The records were added with the "ovh VPS" Cloudflare API token in `~/Documents/vps/.cloudflare-token`, which turned out to cover this zone. That token expires on 2027-01-01.
+- **Vercel:** project `tt-analysis` (`prj_gu5fUEdIHpOM3zv2OUlviHKXSuCP`) in the user's personal team (`team_0dKSydEmVRcqft35lpxBJpw8`). It has `ttanalysis.app`, `www.ttanalysis.app` (a 308 to the apex) and the original `tt-analysis.vercel.app`. Vercel issues the certificate (Let's Encrypt).
+- **Old address:** `vercel.json` sends every path on `tt-analysis.vercel.app` to the same path on ttanalysis.app with a 308, so share links sent before the move still work. People signed in on the old address have to sign in once more, because sessions are stored per domain.
+- **Link preview:** the Open Graph tags in `index.html` point at ttanalysis.app, and `public/og-image.png` was regenerated to show the new address (section 1).
+- **Supabase auth URLs (by hand, not yet confirmed):** in the dashboard, under Authentication, then URL Configuration, the Site URL should be `https://ttanalysis.app`, and the redirect URLs should include `https://ttanalysis.app/**` as well as the old vercel.app entry. `supabase/config.toml` has the same values, but they aren't pushed from there. Until this is done, password reset emails link to the old address and rely on the redirect.
+- **Vercel MCP:** the Vercel plugin's MCP server is signed in and has access to the personal team. It can add domains, read deployments and logs, and check domain configuration (`get_domain_config`), so it's the first thing to reach for instead of the dashboard.
 
 ## Shipping changes
 
