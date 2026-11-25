@@ -31,12 +31,18 @@ Done on 2026-11-25:
 9. **Shot balance in the coach's summary** (section 2), shipped in `76c4035`. Function deployed to production.
 10. **Analysis page and prompt review** (`docs/ANALYSIS_REVIEW.md`): close finishes from 8-all, a Serve and receive section, a new page order, problem kinds and receive guidance in the prompt, and an eval script. `SUMMARY_VERSION` is now 6, so every stored summary shows as out of date until it's regenerated.
 
-Shipped on 2026-11-26 (see *Sweeps* in section 7): sweeps, attacked first, and attacked straight away. `SUMMARY_VERSION` is now 8.
+Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
+
+1. **Sweeps** with attacked first and a third-ball tag, in `65587b3`.
+2. **Sweep-to-sweep fix**: the end screen's links kept the finished sweep's state, fixed in `75b15bd`.
+3. **Attacked straight away** in place of third ball, attacked first split by server, and a UX pass on `/admin/shots` and the analysis page, in `2c2a2ab`. `SUMMARY_VERSION` is now 8, so every stored summary shows as out of date.
+
+The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
 
 - The password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
-- A summary written with shot balance. Press "Update the summary" on a match: the banner should go away afterwards. If it stays, the page and the function are hashing different input (most likely the shot roles).
+- A summary written with the sweep tags. Press "Update the summary" on a match with attacked first and attacked straight away ticked (about $0.10). Check it uses the counts sensibly, including the serve split, and that the banner goes away afterwards. If the banner stays, the page and the function are hashing different input (most likely `confirmed_tags` or the new point columns).
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
 
@@ -197,9 +203,15 @@ Designed with the user on 2026-11-26 on this canvas: https://claude.ai/artifact/
 - **Coach's summary.** The input now carries `attackFirst`, `thirdBall`, `unforced.confirmed` and "attacked first" and "third ball" point flags. The prompt has a "Who attacked first" section: use it over shot balance when present, treat unconfirmed counts as "in the points you marked", and never count unclear points as the opponent's. Not yet tried on a real model call.
 - **Checked** locally in Chrome on the Sam Carter sample match: a sweep by keyboard, Back, finishing, the end screen, the warning and its button, both new sections, and the sweep at 390px wide. The local test user's password was set to `sweep-test-2026` for this.
 
-To ship: the usual steps in *Shipping changes*, with the migration first, then `supabase functions deploy match-summary --use-api --yes`, then push. Then try a summary on a match with attacked first ticked (about $0.10), and check its banner clears after "Update the summary".
+Shipped in `65587b3`, with the changes below in `75b15bd` and `2c2a2ab`. Not yet tried: a coach's summary on a match with these tags (see *Where things stand*).
 
 Changed on 2026-11-26, after the first real use: attacked first is split by who served, and the third-ball sweep became **attacked straight away** (`early_attack`, `points.is_early_attack`, migration `20261126120000_early_attack.sql`). It covers points past the receive on either serve: on the player's serve it's a third-ball attack, on the opponent's it's attacking the serve, and the Yes button says which. Receives that won or lost the point count from the entered shots without a tick, in both `earlyAttack.onReceive` and attacked first. The migration kept the 7 third-ball ticks on production, dropped `third_ball` from `confirmed_tags` (it never covered their serves) and cleared the one unfinished third-ball position. `SUMMARY_VERSION` went to 8. Also fixed: moving from one sweep's end screen to the next kept the old sweep's state (`75b15bd`). A UX pass the same day: the `/admin/shots` edit dialog is now wide, in sections (the shot, role, then Tactical and Technical side by side) with short explanations and Save always in view, and the shot tables share column widths; the analysis page's new bars match the stage bars, and the 8-all figures say so when no set reached 8-all.
+
+Still open on sweeps:
+
+- Opponent's third-ball attacks aren't tagged. Their receive attacks on the player's serve already show from the entered shots when the receive decided the point.
+- The "Edit points" link at the bottom of the analysis page doesn't say that sweeps live on the points editor.
+- Shot balance shows a "Defence 0 (0%)" row when nobody defended.
 
 ## 8. Code quality
 
