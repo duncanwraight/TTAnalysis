@@ -93,7 +93,7 @@ const HomeBrochure = () => (
           <div className="bro-browser">
             <div className="bro-browser-bar" aria-hidden="true">
               <span className="dot" /><span className="dot" /><span className="dot" />
-              <span className="url">tt-analysis.vercel.app/shared/…</span>
+              <span className="url">ttanalysis.app/shared/…</span>
             </div>
             <img className="bro-shot" src={analysisTop} width={1600} height={867}
               alt="Analysis page for a sample match. Sam Carter lost 2-3 to Alex Morgan, winning 39 of 85 points. Under the headline numbers are the What decided it cards." />
