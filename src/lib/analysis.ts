@@ -96,7 +96,13 @@ export type PointRow = {
   isServiceFault: boolean;
   isLucky: boolean;
   isUnforced: boolean;
+  // 'serve' when the serve won the point (the receive missed or wasn't returned),
+  // 'receive' when the receive won it outright; null otherwise, including service faults
+  decidedBy: 'serve' | 'receive' | null;
 };
+
+/** A side's biggest lead in a set, and the score when they had it, player first. */
+export type Lead = { lead: number; at: string };
 
 export type SetSummary = {
   setNumber: number;
@@ -106,6 +112,12 @@ export type SetSummary = {
   gaps: number[];
   playerServe: Tally;
   opponentServe: Tally;
+  // Score after the first six points, player first ("2-4"), or the final score in a shorter set
+  afterSix: string;
+  // Biggest lead each side had at any point, the latest if it happened more than once
+  biggestLead: { player: Lead | null; opponent: Lead | null };
+  // Points in a row that ended the set, and who won them
+  closingRun: { side: Side; length: number };
 };
 
 export type Run = { side: Side; length: number; setNumber: number; fromPlayer: number; fromOpponent: number };
@@ -140,6 +152,31 @@ export type Balance = {
   standouts: string[];
 };
 
+/** A shot and how often it ended a point in one way. The shot includes the hand, as in "Backhand loop". */
+export type ShotCount = { shot: string; count: number; unforced: number };
+
+/**
+ * What happened on one side's serve. The first two shots are the only part of a
+ * rally the data pins down: when the serve is the winning shot, the receiver's
+ * losing shot was the receive, and when the serve is the server's losing shot,
+ * the receive won the point.
+ */
+export type ServeStats = {
+  // Points on this side's serve, from the server's point of view
+  points: Tally;
+  // The serve was the winning shot: a missed receive or no return
+  serveWon: number;
+  // Of those, how many the receiver didn't touch (recorded as "no shot")
+  notReturned: number;
+  // The receiver's missed receives, by shot, most first
+  receiveMissed: ShotCount[];
+  // The receive won the point outright, by shot
+  receiveWon: ShotCount[];
+  faults: number;
+  // Points that went past the receive, from the server's point of view
+  rally: Tally;
+};
+
 export type Card = { tag: 'Match story' | 'Work on' | 'Scouting'; title: string; text: string };
 
 export type Analysis = {
@@ -149,10 +186,13 @@ export type Analysis = {
   // Points the player won and lost while serving, and while receiving
   onServe: Tally;
   onReceive: Tally;
-  // Points from 9-9 onwards, or once either side reached 10
-  fromNineAll: Tally;
+  // Points played with both players on 8 or more: the close finish of a set
+  fromEightAll: Tally & { unforced: number };
   stages: Stage[];
+  // Runs of 3 or more, longest first
   runs: Run[];
+  // Keyed by the server
+  serveReceive: { player: ServeStats; opponent: ServeStats };
   lucky: { player: number; opponent: number };
   balance: Balance;
   shots: { player: ShotRow[]; opponent: ShotRow[] };
@@ -165,6 +205,8 @@ export type Analysis = {
     total: number;
     onServe: number;
     onReceive: number;
+    // Unforced errors from 8-all were at least 3, and at least twice as frequent per point as in the rest of the match
+    bunchedLate: boolean;
   };
   rows: PointRow[];
   // Repeated winning/losing shot pairs, by who won the point
@@ -189,6 +231,23 @@ const stageLabel = (pointsPlayed: number) =>
 const STAGES = ['Points 1–6', 'Points 7–15', 'Points 16+'];
 
 const emptyRecord = (): Tally => ({ won: 0, lost: 0 });
+
+/** Both players on 8 or more before the point: the close finish of a set. */
+export const isFromEightAll = (playerScore: number, opponentScore: number) => playerScore >= 8 && opponentScore >= 8;
+
+const emptyServe = () => ({
+  points: emptyRecord(), serveWon: 0, notReturned: 0,
+  receiveMissed: new Map<string, ShotCount>(), receiveWon: new Map<string, ShotCount>(),
+  faults: 0, rally: emptyRecord(),
+});
+const countShot = (counts: Map<string, ShotCount>, shot: string, unforced: boolean) => {
+  const c = counts.get(shot) ?? { shot, count: 0, unforced: 0 };
+  c.count += 1;
+  if (unforced) c.unforced += 1;
+  counts.set(shot, c);
+};
+const byCount = (counts: Map<string, ShotCount>) =>
+  [...counts.values()].sort((a, b) => b.count - a.count || a.shot.localeCompare(b.shot));
 const pct = (n: number, d: number) => (d > 0 ? Math.round((100 * n) / d) : 0);
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -209,9 +268,10 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   const stages = new Map(STAGES.map(label => [label, { label, won: 0, lost: 0, unforced: 0 }]));
   const onServe = emptyRecord();
   const onReceive = emptyRecord();
-  const fromNineAll = emptyRecord();
+  const fromEightAll = { ...emptyRecord(), unforced: 0 };
   const lucky = { player: 0, opponent: 0 };
-  const unforced = { recorded: false, total: 0, onServe: 0, onReceive: 0 };
+  const unforced = { recorded: false, total: 0, onServe: 0, onReceive: 0, bunchedLate: false };
+  const serveReceive = { player: emptyServe(), opponent: emptyServe() };
   const runs: Run[] = [];
   const rows: PointRow[] = [];
   const patterns = { player: new Map<string, Pattern>(), opponent: new Map<string, Pattern>() };
@@ -293,13 +353,33 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
 
     const stage = stages.get(stageLabel(p + o))!;
     stage[playerWon ? 'won' : 'lost'] += 1;
-    if ((p >= 9 && o >= 9) || p >= 10 || o >= 10) fromNineAll[playerWon ? 'won' : 'lost'] += 1;
+    const closeFinish = isFromEightAll(p, o);
+    if (closeFinish) fromEightAll[playerWon ? 'won' : 'lost'] += 1;
 
     if (point.is_lucky_shot) lucky[winner] += 1;
     if (!playerWon && isUnforced) {
       unforced.total += 1;
       if (server === 'player') unforced.onServe += 1; else unforced.onReceive += 1;
       stage.unforced += 1;
+      if (closeFinish) fromEightAll.unforced += 1;
+    }
+
+    // The first two shots: serve and receive
+    let decidedBy: PointRow['decidedBy'] = null;
+    const serving = serveReceive[server];
+    serving.points[winner === server ? 'won' : 'lost'] += 1;
+    if (isServiceFault) {
+      serving.faults += 1;
+    } else if (winner === server && winningShot.category === SERVE_CATEGORY) {
+      serving.serveWon += 1;
+      decidedBy = 'serve';
+      if (otherShot.name === NO_SHOT) serving.notReturned += 1;
+      else countShot(serving.receiveMissed, shotWithHand(shotLabel(otherShot), point.other_hand ?? null), isUnforced);
+    } else if (winner !== server && otherShot.category === SERVE_CATEGORY && otherShot.name !== NO_SHOT) {
+      countShot(serving.receiveWon, shotWithHand(shotLabel(winningShot), point.winning_hand ?? null), false);
+      decidedBy = 'receive';
+    } else {
+      serving.rally[winner === server ? 'won' : 'lost'] += 1;
     }
     if (!playerWon && point.is_unforced_error) unforced.recorded = true;
 
@@ -329,6 +409,7 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       isServiceFault,
       isLucky: !!point.is_lucky_shot,
       isUnforced,
+      decidedBy,
     });
   }
 
@@ -338,13 +419,17 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     .map(s => {
       const serve = serveBySet.get(s.set_number) ?? { player: emptyRecord(), opponent: emptyRecord() };
       const [playerScore, opponentScore] = scores.get(s.set_number) ?? [0, 0];
+      const setGaps = gaps.get(s.set_number) ?? [0];
       return {
         setNumber: s.set_number,
         playerScore,
         opponentScore,
-        gaps: gaps.get(s.set_number) ?? [0],
+        gaps: setGaps,
         playerServe: serve.player,
         opponentServe: serve.opponent,
+        afterSix: scoreAt(setGaps, Math.min(6, setGaps.length - 1)),
+        biggestLead: { player: biggestLead(setGaps, 'player'), opponent: biggestLead(setGaps, 'opponent') },
+        closingRun: closingRun(setGaps),
       };
     });
 
@@ -354,6 +439,13 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     if (s.playerScore > s.opponentScore) setsWon.won += 1;
     else if (s.opponentScore > s.playerScore) setsWon.lost += 1;
   }
+
+  // Nerves show as unforced errors bunched at the close of sets
+  const closePoints = fromEightAll.won + fromEightAll.lost;
+  const otherPoints = rows.length - closePoints;
+  const otherUnforced = unforced.total - fromEightAll.unforced;
+  unforced.bunchedLate = fromEightAll.unforced >= 3
+    && (otherUnforced === 0 || fromEightAll.unforced / closePoints >= (2 * otherUnforced) / otherPoints);
 
   const byNet = (a: ShotRow, b: ShotRow) => (a.won - a.lost) - (b.won - b.lost) || b.lost - a.lost;
   const analysis: Analysis = {
@@ -365,9 +457,13 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     sets: setSummaries,
     onServe,
     onReceive,
-    fromNineAll,
+    fromEightAll,
     stages: [...stages.values()],
-    runs: runs.filter(r => r.length >= 3).sort((a, b) => b.length - a.length).slice(0, 4),
+    runs: runs.filter(r => r.length >= 3).sort((a, b) => b.length - a.length),
+    serveReceive: {
+      player: serveStats(serveReceive.player),
+      opponent: serveStats(serveReceive.opponent),
+    },
     lucky,
     shots: {
       // Player: most costly first. Opponent: their best first.
@@ -391,6 +487,34 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   };
   analysis.cards = buildCards(analysis);
   return analysis;
+};
+
+const serveStats = (s: ReturnType<typeof emptyServe>): ServeStats => ({
+  ...s, receiveMissed: byCount(s.receiveMissed), receiveWon: byCount(s.receiveWon),
+});
+
+/** The score after a number of points, player first, from a set's gaps. */
+const scoreAt = (gaps: number[], index: number) => {
+  const player = (index + gaps[index]) / 2;
+  return `${player}-${index - player}`;
+};
+
+const biggestLead = (gaps: number[], side: Side): Lead | null => {
+  let best: Lead | null = null;
+  gaps.forEach((g, i) => {
+    const lead = side === 'player' ? g : -g;
+    if (lead > 0 && lead >= (best?.lead ?? 0)) best = { lead, at: scoreAt(gaps, i) };
+  });
+  return best;
+};
+
+const closingRun = (gaps: number[]): { side: Side; length: number } => {
+  const n = gaps.length - 1;
+  if (n < 1) return { side: 'player', length: 0 };
+  const side: Side = gaps[n] > gaps[n - 1] ? 'player' : 'opponent';
+  let length = 0;
+  for (let i = n; i > 0 && (gaps[i] > gaps[i - 1]) === (side === 'player'); i--) length += 1;
+  return { side, length };
 };
 
 const balanceSide = (tallies: Map<Role, Tally>): BalanceSide => {
@@ -481,38 +605,25 @@ export const buildCards = (a: Analysis): Card[] => {
   const workOn: Card[] = [];
   const scouting: Card[] = [];
 
-  // A set lost from a lead of 2 or more, or won from 2 or more down: the
-  // biggest swing of each
+  // A set lost from a real lead, or won from a real deficit: the biggest swing
+  // of each. A lead counts when it was 3 or more, or 2 with the leader on 8 or
+  // more, so 2-0 early in a set doesn't.
   const swings = a.sets.map(s => {
     const lostIt = s.opponentScore > s.playerScore;
     let best = { gap: 0, index: -1 };
     s.gaps.forEach((g, i) => {
       const lead = lostIt ? g : -g;
-      if (lead >= 2 && lead >= best.gap) best = { gap: lead, index: i };
+      const leaderScore = (i + Math.abs(g)) / 2;
+      if ((lead >= 3 || (lead >= 2 && leaderScore >= 8)) && lead >= best.gap) best = { gap: lead, index: i };
     });
     return { s, lostIt, best };
   }).filter(x => x.best.index > 0);
-  const scoreAt = (s: SetSummary, index: number) => {
-    const g = s.gaps[index];
-    const total = index;
-    const player = (total + g) / 2;
-    return `${player}-${total - player}`;
-  };
-  const closingRun = (s: SetSummary, side: Side) => {
-    let n = 0;
-    for (let i = s.gaps.length - 1; i > 0; i--) {
-      const playerWonPoint = s.gaps[i] > s.gaps[i - 1];
-      if ((side === 'player') !== playerWonPoint) break;
-      n += 1;
-    }
-    return n;
-  };
   const lost = swings.filter(x => x.lostIt).sort((x, y) => y.best.gap - x.best.gap)[0];
   if (lost) {
-    const run = closingRun(lost.s, 'opponent');
+    const run = lost.s.closingRun.side === 'opponent' ? lost.s.closingRun.length : 0;
     story.push({
       tag: 'Match story',
-      title: `Lost set ${lost.s.setNumber} from ${scoreAt(lost.s, lost.best.index)} up`,
+      title: `Lost set ${lost.s.setNumber} from ${scoreAt(lost.s.gaps, lost.best.index)} up`,
       text: run >= 3
         ? `Lost the last ${run} points of the set.`
         : `Lost the set ${lost.s.playerScore}-${lost.s.opponentScore}.`,
@@ -523,7 +634,7 @@ export const buildCards = (a: Analysis): Card[] => {
     story.push({
       tag: 'Match story',
       title: `Came back in set ${won.s.setNumber}`,
-      text: `Down ${scoreAt(won.s, won.best.index)}, won ${won.s.playerScore}-${won.s.opponentScore}.`,
+      text: `Down ${scoreAt(won.s.gaps, won.best.index)}, won ${won.s.playerScore}-${won.s.opponentScore}.`,
     });
   }
 
@@ -596,10 +707,10 @@ export const buildCards = (a: Analysis): Card[] => {
     const worst = [...a.shots.player].filter(s => s.unforced >= 3 && s.shot !== 'Service fault').sort((x, y) => y.unforced - x.unforced)[0];
     if (worst) {
       const name = shotWithHand(worst.shot, worst.hand);
-      workOn.push({ tag: 'Work on', title: name, text: `${worst.unforced} of your ${worst.lost} losing ${name.toLowerCase()}s were unforced.` });
+      workOn.push({ tag: 'Work on', title: name, text: `${worst.unforced} of your ${worst.lost} losing ${pluralShot(name)} were unforced.` });
     }
-    if (late.lost >= 4 && late.unforced >= 3 && late.unforced * 2 >= late.lost) {
-      workOn.push({ tag: 'Work on', title: 'Errors late in sets', text: `${late.unforced} of the ${late.lost} points you lost from the 16th point on were unforced.` });
+    if (a.unforced.bunchedLate) {
+      workOn.push({ tag: 'Work on', title: 'Errors from 8-all', text: `${a.fromEightAll.unforced} of the ${a.fromEightAll.lost} points you lost from 8-all were unforced, more often than earlier in sets.` });
     }
   }
   const costly = [...a.shots.player].filter(s => s.lost >= 4 && s.lost > s.won).sort((x, y) => y.lost - x.lost)[0];

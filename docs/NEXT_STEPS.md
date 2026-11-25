@@ -28,7 +28,8 @@ Done on 2026-11-25:
 6. **No out-of-date banner on share links** (section 2), shipped in `bf523cc`.
 7. **Own domain** (*Domain and hosting*): the app moved to ttanalysis.app in `f6eaa13`. The user has checked it works.
 8. **Shot balance** (section 7): a new section on the analysis page in place of Categories, a role per shot on `/admin/shots`, and two new cards.
-9. **Shot balance in the coach's summary** (section 2), shipped in `76c4035`. Function deployed to production. `SUMMARY_VERSION` is now 5, so every stored summary shows as out of date until it's regenerated.
+9. **Shot balance in the coach's summary** (section 2), shipped in `76c4035`. Function deployed to production.
+10. **Analysis page and prompt review** (`docs/ANALYSIS_REVIEW.md`): close finishes from 8-all, a Serve and receive section, a new page order, problem kinds and receive guidance in the prompt, and an eval script. `SUMMARY_VERSION` is now 6, so every stored summary shows as out of date until it's regenerated.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
 
@@ -62,7 +63,7 @@ How it works:
 - **The function.** `supabase/functions/match-summary` checks the flag and that the caller owns the match. It loads the match as the caller, so RLS applies, and rebuilds the analysis with `buildAnalysis`. Then it sends the analysis, every point and the shot guide to `claude-opus-5-5` (effort `medium`, structured output). The service role is only used for the flag, the budget, and writing the summary and usage rows.
 - **Shared code.** `src/lib/aiSummary.ts` (input builder, hash, cost sum, output schema, validator) and `src/lib/shotGuide.ts` (the quality list and what each means to the model) are used by both the page and the function. That's why `src/lib` imports carry `.ts` extensions. The prompt is `supabase/functions/match-summary/prompt.ts`.
 - **Storage.** `match_summaries` holds the latest summary per match, readable by the owner and by share-token requests. `match_summary_notes` holds the owner's correction notes, owner-only, so a share link never shows them. `ai_usage` logs every call's tokens and cost, and is kept when a match is deleted. `ai_settings` holds the monthly budget, $20.
-- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 5. The page computes the same hash, and shows the owner an "Update the summary" banner and a dot on the tab when they differ. Share links never see either, and the banner is left out of PDF exports (`data-html2canvas-ignore`), because only the owner can act on it. Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a shot's guide also changes the hash for matches that use that shot.
+- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 6. The page computes the same hash, and shows the owner an "Update the summary" banner and a dot on the tab when they differ. Share links never see either, and the banner is left out of PDF exports (`data-html2canvas-ignore`), because only the owner can act on it. Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a shot's guide also changes the hash for matches that use that shot.
 - **Notes.** "Correct this summary" sends the owner's notes with the previous summary. Corrections of fact are treated as true. Saved notes are reapplied on every rewrite.
 - **Shot guide.** Each shot has `check_qualities` (tickboxes on `/admin/shots`) and free-text `technical_notes`. The output splits each problem into `tactical` and `technical`, shown as the "Tactical" and "Technical" panels. The technical part is empty when the shot has no notes, or the problem isn't about one shot. The tactical part is empty for unforced errors. The validator accepts either part empty, but not both. Serve is always in the guide, and its notes cover receiving as well as serving.
 - **The tab.** The summary lives at `/matches/:id/summary` and `/shared/:token/summary` (`src/components/analysis/CoachSummary.tsx`). Share links only show the tab when a summary exists. PDF export prints whichever tab is open.
@@ -96,7 +97,8 @@ Still open:
   - Privacy on share links: notes about a player's weaknesses probably shouldn't be visible, like the correction notes today.
   - Effect on the input hash, cost and the token budget.
 - The technical notes are the user's to write and refine. My drafts from the A/B test were never put on production.
-- There's no eval set. Prompt changes have been judged by reading outputs for the Duncan and James matches. If changes become frequent, build a small eval: a handful of matches, plus a checklist covering counts with every claim, no placement guesses, no invented technical faults, shot balance kept out of the headline without a role standout, and the length limits.
+- The eval (`scripts/summary-eval.ts`) checks rules by pattern, not the truth of each count. Claims like "won 5, lost 12" could be checked against the analysis if a wrong count ever turns up.
+- The user's Serve and Push notes need a rewrite now that receive has its own guidance (see *Left for the user* in `docs/ANALYSIS_REVIEW.md`).
 - Possibly let the user choose Sonnet 5.5 for half the cost, if quality holds on a side-by-side.
 
 ## 3. Deploying and testing the Edge Function
@@ -176,7 +178,7 @@ Still open:
 
 Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/FrhvxN3b9vbEQGZ8hounA2
 
-- **Roles.** `shots.role` is `attack`, `control` (at the table: push, block, bump, chop block), `defence` (away from it: chop, fish, lob) or null (serve, no shot, service fault), set by migration `20261125120000_shot_roles.sql` by shot name and edited on `/admin/shots`. Pips shots take the same role as the inverted ones. Three roles, not two, so a chopper and a pusher look different.
+- **Roles.** `shots.role` is `attack`, `control` (keeping the ball in play at the table: push, block, bump), `defence` (with backspin or from distance: chop, chop block, fish, lob; chop block moved from control on 2026-11-25 by `20261125150000_chop_block_defence.sql`) or null (serve, no shot, service fault), set by migration `20261125120000_shot_roles.sql` by shot name and edited on `/admin/shots`. Pips shots take the same role as the inverted ones. Three roles, not two, so a chopper and a pusher look different.
 - **The section** (`src/components/analysis/ShotBalance.tsx`, built by `buildBalance` in `analysis.ts`) replaced Categories. Each side's winning and losing shots by role, "What stands out", and a by-shot chart with you on the left and the opponent on the right. Pips shots stay separate rows. The comparison is always the opponent in the same match.
 - **What stands out**, at most three, in this order: a role share 20 points or more apart (both sides with 10+ shots); a shot and hand the opponent had 5+ times that you never had; a shot one side had 1.5x as often with 10+; a shot you had 5+ times that they never had.
 - **Cards.** "They/You did more attacking" now counts attack-role shots, falling back to "did more defending". "No backhand blocks" (or whichever shot) appears for the biggest shot you never had. "Attacking dropped off" (`attacksBySet`) counts attack-role shots too, so a pips attack filed under another category counts.

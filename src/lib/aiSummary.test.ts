@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnalysisPoint, AnalysisShot, buildAnalysis } from './analysis';
-import { buildSummaryInput, costUsd, hashInput, isMatchSummary } from './aiSummary';
+import { buildSummaryInput, costUsd, enforceKinds, hashInput, isMatchSummary } from './aiSummary';
 
 const SHOTS: AnalysisShot[] = [
   { id: 'push', name: 'push', display_name: 'Push', category: 'short_game', category_order: 2, check_qualities: ['spin', 'length'] },
@@ -67,6 +67,34 @@ describe('summary input', () => {
     expect(withBalance).not.toBe(input);
   });
 
+  it('gives each set its facts instead of the per-point gaps, and only runs of 4 or more', () => {
+    const json = JSON.parse(input.split('\n')[3]);
+    expect(json.sets).toEqual([{
+      setNumber: 1, score: '2-1', afterSix: '2-1',
+      biggestLead: { player: { lead: 1, at: '2-1' }, opponent: null },
+      closingRun: { side: 'player', length: 1 },
+      playerServe: { won: 1, lost: 1 }, opponentServe: { won: 1, lost: 0 },
+    }]);
+    expect(json.runs).toEqual([]);
+  });
+
+  it('flags points the serve or the receive decided', () => {
+    const served = buildAnalysis({
+      initialServer: 'player',
+      sets: [{ id: 'set-1', set_number: 1, player_score: 1, opponent_score: 1 }],
+      points: [
+        point(0, 'player', { winning_shot_id: 'serve', other_shot_id: 'push', other_hand: 'bh' }),
+        point(1, 'opponent', { winning_shot_id: 'loop', other_shot_id: 'serve', other_hand: 'fh' }),
+      ],
+      shots: SHOTS,
+    });
+    const lines = buildSummaryInput(MATCH, served, SHOTS).split('\n').slice(6, 8);
+    expect(lines).toEqual([
+      '1,1,player,player,1-0,Serve FH,Push BH,serve won',
+      '1,2,player,opponent,1-1,Loop FH,Serve FH,receive won',
+    ]);
+  });
+
   it('lists every point with its score and flags', () => {
     const lines = input.split('\n').slice(6, 9);
     expect(lines).toEqual([
@@ -128,7 +156,7 @@ describe('cost', () => {
 describe('summary shape', () => {
   const valid = {
     headline: 'Lost 2-3.',
-    problems: [{ title: 'Backhand loop', detail: 'Won 5, lost 12.', tactical: 'Check placement on the video.', technical: '' }],
+    problems: [{ kind: 'shot', title: 'Backhand loop', detail: 'Won 5, lost 12.', tactical: 'Check placement on the video.', technical: '' }],
     mental: [],
   };
 
@@ -139,13 +167,41 @@ describe('summary shape', () => {
   it('rejects missing or empty fields', () => {
     expect(isMatchSummary(null)).toBe(false);
     expect(isMatchSummary({ ...valid, headline: ' ' })).toBe(false);
-    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', technical: '' }] })).toBe(false);
-    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', tactical: 'z' }] })).toBe(false);
-    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', tactical: '', technical: 'z' }] })).toBe(true);
-    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', tactical: ' ', technical: '' }] })).toBe(false);
+    expect(isMatchSummary({ ...valid, problems: [{ kind: 'shot', title: 'x', detail: 'y', technical: '' }] })).toBe(false);
+    expect(isMatchSummary({ ...valid, problems: [{ kind: 'shot', title: 'x', detail: 'y', tactical: 'z' }] })).toBe(false);
+    expect(isMatchSummary({ ...valid, problems: [{ kind: 'shot', title: 'x', detail: 'y', tactical: '', technical: 'z' }] })).toBe(true);
+    expect(isMatchSummary({ ...valid, problems: [{ kind: 'shot', title: 'x', detail: 'y', tactical: ' ', technical: '' }] })).toBe(false);
+    // Every problem needs a known kind
+    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', tactical: 'z', technical: '' }] })).toBe(false);
+    expect(isMatchSummary({ ...valid, problems: [{ kind: 'mood', title: 'x', detail: 'y', tactical: 'z', technical: '' }] })).toBe(false);
     // A version 1 summary is still shown on the page, but the function never stores a new one
-    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', try: 'z' }] })).toBe(false);
+    expect(isMatchSummary({ ...valid, problems: [{ kind: 'shot', title: 'x', detail: 'y', try: 'z' }] })).toBe(false);
     expect(isMatchSummary({ ...valid, mental: undefined })).toBe(false);
+  });
+
+  it('needs technical advice on unforced errors and tactical advice on a situation', () => {
+    const problem = (kind: string, tactical: string, technical: string) => ({ ...valid, problems: [{ kind, title: 'x', detail: 'y', tactical, technical }] });
+    expect(isMatchSummary(problem('unforced', 'Change tactics.', ''))).toBe(false);
+    expect(isMatchSummary(problem('unforced', '', 'Late contact.'))).toBe(true);
+    expect(isMatchSummary(problem('situation', '', 'Late contact.'))).toBe(false);
+    expect(isMatchSummary(problem('situation', 'Plan the first serves.', ''))).toBe(true);
+  });
+
+  it('clears tactical advice on unforced errors and technical advice on a situation', () => {
+    const summary = {
+      ...valid,
+      problems: [
+        { kind: 'unforced', title: 'a', detail: 'b', tactical: 'Plan the third ball.', technical: 'Late contact.' },
+        { kind: 'situation', title: 'c', detail: 'd', tactical: 'Plan the first serves.', technical: 'Footwork.' },
+        { kind: 'shot', title: 'e', detail: 'f', tactical: 'Vary the length.', technical: 'Lift the ball.' },
+      ],
+    };
+    const enforced = enforceKinds(summary) as typeof summary;
+    expect(enforced.problems.map(p => [p.tactical, p.technical])).toEqual([
+      ['', 'Late contact.'], ['Plan the first serves.', ''], ['Vary the length.', 'Lift the ball.'],
+    ]);
+    expect(isMatchSummary(enforced)).toBe(true);
+    expect(enforceKinds(null)).toBe(null);
   });
 
   it('rejects a field that has run on far past the limit', () => {

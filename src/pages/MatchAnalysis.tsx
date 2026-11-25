@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import type { AnalysisData } from '../lib/api';
-import { Analysis, Pattern, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
+import { Analysis, Pattern, ServeStats, ShotCount, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
 import { buildSummaryInput, hashInput } from '../lib/aiSummary';
 import CoachSummary from '../components/analysis/CoachSummary';
@@ -64,6 +64,34 @@ const PatternList = ({ title, patterns, yours }: { title: string; patterns: Patt
     ))}
   </div>
 );
+
+const countList = (counts: ShotCount[]) => counts.map(c => `${c.shot.toLowerCase()} ${c.count}`).join(', ');
+
+/** One side's serve: what the serve and the receive decided, and the rest. */
+const ServeCard = ({ title, stats, yours }: { title: string; stats: ServeStats; yours: boolean }) => {
+  const total = stats.points.won + stats.points.lost;
+  const youWon = yours ? stats.points.won : stats.points.lost;
+  const rallies = stats.rally.won + stats.rally.lost;
+  const ralliesYouWon = yours ? stats.rally.won : stats.rally.lost;
+  const [server, receiver] = yours ? ['Your', 'Their'] : ['Their', 'Your'];
+  const receiveWon = stats.receiveWon.reduce((n, c) => n + c.count, 0);
+  const missed = [
+    stats.receiveMissed.length > 0 && `${receiver} missed receives: ${countList(stats.receiveMissed)}.`,
+    stats.notReturned > 0 && `Not returned: ${stats.notReturned}.`,
+  ].filter(Boolean).join(' ');
+  return (
+    <div className="card ma-list">
+      <h3>{title}</h3>
+      <p className="ma-small muted">You won {youWon} of {total} points.</p>
+      <div className="ma-pair-row"><span className="muted">{server} serve won the point</span><strong>{stats.serveWon}</strong></div>
+      {missed && <p className="ma-small muted">{missed}</p>}
+      <div className="ma-pair-row"><span className="muted">{receiver} receive won the point</span><strong>{receiveWon}</strong></div>
+      {receiveWon > 0 && <p className="ma-small muted">With: {countList(stats.receiveWon)}.</p>}
+      <div className="ma-pair-row"><span className="muted">{server} service faults</span><strong>{stats.faults}</strong></div>
+      <div className="ma-pair-row"><span className="muted">Longer rallies</span><strong>You won {ralliesYouWon} of {rallies}</strong></div>
+    </div>
+  );
+};
 
 const shotName = (s: ShotRow) => `${s.shot} ${handLabel(s.hand)}`.trim();
 const listShots = (rows: ShotRow[], count: (s: ShotRow) => number) =>
@@ -240,7 +268,7 @@ const MatchAnalysis = () => {
   const editorPath = `/matches/${match.id}/points`;
   const totalPoints = a.points.won + a.points.lost;
   const setsResult = a.setsWon.won > a.setsWon.lost ? 'Won' : a.setsWon.won < a.setsWon.lost ? 'Lost' : 'Level';
-  const nineAllTotal = a.fromNineAll.won + a.fromNineAll.lost;
+  const eightAllTotal = a.fromEightAll.won + a.fromEightAll.lost;
   const chartScale = 48 / Math.max(4, ...a.sets.flatMap(s => s.gaps.map(Math.abs)));
 
   const yourLosing = a.shots.player.filter(s => s.lost > 0);
@@ -249,12 +277,6 @@ const MatchAnalysis = () => {
   const theirMain = a.shots.opponent.filter(s => s.won + s.lost >= 2);
   const theirOther = a.shots.opponent.filter(s => s.won + s.lost < 2);
   const theirMax = Math.max(1, ...a.shots.opponent.map(s => Math.max(s.won, s.lost)));
-  const theirServeWins = a.shots.opponent.filter(s => s.category === 'serve' && s.shot !== 'Service fault').reduce((n, s) => n + s.won, 0);
-  const theirFaults = a.shots.opponent.filter(s => s.shot === 'Service fault').reduce((n, s) => n + s.lost, 0);
-
-  const ueRows = a.shots.player.filter(s => s.lost > 0).sort((x, y) => y.unforced - x.unforced || y.lost - x.lost);
-  const ueMax = Math.max(1, ...ueRows.map(s => s.lost));
-  const [, , lateStage] = a.stages;
 
   const handRow = (label: string, t: Tally) => (
     <div className="ma-pair-row"><span className="muted">{label}</span><strong>Won {t.won} · Lost {t.lost}</strong></div>
@@ -332,7 +354,7 @@ const MatchAnalysis = () => {
               of={`${a.onServe.won} of ${a.onServe.won + a.onServe.lost}`} note="Points won while serving" />
             <Tile label="On their serve" value={`${pct(a.onReceive.won, a.onReceive.won + a.onReceive.lost)}%`}
               of={`${a.onReceive.won} of ${a.onReceive.won + a.onReceive.lost}`} note="Points won while receiving" />
-            <Tile label="From 9-all" value={`${a.fromNineAll.won}`} of={`of ${nineAllTotal}`} note="Points won at 9-9 or later" />
+            <Tile label="From 8-all" value={`${a.fromEightAll.won}`} of={`of ${eightAllTotal}`} note="Points won with both players on 8 or more" />
             {a.unforced.recorded ? (
               <Tile label="Your unforced errors" value={`${a.unforced.total}`} of={`of ${a.points.lost} lost`}
                 note={`${pct(a.unforced.total, a.points.lost)}% of the points you lost`} />
@@ -344,7 +366,7 @@ const MatchAnalysis = () => {
 
           {a.cards.length > 0 && (
             <section aria-labelledby="cards" className="section">
-              <h2 id="cards">What decided it</h2>
+              <h2 id="cards">Main findings</h2>
               <div className="ma-grid cards">
                 {a.cards.map(card => (
                   <article key={card.title} className="card ma-finding">
@@ -357,166 +379,21 @@ const MatchAnalysis = () => {
             </section>
           )}
 
-          <section aria-labelledby="ma-ue" className="section">
+          <section aria-labelledby="ma-serve" className="section">
             <div className="section-head">
-              <h2 id="ma-ue">Unforced errors</h2>
-              <p className="ma-note ma-definition"><strong>What counts as unforced.</strong> {UNFORCED_ERROR_DEFINITION} If the other player made it hard to play your shot with spin, placement or speed, it is not an unforced error.</p>
-            </div>
-            {a.unforced.recorded ? (
-              <>
-                <div className="ma-grid tiles">
-                  <Tile label="Unforced errors" value={`${a.unforced.total}`} of={`of ${a.points.lost} lost`}
-                    note={`${pct(a.unforced.total, a.points.lost)}% of the points you lost`} />
-                  <Tile label="Forced" value={`${a.points.lost - a.unforced.total}`} of={`of ${a.points.lost} lost`}
-                    note="The opponent won the point" />
-                  <Tile label="From the 16th point on" value={`${lateStage.unforced}`} of={`of ${lateStage.lost} lost`}
-                    note="Unforced, late in sets" />
-                </div>
-                <div className="card table-card">
-                  <table className="data-table" style={{ minWidth: 560 }}>
-                    <caption>By losing shot</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">Shot</th>
-                        <th scope="col" className="bar-col">
-                          <span className="ma-legend">
-                            <span><span className="ma-swatch opp" />Unforced</span>
-                            <span><span className="ma-swatch opp-soft" />Forced</span>
-                          </span>
-                        </th>
-                        <th scope="col" className="num">Unforced</th>
-                        <th scope="col" className="num">Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ueRows.map(s => (
-                        <tr key={s.key}>
-                          <th scope="row">{s.shot} <span className="ma-hand">{handLabel(s.hand)}</span></th>
-                          <td>
-                            <div className="ma-stack" title={`${shotName(s)}: ${s.unforced} unforced, ${s.lost - s.unforced} forced`}>
-                              {s.unforced > 0 && <div className="ma-fill-opp" style={{ width: `${(100 * s.unforced) / ueMax}%` }} />}
-                              {s.lost - s.unforced > 0 && <div className="ma-fill-opp-soft" style={{ width: `${(100 * (s.lost - s.unforced)) / ueMax}%` }} />}
-                            </div>
-                          </td>
-                          <td className="num strong">{s.unforced} of {s.lost}</td>
-                          <td className="num muted">{pct(s.unforced, s.lost)}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="ma-grid pairs">
-                  <div className="card ma-list">
-                    <h3>By stage of the set</h3>
-                    {a.stages.map(st => (
-                      <div key={st.label} className="ma-pair-row"><span className="muted">{st.label}</span><strong>{st.unforced} of {st.lost} lost</strong></div>
-                    ))}
-                  </div>
-                  <div className="card ma-list">
-                    <h3>Serving and receiving</h3>
-                    <div className="ma-pair-row"><span className="muted">On your serve</span><strong>{a.unforced.onServe} of {a.onServe.lost} lost</strong></div>
-                    <div className="ma-pair-row"><span className="muted">On their serve</span><strong>{a.unforced.onReceive} of {a.onReceive.lost} lost</strong></div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="card dashed ma-empty">
-                <div>
-                  <h3>Not ticked for this match yet</h3>
-                  <p>
-                    {isOwnerView
-                      ? `Go through your ${a.points.lost} lost points and tick the ones where your losing shot was unforced. This section then shows which shots let you down and when.`
-                      : 'Unforced errors haven\'t been ticked for this match.'}
-                  </p>
-                </div>
-                {isOwnerView && <Link to={editorPath} className="btn primary">Open the points editor</Link>}
-              </div>
-            )}
-          </section>
-
-          <section aria-labelledby="ma-story" className="section">
-            <div className="ma-story-head">
-              <h2 id="ma-story">Match progression</h2>
-              <div className="ma-legend">
-                <span><span className="ma-swatch you" />Point to you</span>
-                <span><span className="ma-swatch opp" />Point to opponent</span>
-              </div>
-            </div>
-            <p className="muted" style={{ fontSize: 14 }}>Each chart shows the difference in score after every point. Above the line, you were ahead.</p>
-            <div className="ma-grid sets">
-              {a.sets.map(s => (
-                <figure key={s.setNumber} className="card ma-set">
-                  <figcaption>
-                    <span>Set {s.setNumber}</span>
-                    <span>{s.playerScore}–{s.opponentScore} <span className="muted" style={{ fontWeight: 500 }}>{s.playerScore > s.opponentScore ? 'won' : 'lost'}</span></span>
-                  </figcaption>
-                  <SetChart gaps={s.gaps} scale={chartScale} />
-                  <div className="ma-set-serve">
-                    <span>Your serve {s.playerServe.won} of {s.playerServe.won + s.playerServe.lost}</span>
-                    <span>Their serve {s.opponentServe.won} of {s.opponentServe.won + s.opponentServe.lost}</span>
-                  </div>
-                </figure>
-              ))}
-            </div>
-            <div className="ma-grid pairs">
-              <div className="card ma-list">
-                <h3>Points by stage of the set</h3>
-                {[...a.stages.map(st => ({ label: st.label, won: st.won, lost: st.lost })), { label: 'From 9-all', ...a.fromNineAll }]
-                  .filter(st => st.won + st.lost > 0)
-                  .map(st => (
-                    <div key={st.label} className="ma-stage">
-                      <span className="muted">{st.label}</span>
-                      <div className="ma-stage-bar" title={`You ${st.won}, opponent ${st.lost}`}>
-                        {st.won > 0 && <div style={{ flex: `${st.won} 1 0` }} />}
-                        {st.lost > 0 && <div style={{ flex: `${st.lost} 1 0` }} className={st.won === 0 ? 'ma-fill-opp' : undefined} />}
-                      </div>
-                      <span className="ma-right">{st.won} of {st.won + st.lost}</span>
-                    </div>
-                  ))}
-                <p className="ma-small faint">Stages count both players' points: "points 1–6" covers 3-3, 5-1 and 6-0 alike.</p>
-              </div>
-              <div className="card ma-list">
-                <h3>Longest runs</h3>
-                {a.runs.length === 0 && <p className="ma-small muted">No runs of 3 or more.</p>}
-                {a.runs.map((r, i) => (
-                  <div key={i} className="ma-run">
-                    <span className={`ma-run-badge ${r.side === 'player' ? 'you' : 'opp'}`}>{r.length}</span>
-                    <span>{r.side === 'player' ? 'You' : 'Opponent'}, from {r.fromPlayer}-{r.fromOpponent}</span>
-                    <span className="ma-small muted">Set {r.setNumber}</span>
-                  </div>
-                ))}
-                <p className="ma-small faint">
-                  Lucky points (net or edge): {a.lucky.player === a.lucky.opponent ? `${a.lucky.player} each` : `you ${a.lucky.player}, opponent ${a.lucky.opponent}`}.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {(a.balance.player.total > 0 || a.balance.opponent.total > 0) && (
-            <section aria-labelledby="ma-balance" className="section">
-              <div className="section-head">
-                <h2 id="ma-balance">Shot balance</h2>
-                <p>Your winning and losing shots against theirs, by role: attack (loops, flicks), control at the table (pushes, blocks) and defence away from it (chops, lobs).</p>
-              </div>
-              <ShotBalance balance={a.balance} />
-            </section>
-          )}
-
-          <section aria-labelledby="ma-patterns" className="section">
-            <div className="section-head">
-              <h2 id="ma-patterns">Patterns</h2>
-              <p>A winning shot and the losing shot it was played against, when the same pair happened three times or more. Unforced errors are excluded.</p>
+              <h2 id="ma-serve">Serve and receive</h2>
+              <p>The serve and the receive are the only shots in a rally that can be picked out. When the serve is the winning shot, the receive missed or wasn't returned. When the serve is the losing shot, the receive won the point.</p>
             </div>
             <div className="ma-grid halves">
-              <PatternList title="How you won points" patterns={a.patterns.player} yours />
-              <PatternList title="How they won points" patterns={a.patterns.opponent} yours={false} />
+              <ServeCard title="Your serve" stats={a.serveReceive.player} yours />
+              <ServeCard title="Their serve" stats={a.serveReceive.opponent} yours={false} />
             </div>
           </section>
 
           <section aria-labelledby="ma-you" className="section">
             <div className="section-head">
               <h2 id="ma-you">Your winning and losing shots</h2>
-              <p>Most costly first. A service fault counts as your losing shot.</p>
+              <p>Most costly first. A service fault counts as your losing shot. Unforced counts the losing shots ticked as unforced.</p>
             </div>
             <div className="card table-card">
               <table className="data-table" style={{ minWidth: 640 }}>
@@ -553,6 +430,129 @@ const MatchAnalysis = () => {
             <div className="ma-grid pairs">
               <div className="card">{handRow('Backhand, excluding serves', a.hands.player.bh)}</div>
               <div className="card">{handRow('Forehand, excluding serves', a.hands.player.fh)}</div>
+            </div>
+          </section>
+
+          <section aria-labelledby="ma-ue" className="section">
+            <div className="section-head">
+              <h2 id="ma-ue">Unforced errors</h2>
+              <p className="ma-note ma-definition"><strong>What counts as unforced.</strong> {UNFORCED_ERROR_DEFINITION} If the other player made it hard to play your shot with spin, placement or speed, it is not an unforced error.</p>
+            </div>
+            {a.unforced.recorded ? (
+              <>
+                <div className="ma-grid tiles">
+                  <Tile label="Unforced errors" value={`${a.unforced.total}`} of={`of ${a.points.lost} lost`}
+                    note={`${pct(a.unforced.total, a.points.lost)}% of the points you lost`} />
+                  <Tile label="Forced" value={`${a.points.lost - a.unforced.total}`} of={`of ${a.points.lost} lost`}
+                    note="The opponent won the point" />
+                  <Tile label="From 8-all" value={`${a.fromEightAll.unforced}`} of={`of ${a.fromEightAll.lost} lost`}
+                    note="Unforced, at the close of sets" />
+                </div>
+                <div className="ma-grid pairs">
+                  <div className="card ma-list">
+                    <h3>By stage of the set</h3>
+                    {[...a.stages, { label: 'From 8-all', ...a.fromEightAll }].map(st => (
+                      <div key={st.label} className="ma-pair-row"><span className="muted">{st.label}</span><strong>{st.unforced} of {st.lost} lost</strong></div>
+                    ))}
+                  </div>
+                  <div className="card ma-list">
+                    <h3>Serving and receiving</h3>
+                    <div className="ma-pair-row"><span className="muted">On your serve</span><strong>{a.unforced.onServe} of {a.onServe.lost} lost</strong></div>
+                    <div className="ma-pair-row"><span className="muted">On their serve</span><strong>{a.unforced.onReceive} of {a.onReceive.lost} lost</strong></div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="card dashed ma-empty">
+                <div>
+                  <h3>Not ticked for this match yet</h3>
+                  <p>
+                    {isOwnerView
+                      ? `Go through your ${a.points.lost} lost points and tick the ones where your losing shot was unforced. This section then shows which shots let you down and when.`
+                      : 'Unforced errors haven\'t been ticked for this match.'}
+                  </p>
+                </div>
+                {isOwnerView && <Link to={editorPath} className="btn primary">Open the points editor</Link>}
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="ma-patterns" className="section">
+            <div className="section-head">
+              <h2 id="ma-patterns">Patterns</h2>
+              <p>A winning shot and the losing shot it was played against, when the same pair happened three times or more. Unforced errors are excluded.</p>
+            </div>
+            <div className="ma-grid halves">
+              <PatternList title="How you won points" patterns={a.patterns.player} yours />
+              <PatternList title="How they won points" patterns={a.patterns.opponent} yours={false} />
+            </div>
+          </section>
+
+          {(a.balance.player.total > 0 || a.balance.opponent.total > 0) && (
+            <section aria-labelledby="ma-balance" className="section">
+              <div className="section-head">
+                <h2 id="ma-balance">Shot balance</h2>
+                <p>Your winning and losing shots against theirs, by role: attack (loops, flicks), control at the table (pushes, blocks) and defence with backspin or from distance (chops, chop blocks, lobs).</p>
+              </div>
+              <ShotBalance balance={a.balance} />
+            </section>
+          )}
+
+          <section aria-labelledby="ma-story" className="section">
+            <div className="ma-story-head">
+              <h2 id="ma-story">Match progression</h2>
+              <div className="ma-legend">
+                <span><span className="ma-swatch you" />Point to you</span>
+                <span><span className="ma-swatch opp" />Point to opponent</span>
+              </div>
+            </div>
+            <p className="muted" style={{ fontSize: 14 }}>Each chart shows the difference in score after every point. Above the line, you were ahead.</p>
+            <div className="ma-grid sets">
+              {a.sets.map(s => (
+                <figure key={s.setNumber} className="card ma-set">
+                  <figcaption>
+                    <span>Set {s.setNumber}</span>
+                    <span>{s.playerScore}–{s.opponentScore} <span className="muted" style={{ fontWeight: 500 }}>{s.playerScore > s.opponentScore ? 'won' : 'lost'}</span></span>
+                  </figcaption>
+                  <SetChart gaps={s.gaps} scale={chartScale} />
+                  <div className="ma-set-serve">
+                    <span>Your serve {s.playerServe.won} of {s.playerServe.won + s.playerServe.lost}</span>
+                    <span>Their serve {s.opponentServe.won} of {s.opponentServe.won + s.opponentServe.lost}</span>
+                  </div>
+                </figure>
+              ))}
+            </div>
+            <div className="ma-grid pairs">
+              <div className="card ma-list">
+                <h3>Points by stage of the set</h3>
+                {[...a.stages.map(st => ({ label: st.label, won: st.won, lost: st.lost })), { label: 'From 8-all', ...a.fromEightAll }]
+                  .filter(st => st.won + st.lost > 0)
+                  .map(st => (
+                    <div key={st.label} className="ma-stage">
+                      <span className="muted">{st.label}</span>
+                      <div className="ma-stage-bar" title={`You ${st.won}, opponent ${st.lost}`}>
+                        {st.won > 0 && <div style={{ flex: `${st.won} 1 0` }} />}
+                        {st.lost > 0 && <div style={{ flex: `${st.lost} 1 0` }} className={st.won === 0 ? 'ma-fill-opp' : undefined} />}
+                      </div>
+                      <span className="ma-right">{st.won} of {st.won + st.lost}</span>
+                    </div>
+                  ))}
+                <p className="ma-small faint">Stages count both players' points: "points 1–6" covers 3-3, 5-1 and 6-0 alike.</p>
+              </div>
+              <div className="card ma-list">
+                <h3>Longest runs</h3>
+                {a.runs.length === 0 && <p className="ma-small muted">No runs of 3 or more.</p>}
+                {a.runs.slice(0, 4).map((r, i) => (
+                  <div key={i} className="ma-run">
+                    <span className={`ma-run-badge ${r.side === 'player' ? 'you' : 'opp'}`}>{r.length}</span>
+                    <span>{r.side === 'player' ? 'You' : 'Opponent'}, from {r.fromPlayer}-{r.fromOpponent}</span>
+                    <span className="ma-small muted">Set {r.setNumber}</span>
+                  </div>
+                ))}
+                <p className="ma-small faint">
+                  Lucky points (net or edge): {a.lucky.player === a.lucky.opponent ? `${a.lucky.player} each` : `you ${a.lucky.player}, opponent ${a.lucky.opponent}`}.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -594,13 +594,6 @@ const MatchAnalysis = () => {
                   <h3>Their forehand and backhand</h3>
                   {handRow('Forehand, excluding serves', a.hands.opponent.fh)}
                   {handRow('Backhand, excluding serves', a.hands.opponent.bh)}
-                </div>
-                <div className="card ma-list">
-                  <h3>Their serve</h3>
-                  <p className="muted" style={{ fontSize: 14, lineHeight: 1.5 }}>
-                    You won {a.onReceive.won} of {a.onReceive.won + a.onReceive.lost} points on their serve.
-                    {' '}The serve was their winning shot {theirServeWins === 1 ? 'once' : `${theirServeWins} times`}, and they made {theirFaults === 0 ? 'no service faults' : theirFaults === 1 ? 'one service fault' : `${theirFaults} service faults`}.
-                  </p>
                 </div>
               </div>
             </div>

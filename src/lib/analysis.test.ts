@@ -164,12 +164,70 @@ describe('stages and close finishes', () => {
     ]);
   });
 
-  it('counts points from 9-all or once either side has 10', () => {
-    // 9-9, then 10-9, then 10-10, then 11-10... and 10-0 counts too
-    const a = analyse([...many(9, 'player'), ...many(9, 'opponent'), pt({ winner: 'player' }), pt({ winner: 'opponent' })]);
-    expect(a.fromNineAll).toEqual({ won: 1, lost: 1 });
-    const b = analyse([...many(10, 'player'), pt({ winner: 'player' })]);
-    expect(b.fromNineAll).toEqual({ won: 1, lost: 0 });
+  it('counts points played with both players on 8 or more', () => {
+    // 8-8, then 9-8 (from 8-8), 9-9 (from 9-8), then an unforced loss at 9-9
+    const a = analyse([
+      ...many(8, 'player'), ...many(8, 'opponent'),
+      pt({ winner: 'player' }), pt({ winner: 'opponent' }), pt({ winner: 'opponent', unforced: true }),
+    ]);
+    expect(a.fromEightAll).toEqual({ won: 1, lost: 2, unforced: 1 });
+    // 10-0 is not a close finish
+    expect(analyse([...many(10, 'player'), pt({ winner: 'player' })]).fromEightAll).toEqual({ won: 0, lost: 0, unforced: 0 });
+  });
+
+  it('flags unforced errors bunched from 8-all', () => {
+    // No unforced errors before 8-8, three after it
+    const late = analyse([
+      ...many(8, 'player'), ...many(8, 'opponent'),
+      ...many(3, 'opponent', 1, { unforced: true }),
+    ]);
+    expect(late.unforced.bunchedLate).toBe(true);
+    // The same three spread through the set early on are not bunched
+    const early = analyse([
+      ...many(3, 'opponent', 1, { unforced: true }), ...many(8, 'player'), ...many(5, 'opponent'),
+      pt({ winner: 'player' }), pt({ winner: 'opponent' }),
+    ]);
+    expect(early.unforced.bunchedLate).toBe(false);
+  });
+});
+
+describe('set facts', () => {
+  it('gives the score after six points, each side\'s biggest lead and the closing run', () => {
+    // 2-4 after six, 5-4, then 5-11
+    const a = analyse([
+      ...many(2, 'player'), ...many(4, 'opponent'), ...many(3, 'player'), ...many(7, 'opponent'),
+    ]);
+    expect(a.sets[0]).toMatchObject({
+      afterSix: '2-4',
+      biggestLead: { player: { lead: 2, at: '2-0' }, opponent: { lead: 6, at: '5-11' } },
+      closingRun: { side: 'opponent', length: 7 },
+    });
+  });
+});
+
+describe('serve and receive outcomes', () => {
+  it('splits each server\'s points into serve winners, missed receives, receive winners, faults and rallies', () => {
+    // Player serves points 1-2 and 5-6, opponent 3-4 and 7-8
+    const a = analyse([
+      pt({ winner: 'player', win: 'serve', lose: 'none' }),
+      pt({ winner: 'player', win: 'serve', lose: 'loop', loseHand: 'bh' }),
+      pt({ winner: 'opponent', win: 'serve', lose: 'push', loseHand: 'bh', unforced: true }),
+      pt({ winner: 'player', win: 'loop', winHand: 'fh', lose: 'serve' }),
+      pt({ winner: 'opponent', win: 'fault', lose: 'none' }),
+      pt({ winner: 'opponent', win: 'loop', lose: 'block' }),
+      pt({ winner: 'player', win: 'loop', lose: 'chop' }),
+      pt({ winner: 'opponent', win: 'serve', lose: 'push', loseHand: 'bh' }),
+    ]);
+    expect(a.serveReceive.player).toEqual({
+      points: { won: 2, lost: 2 }, serveWon: 2, notReturned: 1,
+      receiveMissed: [{ shot: 'Backhand loop', count: 1, unforced: 0 }],
+      receiveWon: [], faults: 1, rally: { won: 0, lost: 1 },
+    });
+    expect(a.serveReceive.opponent).toEqual({
+      points: { won: 2, lost: 2 }, serveWon: 2, notReturned: 0,
+      receiveMissed: [{ shot: 'Backhand push', count: 2, unforced: 1 }],
+      receiveWon: [{ shot: 'Forehand loop', count: 1, unforced: 0 }], faults: 0, rally: { won: 0, lost: 1 },
+    });
   });
 });
 
@@ -244,7 +302,19 @@ describe('patterns', () => {
 describe('cards', () => {
   const titles = (points: AnalysisPoint[]) => analyse(points).cards.map(c => c.title);
 
-  it('notes a set lost from 2 or more up, with the closing run', () => {
+  it('ignores an early lead of 2', () => {
+    // 3-1 up, then lost 3-11
+    expect(titles([...many(3, 'player'), pt({ winner: 'opponent' }), ...many(10, 'opponent')])).not.toContain('Lost set 1 from 3-1 up');
+  });
+
+  it('counts a lead of 2 late in the set', () => {
+    // 9-7 up, then lost 9-11
+    const level = Array.from({ length: 7 }, () => [pt({ winner: 'player' }), pt({ winner: 'opponent' })]).flat();
+    const points = [...level, ...many(2, 'player'), ...many(4, 'opponent')];
+    expect(titles(points)).toContain('Lost set 1 from 9-7 up');
+  });
+
+  it('notes a set lost from 3 or more up, with the closing run', () => {
     // 7-3 up, then 0-8 to lose 7-11
     const a = analyse([...many(7, 'player'), ...many(3, 'opponent'), ...many(8, 'opponent')]);
     expect(a.cards[0]).toEqual({ tag: 'Match story', title: 'Lost set 1 from 7-0 up', text: 'Lost the last 11 points of the set.' });
@@ -276,6 +346,8 @@ describe('cards', () => {
       ...many(6, 'opponent', 1, { lose: 'chop', loseHand: 'bh' }),
     ]);
     expect(a.cards.filter(c => c.tag === 'Work on')[0]).toEqual({ tag: 'Work on', title: 'Forehand loop', text: '3 of your 3 losing forehand loops were unforced.' });
+    const pushes = analyse(many(4, 'opponent', 1, { lose: 'push', loseHand: 'bh', unforced: true }));
+    expect(pushes.cards).toContainEqual({ tag: 'Work on', title: 'Backhand push', text: '4 of your 4 losing backhand pushes were unforced.' });
   });
 
   it('names their weapon and their weakness', () => {

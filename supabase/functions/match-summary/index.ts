@@ -16,7 +16,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.13.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.8';
 import { buildAnalysis, type AnalysisShot } from '../../../src/lib/analysis.ts';
 import {
-  MAX_NOTES_LENGTH, SUMMARY_MODEL, SUMMARY_SCHEMA, buildSummaryInput, costUsd, hashInput, isMatchSummary, notesMessage,
+  MAX_NOTES_LENGTH, SUMMARY_MODEL, SUMMARY_SCHEMA, buildSummaryInput, costUsd, enforceKinds, hashInput, isMatchSummary, notesMessage,
 } from '../../../src/lib/aiSummary.ts';
 import { SYSTEM_PROMPT } from './prompt.ts';
 
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
     const text = response.content.flatMap(block => (block.type === 'text' ? [block.text] : [])).join('');
     let summary: unknown;
     try {
-      summary = JSON.parse(text);
+      summary = enforceKinds(JSON.parse(text));
     } catch {
       summary = null;
     }

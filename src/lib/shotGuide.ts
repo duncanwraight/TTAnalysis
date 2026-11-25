@@ -25,6 +25,13 @@ export const qualityLabel = (key: string): string =>
 export const sortQualities = (keys: readonly string[]): QualityKey[] =>
   QUALITIES.filter(q => keys.includes(q.key)).map(q => q.key);
 
+/**
+ * The technical side of receiving serve, whatever shot the receive was. A
+ * missed receive is nearly always a misread serve rather than a fault in the
+ * stroke, so the coach's summary uses this instead of the stroke's own notes.
+ */
+export const RECEIVE_GUIDANCE = 'Receiving is mostly about reading the serve. Watch the ball, not just the server\'s arm: from the toss, through contact, to the first bounce. Be balanced and ready to move before the serve is struck. Above all, read the spin, and use the bat\'s angle and the contact to cope with it. A missed receive is nearly always a misread serve, not a fault in the stroke used to return it.';
+
 /** What tactical and technical mean on the shot guide and in the coach's summary. */
 export const TACTICAL_DEFINITION = 'Tactical: something you can change during a match to influence it, such as where you place the ball, how you vary it or which shot you choose.';
 export const TECHNICAL_DEFINITION = 'Technical: something in the stroke itself, or in reading spin, that you work on in practice.';

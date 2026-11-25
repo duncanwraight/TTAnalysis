@@ -15,9 +15,18 @@ export const SUMMARY_MODEL = 'claude-opus-5-5';
 
 // Part of every input hash. Bump it when the prompt or input changes enough
 // that stored summaries should show as out of date.
-export const SUMMARY_VERSION = 5;
+export const SUMMARY_VERSION = 6;
+
+/**
+ * What a problem is about, which decides the advice it gets: unforced errors get
+ * technical advice only, a receive gets the receive guidance, and a situation
+ * (a set, a spell of points, the close of sets) gets tactical advice only.
+ */
+export const PROBLEM_KINDS = ['shot', 'unforced', 'receive', 'serve', 'situation'] as const;
+export type ProblemKind = typeof PROBLEM_KINDS[number];
 
 export type SummaryProblem = {
+  kind: ProblemKind;
   title: string;
   detail: string;
   // What to check and vary; empty for unforced errors, which only get technical advice
@@ -25,8 +34,9 @@ export type SummaryProblem = {
   // What a stroke or spin-reading fault would look like on the video; empty when it doesn't apply
   technical: string;
 };
-// Summaries from version 1 had a single "try" in place of tactical and technical
-export type StoredProblem = Omit<SummaryProblem, 'tactical' | 'technical'> & { tactical?: string; technical?: string; try?: string };
+// Summaries from version 1 had a single "try" in place of tactical and technical,
+// and summaries before version 6 have no kind
+export type StoredProblem = Omit<SummaryProblem, 'kind' | 'tactical' | 'technical'> & { kind?: ProblemKind; tactical?: string; technical?: string; try?: string };
 export type SummaryNote = { title: string; detail: string };
 export type MatchSummary = {
   headline: string;
@@ -46,12 +56,13 @@ export const SUMMARY_SCHEMA = {
       items: {
         type: 'object',
         properties: {
+          kind: { type: 'string', enum: [...PROBLEM_KINDS] },
           title: { type: 'string' },
           detail: { type: 'string' },
           tactical: { type: 'string' },
           technical: { type: 'string' },
         },
-        required: ['title', 'detail', 'tactical', 'technical'],
+        required: ['kind', 'title', 'detail', 'tactical', 'technical'],
         additionalProperties: false,
       },
     },
@@ -80,16 +91,35 @@ const isShortEnough = (v: string) => v.trim() === '' || v.trim().split(/\s+/).le
 const isText = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0 && isShortEnough(v);
 const isOptionalText = (v: unknown): v is string => typeof v === 'string' && isShortEnough(v);
 
+const isKind = (v: unknown): v is ProblemKind => PROBLEM_KINDS.includes(v as ProblemKind);
+
 export const isMatchSummary = (v: unknown): v is MatchSummary => {
   if (!v || typeof v !== 'object') return false;
   const s = v as Record<string, unknown>;
   return isText(s.headline)
     && Array.isArray(s.problems)
-    && s.problems.every(p => p && isText(p.title) && isText(p.detail)
+    && s.problems.every(p => p && isKind(p.kind) && isText(p.title) && isText(p.detail)
       && isOptionalText(p.tactical) && isOptionalText(p.technical)
-      && (isText(p.tactical) || isText(p.technical)))
+      && (p.kind === 'unforced' ? isText(p.technical) : p.kind === 'situation' ? isText(p.tactical) : isText(p.tactical) || isText(p.technical)))
     && Array.isArray(s.mental)
     && s.mental.every(m => m && isText(m.title) && isText(m.detail));
+};
+
+/**
+ * Applies the rules the prompt states but the model can still break: an
+ * unforced problem has no tactical part, and a situation has no technical part.
+ * Run before isMatchSummary, which then checks the part that's left.
+ */
+export const enforceKinds = (v: unknown): unknown => {
+  if (!v || typeof v !== 'object' || !Array.isArray((v as { problems?: unknown }).problems)) return v;
+  const s = v as { problems: Record<string, unknown>[] };
+  return {
+    ...s,
+    problems: s.problems.map(p => (
+      p?.kind === 'unforced' ? { ...p, tactical: '' }
+        : p?.kind === 'situation' ? { ...p, technical: '' }
+          : p)),
+  };
 };
 
 export type SummaryMatch = {
@@ -136,6 +166,17 @@ export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots
   const computed = {
     ...rest,
     cards: undefined,
+    // The per-point gaps are in the point list; each set gets the facts drawn from them
+    sets: rest.sets.map(s => ({
+      setNumber: s.setNumber,
+      score: `${s.playerScore}-${s.opponentScore}`,
+      afterSix: s.afterSix,
+      biggestLead: s.biggestLead,
+      closingRun: s.closingRun,
+      playerServe: s.playerServe,
+      opponentServe: s.opponentServe,
+    })),
+    runs: rest.runs.filter(r => r.length >= 4),
     balance: { ...rest.balance, shots: rest.balance.shots.map(noKey) },
     shots: { player: rest.shots.player.map(noKey), opponent: rest.shots.opponent.map(noKey) },
     patterns: { player: rest.patterns.player.map(noKey), opponent: rest.patterns.opponent.map(noKey) },
@@ -151,7 +192,12 @@ export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots
   ].filter(Boolean).join('. ');
 
   const points = rows.map(r => {
-    const flags = [r.isLucky && 'lucky', r.isUnforced && 'unforced'].filter(Boolean).join(' ');
+    const flags = [
+      r.isLucky && 'lucky',
+      r.isUnforced && 'unforced',
+      r.decidedBy === 'serve' && 'serve won',
+      r.decidedBy === 'receive' && 'receive won',
+    ].filter(Boolean).join(' ');
     return [r.setNumber, r.number, r.server, r.winner, `${r.playerScore}-${r.opponentScore}`,
       r.winningShot ?? '-', r.losingShot ?? '-', flags].join(',');
   });
@@ -162,7 +208,7 @@ export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots
     'Computed analysis (player = the player named above):',
     JSON.stringify(computed),
     '',
-    'Points in order. Columns: set, point, server, winner, score after (player-opponent), winning shot, loser\'s last shot, flags (lucky, unforced).',
+    'Points in order. Columns: set, point, server, winner, score after (player-opponent), winning shot, loser\'s last shot, flags (lucky, unforced, serve won, receive won).',
     ...points,
     '',
     'Shot guide. For each shot in this match: the qualities worth checking, then what a technical fault looks like.',

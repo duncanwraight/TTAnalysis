@@ -4,7 +4,7 @@ import { useApi } from '../lib/useApi';
 import Button from '../components/ui/Button';
 import Layout from '../components/Layout';
 import { ROLES, ROLE_LABEL, type Role } from '../lib/analysis';
-import { MAX_TECHNICAL_NOTES, QUALITIES, TACTICAL_DEFINITION, TECHNICAL_DEFINITION, qualityLabel, sortQualities } from '../lib/shotGuide';
+import { MAX_TECHNICAL_NOTES, QUALITIES, RECEIVE_GUIDANCE, TACTICAL_DEFINITION, TECHNICAL_DEFINITION, qualityLabel, sortQualities } from '../lib/shotGuide';
 
 interface EditingCategory {
   id?: string;
@@ -26,7 +26,7 @@ interface EditingShot {
   role: Role | null;
 }
 
-const ROLE_HINT = 'Attack: shots that go for the point. Control: shots at the table that keep the ball in play. Defence: shots away from the table. None: left out of shot balance, as serves are.';
+const ROLE_HINT = 'Attack: shots that go for the point. Control: shots at the table that keep the ball in play, such as pushes and blocks. Defence: shots that defend with backspin or from distance, such as chops, chop blocks and lobs. None: left out of shot balance, as serves are.';
 
 const AdminShots: React.FC = () => {
   const api = useApi();
@@ -395,7 +395,7 @@ const AdminShots: React.FC = () => {
               <span className="field-hint">{TACTICAL_DEFINITION} The coach's summary only suggests checking these for this shot, on either hand.</span>
             </fieldset>
             <label className="field">
-              <span>{editingShot.name === 'serve' ? 'Technical: faults to look for, serving or receiving' : 'Technical: faults to look for'}</span>
+              <span>{editingShot.name === 'serve' ? 'Technical: faults to look for when serving' : 'Technical: faults to look for'}</span>
               <textarea
                 rows={5}
                 maxLength={MAX_TECHNICAL_NOTES}
@@ -406,7 +406,7 @@ const AdminShots: React.FC = () => {
               <span className="field-hint">
                 {TECHNICAL_DEFINITION}{' '}
                 {editingShot.name === 'serve'
-                  ? 'The coach\'s summary uses these for problems with your serve and with receiving the opponent\'s. Say which notes are about receiving. '
+                  ? `The coach's summary uses these for problems with your own serve. Receiving has fixed guidance, used whatever the receive shot was: "${RECEIVE_GUIDANCE}" `
                   : 'The coach\'s summary uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. '}
                 {editingShot.technical_notes.length}/{MAX_TECHNICAL_NOTES}
               </span>
