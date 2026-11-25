@@ -1,9 +1,14 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Login from './Login';
 import Signup from './Signup';
 
 const Auth = () => {
-  const [view, setView] = useState<'login' | 'signup'>('login');
+  // The homepage's sign-up buttons link to /auth?mode=signup
+  const [searchParams] = useSearchParams();
+  const [view, setView] = useState<'login' | 'signup'>(
+    searchParams.get('mode') === 'signup' ? 'signup' : 'login'
+  );
 
   const toggleView = (newView: 'login' | 'signup') => {
     setView(newView);

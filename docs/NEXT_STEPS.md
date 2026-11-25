@@ -1,6 +1,6 @@
 # Next steps
 
-Last updated: 2026-11-24
+Last updated: 2026-11-25
 
 Handover notes for picking this work up in a fresh session. Section 1 is the next piece of work. The sections after it record what's already done and what's still open.
 
@@ -20,34 +20,22 @@ Done on 2026-11-24, in order:
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. The reset link also needs `https://tt-analysis.vercel.app/reset-password` in the Supabase dashboard's allowed redirect URLs.
 
-## 1. Signed-out homepage as a marketing brochure (next)
+## 1. Signed-out homepage brochure (built, not yet shipped)
 
-The user wants the signed-out homepage (`/`, `src/pages/Home.tsx`) to sell the app properly: what it is, how it works and why it's worth the effort of recording a match. Today it's a heading, a sign-in button and a six-step "How it works" card, which explains the process but doesn't show the product.
+Built on 2026-11-25 from this design canvas: https://claude.ai/artifact/QEw5JW86rf8BMaRDQSm79J
 
-Approach: design it on a Design canvas with the user first, as was done for the analysis page and the summary tab, then build it.
+- **Where:** `src/pages/HomeBrochure.tsx` and `src/styles/home.css`. `Home.tsx` shows it to signed-out visitors and keeps the old home for signed-in users. It renders nothing while the session loads, so signed-in users don't see the brochure flash.
+- **Screenshots:** WebP files in `src/assets/home/`, taken from the real app with a sample match: a copy of a real local match with made-up names (Sam Carter v Alex Morgan, "Club league, division 2"). The copy quotes its numbers, so new screenshots mean checking the copy too. The sample matches exist only on the local stack, under `summary-test@example.test`.
+- **Copy:** rewritten from a brief built on research into UK sports product sites. Recording a match means filming it; putting the points in is "enter". The headline is "Your backhand loop won 5 and lost 12."
+- **Facts still missing:** constants at the top of `HomeBrochure.tsx`, all `null`: recording time, how the coach's summary is offered, the coach's summary and pricing FAQ answers, and a contact link. Each line or question stays hidden until its value is set. Don't invent them.
+- **Sign-up:** "Record your first match" and "Create an account" link to `/auth?mode=signup`, which opens the sign-up form.
+- **Link previews:** `index.html` has a title, description and Open Graph tags. `public/og-image.png` is a 1200x630 shot of the hero.
 
-What the page should show, as a starting point for the design conversation:
+Still open:
 
-- **The product itself, not a description of it.** The strongest asset is the real analysis page. Rather than screenshots that go stale, consider rendering the real components (headline tiles, "What decided it" cards, set charts, patterns, a coach's summary) from a bundled sample match run through `buildAnalysis`. It would always match the live app and stay sharp at any width.
-- **How recording works.** Film the match, go through the video, two shots per point (winning and losing), tick unforced errors. The key selling point is that you don't log every rally shot. A small working version of the tracker's shot picker could show this better than text.
-- **What the analysis tells you:** where points were won and lost, patterns, how each set went, set starts and finishes, scouting the opponent.
-- **The AI coach:** problems ranked by cost, "Check" and "If it's technical" advice from the shot guide, the mental side, and corrections. It's admin-enabled per account and costs real money per summary, so the copy must not promise it to every sign-up. Decide with the user how to present it (invite-only, coming soon, or a paid tier).
-- **Sharing:** share links for a coach or the player, PDF export, recording matches for friends and players you coach.
-- **Who it's for, and an FAQ:** how long recording takes, whether you need to record every shot (no), privacy (matches are private unless shared).
-
-Questions to settle with the user before designing:
-
-1. **Audience:** individual players, coaches recording their players, clubs, or all three? This decides the main message.
-2. **Sample data:** the real matches belong to real people (James Moore, Howard McCain, Andrew Wilkinson). Using them publicly needs their consent. The alternative is a made-up sample match clearly labelled as an example.
-3. **Real numbers for the copy:** how long it takes to record a match, and anything else a claim would rest on. Don't invent figures, testimonials or user counts. Leave a visible placeholder where a fact is missing.
-4. **Sign-ups:** are they open to anyone? The page's main button depends on it.
-5. **Signed-in users:** keep the current home for them, or send them straight to `/matches`?
-
-Technical notes:
-
-- It's a Vite single-page app, so link previews and search engines only see `index.html`. Give it a proper `<title>`, description and Open Graph image. Consider prerendering `/` if search traffic matters.
-- Keep the page fast on a phone. `html2pdf.js` already loads on demand, and the marketing page should do the same with anything heavy.
-- Use the existing tokens in `src/index.css`. Blue (`--you`) and orange (`--opp`) always mean player and opponent, so they can't become general accent colours on the brochure either.
+- The hero button says "Record your first match" and the closing button "Create an account". The user hasn't picked one wording.
+- Prerendering `/` if search traffic matters; search engines only see `index.html`.
+- Whether signed-in users should go straight to `/matches`.
 
 ## 2. AI coach's summary (done)
 

@@ -1,0 +1,249 @@
+/* Signed-out homepage. Dark navy bands for the hero, the coach's summary and
+   the closing panel. Blue and orange only appear in the one-point example,
+   where they mean player and opponent as they do everywhere else. */
+
+.bro {
+  --bro-night: #0b1220;
+  --bro-ink: #0f172a;
+  --bro-body: #475569;
+  --bro-muted: #64748b;
+  --bro-on-dark: #e2e8f0;
+  --bro-on-dark-2: #cbd5e1;
+  --bro-on-dark-3: #94a3b8;
+  --bro-display: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  /* The app's tabular figures spread out numbers like 12 and 3-1 in prose */
+  font-variant-numeric: normal;
+}
+.bro section[id], .bro [id="top"] { scroll-margin-top: 24px; }
+
+.bro-wrap { max-width: 1240px; margin: 0 auto; padding-left: 40px; padding-right: 40px; }
+
+.bro-shot { display: block; width: 100%; height: auto; }
+
+.bro-eyebrow {
+  margin: 0 0 16px; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--bro-muted);
+}
+.bro-h2 {
+  font-family: var(--bro-display); font-weight: 800;
+  font-size: clamp(34px, 3.6vw, 52px); line-height: 1.05; letter-spacing: -0.025em;
+  color: var(--bro-ink);
+}
+
+/* Buttons */
+.bro-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 0 22px; border-radius: 10px;
+  font-weight: 600; font-size: 16px; text-decoration: none; white-space: nowrap;
+}
+.bro-btn.light { background: #fff; color: var(--bro-night); }
+.bro-btn.light:hover { background: var(--bro-on-dark); }
+.bro-btn.ghost { color: var(--bro-on-dark); border: 1px solid rgba(226, 232, 240, 0.3); }
+.bro-btn.ghost:hover { border-color: var(--bro-on-dark); color: #fff; }
+.bro-btn.small { min-height: 44px; font-size: 15px; }
+.bro-btn:focus-visible { box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.6); }
+
+/* Hero */
+.bro-hero { background: var(--bro-night); color: var(--bro-on-dark); position: relative; overflow: hidden; }
+.bro-table { position: absolute; inset: 0; pointer-events: none; }
+.bro-table span { position: absolute; }
+.bro-table .net { left: 0; right: 0; top: 58%; height: 1px; background: rgba(255, 255, 255, 0.07); }
+.bro-table .centre { top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255, 255, 255, 0.05); }
+.bro-table .edge { inset: 24px; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 4px; }
+
+.bro-nav {
+  position: relative; padding-top: 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+}
+.bro-brand {
+  display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none;
+  font-family: var(--bro-display); font-weight: 700; font-size: 19px;
+}
+.bro-brand:hover { color: #fff; }
+.bro-nav-links { display: flex; gap: 32px; align-items: center; }
+.bro-nav-links a { color: var(--bro-on-dark-2); text-decoration: none; font-size: 15px; font-weight: 500; }
+.bro-nav-links a:hover { color: #fff; }
+
+.bro-hero-grid {
+  position: relative; padding-top: 88px;
+  display: flex; flex-wrap: wrap; gap: 56px; align-items: center;
+}
+.bro-hero-copy { flex: 1 1 400px; min-width: 0; max-width: 520px; }
+.bro-hero-copy .bro-eyebrow { margin-bottom: 20px; color: var(--bro-on-dark-3); }
+.bro-hero h1 {
+  font-family: var(--bro-display); font-weight: 800;
+  font-size: clamp(44px, 5.4vw, 72px); line-height: 1.02; letter-spacing: -0.03em; color: #fff;
+}
+.bro-lede { margin-top: 28px; font-size: clamp(17px, 1.5vw, 20px); color: var(--bro-on-dark-2); max-width: 470px; }
+.bro-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+.bro-hero-note { margin-top: 18px; font-size: 14px; color: var(--bro-on-dark-3); }
+
+.bro-hero-visual { flex: 1.5 1 560px; min-width: 0; position: relative; padding: 0 0 72px 40px; }
+.bro-browser {
+  border-radius: 12px; overflow: hidden; background: var(--bg);
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.bro-browser-bar { height: 34px; background: #e2e8f0; display: flex; align-items: center; gap: 7px; padding: 0 14px; }
+.bro-browser-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; }
+.bro-browser-bar .url {
+  margin-left: 14px; flex: 1; max-width: 300px; height: 20px; border-radius: 6px;
+  background: var(--bg); font-size: 11px; color: var(--bro-muted);
+  display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap;
+}
+.bro-phone {
+  position: absolute; left: 0; bottom: 0; width: 30%; min-width: 130px;
+  border-radius: 26px; padding: 7px; background: #1e293b;
+  box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.bro-phone img { border-radius: 20px; }
+.bro-caption { position: relative; padding-top: 24px; padding-bottom: 56px; font-size: 13px; color: var(--bro-muted); text-align: right; }
+
+/* How it works */
+.bro-how { padding-top: 128px; }
+.bro-how-head { display: flex; flex-wrap: wrap; gap: 24px 64px; align-items: end; justify-content: space-between; }
+.bro-how-head .bro-h2 { max-width: 620px; }
+.bro-how-head p { max-width: 440px; font-size: 18px; color: var(--bro-body); }
+
+.bro-steps {
+  list-style: none; margin-top: 64px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;
+}
+.bro-steps li { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+.bro-steps .num { font-family: var(--bro-display); font-weight: 800; font-size: 15px; color: var(--bro-on-dark-3); }
+.bro-steps h3 { margin: 14px 0 8px; font-size: 21px; color: var(--bro-ink); }
+.bro-steps p { color: var(--bro-body); }
+.bro-steps li.dark { background: var(--bro-ink); border-color: var(--bro-ink); }
+.bro-steps li.dark .num { color: var(--bro-muted); }
+.bro-steps li.dark h3 { color: #fff; }
+.bro-steps li.dark p { color: var(--bro-on-dark-2); }
+
+.bro-how-demo { margin-top: 56px; display: flex; flex-wrap: wrap; gap: 40px; align-items: center; }
+.bro-how-shot {
+  flex: 2 1 560px; min-width: 0; border-radius: 14px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line);
+  box-shadow: 0 30px 60px -30px rgba(15, 23, 42, 0.35);
+}
+.bro-point { flex: 1 1 280px; min-width: 0; }
+.bro-point .bro-eyebrow { margin-bottom: 0; letter-spacing: 0.06em; }
+.bro-point-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+.bro-point-card {
+  background: var(--surface); border: 1px solid var(--line); border-top: 4px solid;
+  border-radius: 12px; padding: 16px 18px;
+}
+.bro-point-card.you { border-top-color: var(--you); }
+.bro-point-card.opp { border-top-color: var(--opp); }
+.bro-point-card .who { font-size: 13px; color: var(--bro-muted); }
+.bro-point-card .shot { margin-top: 2px; font-size: 19px; font-weight: 700; color: var(--bro-ink); }
+.bro-point > p:last-child { margin-top: 18px; color: var(--bro-body); }
+
+/* The analysis */
+.bro-analysis { padding-top: 144px; }
+.bro-analysis .bro-h2 { max-width: 760px; }
+.bro-cards {
+  margin-top: 56px; display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 24px;
+}
+.bro-card {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+  padding: 28px 28px 0; overflow: hidden; display: flex; flex-direction: column;
+}
+.bro-card h3 { font-size: 22px; color: var(--bro-ink); }
+.bro-card figcaption p { margin: 6px 0 24px; color: var(--bro-body); max-width: 440px; }
+.bro-card-shot {
+  margin-top: auto; border-radius: 10px 10px 0 0; overflow: hidden;
+  border: 1px solid var(--line); border-bottom: 0;
+}
+.bro-card-shot.capped { max-height: 360px; }
+/* Wide, short screenshots sit beside their caption across the full width */
+.bro-card.wide {
+  grid-column: 1 / -1; padding: 28px;
+  flex-direction: row; flex-wrap: wrap; gap: 24px 40px; align-items: center;
+}
+.bro-card.wide figcaption { flex: 1 1 260px; min-width: 0; }
+.bro-card.wide figcaption p { margin: 8px 0 0; max-width: 360px; }
+.bro-card.wide .bro-card-shot { flex: 2.6 1 520px; min-width: 0; margin-top: 0; border-radius: 10px; border-bottom: 1px solid var(--line); }
+
+/* Coach's summary */
+.bro-coach { margin-top: 144px; background: var(--bro-night); color: var(--bro-on-dark); }
+.bro-coach-grid { padding-top: 120px; padding-bottom: 120px; display: flex; flex-wrap: wrap; gap: 64px; align-items: center; }
+.bro-coach-copy { flex: 1 1 380px; min-width: 0; max-width: 460px; }
+.bro-coach-copy .bro-eyebrow { margin-bottom: 20px; color: var(--bro-on-dark-3); }
+.bro-coach .bro-h2 { color: #fff; font-size: clamp(34px, 3.4vw, 48px); }
+.bro-coach-copy > p { margin-top: 24px; font-size: 18px; color: var(--bro-on-dark-2); }
+.bro-coach dl { margin-top: 32px; display: flex; flex-direction: column; gap: 20px; }
+.bro-coach dl div { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 18px; }
+.bro-coach dt { font-weight: 700; color: #fff; }
+.bro-coach dd { margin-top: 4px; color: var(--bro-on-dark-3); }
+.bro-coach-copy > p.fine { margin-top: 28px; font-size: 14px; color: var(--bro-muted); }
+.bro-coach-shot {
+  flex: 1.4 1 560px; min-width: 0; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Sharing */
+.bro-share { padding-top: 144px; display: flex; flex-wrap: wrap; gap: 64px; align-items: center; }
+.bro-share-phone { flex: 0 1 300px; min-width: 0; margin: 0 auto; }
+.bro-share-phone div {
+  width: 280px; max-width: 100%; margin: 0 auto; border-radius: 34px; padding: 9px;
+  background: var(--bro-ink); box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.5);
+}
+.bro-share-phone img { border-radius: 26px; }
+.bro-share-copy { flex: 1 1 520px; min-width: 0; }
+.bro-share-list { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 28px 32px; }
+.bro-share-list svg { display: block; }
+.bro-share-list h3 { margin: 12px 0 6px; font-size: 18px; color: var(--bro-ink); }
+.bro-share-list p { color: var(--bro-body); }
+
+/* Questions */
+.bro-faq { padding-top: 144px; display: flex; flex-wrap: wrap; gap: 40px 80px; }
+.bro-faq-head { flex: 1 1 280px; min-width: 0; }
+.bro-faq-head p { margin-top: 16px; color: var(--bro-body); max-width: 320px; }
+.bro-faq-list { flex: 2 1 560px; min-width: 0; border-top: 1px solid var(--line); }
+.bro-faq-list details { border-bottom: 1px solid var(--line); }
+.bro-faq-list summary {
+  cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 22px 0; font-weight: 600; font-size: 18px; color: var(--bro-ink);
+}
+.bro-faq-list summary::-webkit-details-marker { display: none; }
+.bro-faq-list summary::after { content: '+'; font-size: 24px; font-weight: 400; color: var(--bro-muted); }
+.bro-faq-list details[open] summary::after { content: '\2212'; }
+.bro-faq-list details p { margin: 0 0 22px; color: var(--bro-body); max-width: 620px; }
+
+/* Closing panel and footer */
+.bro-closing { padding-top: 144px; }
+.bro-closing-panel {
+  background: var(--bro-night); border-radius: 24px; padding: clamp(40px, 6vw, 88px);
+  display: flex; flex-wrap: wrap; gap: 32px; align-items: center; justify-content: space-between;
+  position: relative; overflow: hidden;
+}
+.bro-closing-panel::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255, 255, 255, 0.06);
+}
+.bro-closing-panel > div { position: relative; }
+.bro-closing-panel > div:first-child { max-width: 620px; }
+.bro-closing .bro-h2 { color: #fff; }
+.bro-closing-panel p { margin-top: 16px; font-size: 18px; color: var(--bro-on-dark-2); }
+.bro-closing-panel .bro-actions { margin-top: 0; }
+
+.bro-footer {
+  padding-top: 56px; padding-bottom: 48px;
+  display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between;
+  font-size: 14px; color: var(--bro-muted);
+}
+
+@media (max-width: 760px) {
+  .bro-wrap { padding-left: 16px; padding-right: 16px; }
+  .bro-nav-links { display: none; }
+  .bro-hero-grid { padding-top: 56px; }
+  .bro-hero-visual { padding-left: 20px; padding-bottom: 48px; }
+  .bro-caption { text-align: left; }
+  .bro-how, .bro-analysis, .bro-share, .bro-faq, .bro-closing { padding-top: 96px; }
+  .bro-coach { margin-top: 96px; }
+  .bro-coach-grid { padding-top: 80px; padding-bottom: 80px; }
+  .bro-card { padding: 20px 20px 0; }
+  .bro-card.wide { padding: 20px; }
+}

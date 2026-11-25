@@ -90,7 +90,7 @@ The database uses PostgreSQL with Supabase for Auth and Row Level Security. The 
 ## Code Organization
 
 - `/src/components`: Reusable UI components. `Layout` renders the header, with a purple admin variant on `/admin` pages. `tracker/` holds the tracker's `Scoreboard` (each side is the "who won" button), `ShotPicker` and `MatchComplete`
-- `/src/pages`: Main application pages/screens
+- `/src/pages`: Main application pages/screens. `Home` shows `HomeBrochure` (the marketing page, styles in `src/styles/home.css`, screenshots in `src/assets/home/`) to signed-out visitors; missing facts are `null` constants at the top of `HomeBrochure.tsx` and stay hidden until set
 - `/src/lib`: Utilities and external clients (Supabase)
 - `/src/types`: TypeScript definitions for database entities
 - `/src/styles`: Page stylesheets. Tokens and shared pieces (cards, `.btn`, fields, `.segmented`, `.data-table`, `.chip`, `.notice`, `.state`) live in `src/index.css`; blue `--you` and orange `--opp` mean player and opponent and aren't used as general accents
