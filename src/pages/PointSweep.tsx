@@ -26,7 +26,7 @@ const shotText = (shot: string | null) => {
  * point, No moves on, and every answer saves straight away along with where
  * the sweep has got to, so it can be finished later.
  */
-const PointSweep = () => {
+const Sweep = () => {
   const { id, tag: tagParam } = useParams<{ id: string; tag: string }>();
   const tag: SweepTag | null = isSweepTag(tagParam) ? tagParam : null;
   const api = useApi();
@@ -337,6 +337,16 @@ const PointSweep = () => {
       </div>
     </Layout>
   );
+};
+
+/**
+ * The end of one sweep links to the next, which only changes the URL. Keying on
+ * the match and tag starts each sweep fresh, with the data reloaded, instead of
+ * carrying over the last one's finished state and position.
+ */
+const PointSweep = () => {
+  const { id, tag } = useParams<{ id: string; tag: string }>();
+  return <Sweep key={`${id}/${tag}`} />;
 };
 
 export default PointSweep;
