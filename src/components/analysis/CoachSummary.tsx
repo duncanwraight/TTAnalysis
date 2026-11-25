@@ -75,7 +75,7 @@ const CoachSummary = ({
             {generating ? 'Writing the summary...' : 'Write a summary'}
           </button>
         )}
-        {canGenerate && totalPoints === 0 && <p className="muted">Record some points first.</p>}
+        {canGenerate && totalPoints === 0 && <p className="muted">Enter some points first.</p>}
         {canGenerate && totalPoints > 0 && <p className="cs-small muted">Takes up to a minute.</p>}
       </section>
     );
@@ -204,7 +204,7 @@ const CoachSummary = ({
         )}
 
         <p className="cs-small muted cs-disclaimer">
-          Written by AI from the recorded points. It only knows the last two shots of each point, so check what it suggests against the video.
+          Written by AI from the points entered for this match. It only knows the last two shots of each point, so check what it suggests against the video.
         </p>
       </aside>
     </div>

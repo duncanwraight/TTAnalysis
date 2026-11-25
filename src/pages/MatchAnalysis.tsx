@@ -353,12 +353,12 @@ const MatchAnalysis = () => {
           onRewrite={generateSummary}
         />
       ) : (<>
-      <aside className="ma-note" aria-label="How points are recorded">
-        <strong>How to read this page.</strong> Each point records two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Rally shots aren't recorded, so the numbers only cover the last two shots of each point.
+      <aside className="ma-note" aria-label="How points are entered">
+        <strong>How to read this page.</strong> Each point has two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Rally shots aren't entered, so the numbers only cover the last two shots of each point.
       </aside>
 
       {totalPoints === 0 ? (
-        <p className="muted">No points have been recorded for this match yet.</p>
+        <p className="muted">No points have been entered for this match yet.</p>
       ) : (
         <>
           <section aria-label="Headline numbers" className="ma-grid tiles">
@@ -374,7 +374,7 @@ const MatchAnalysis = () => {
                 note={`${pct(a.unforced.total, a.points.lost)}% of the points you lost`} />
             ) : (
               <Tile label="Your unforced errors" value="–" empty
-                note={isOwnerView ? <Link to={editorPath}>Tick them in the points editor</Link> : 'Not recorded for this match'} />
+                note={isOwnerView ? <Link to={editorPath}>Tick them in the points editor</Link> : 'Not ticked for this match'} />
             )}
           </section>
 
@@ -458,7 +458,7 @@ const MatchAnalysis = () => {
             ) : (
               <div className="card dashed ma-empty">
                 <div>
-                  <h3>Not recorded for this match yet</h3>
+                  <h3>Not ticked for this match yet</h3>
                   <p>
                     {isOwnerView
                       ? `Go through your ${a.points.lost} lost points and tick the ones where your losing shot was unforced. This section then shows which shots let you down and when.`

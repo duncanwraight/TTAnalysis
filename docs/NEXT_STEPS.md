@@ -2,11 +2,11 @@
 
 Last updated: 2026-11-25
 
-Handover notes for picking this work up in a fresh session. Section 1 is the next piece of work. The sections after it record what's already done and what's still open.
+Handover notes for picking this work up in a fresh session. Section 1 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
 
 ## Where things stand
 
-Everything below is merged to `main`, migrated on production Supabase (project `ztozinueuucrdlfwusen`) and deployed to https://tt-analysis.vercel.app. The latest commit is `d2c03d7`.
+Everything below is merged to `main`, migrated on production Supabase (project `ztozinueuucrdlfwusen`) and deployed to https://tt-analysis.vercel.app.
 
 Done on 2026-11-24, in order:
 
@@ -18,22 +18,29 @@ Done on 2026-11-24, in order:
 6. **Site-wide redesign and new tracker** (section 4), shipped in `ad8a04f`.
 7. **AI coach's summary** (section 2): per-user toggle, Claude Opus 5.5 behind a Supabase Edge Function, a monthly budget, correction notes, a per-shot guide, and its own tab on the analysis page.
 
+Done on 2026-11-25:
+
+1. **Signed-out homepage brochure** (section 1), shipped in `b8d8a1e`.
+2. **Wording sweep** (section 1): "film" and "enter" used consistently across the whole site, shipped in the commit after it.
+
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. The reset link also needs `https://tt-analysis.vercel.app/reset-password` in the Supabase dashboard's allowed redirect URLs.
 
-## 1. Signed-out homepage brochure (built, not yet shipped)
+## 1. Signed-out homepage brochure and wording sweep (done)
 
-Built on 2026-11-25 from this design canvas: https://claude.ai/artifact/QEw5JW86rf8BMaRDQSm79J
+Built and shipped on 2026-11-25 from this design canvas: https://claude.ai/artifact/QEw5JW86rf8BMaRDQSm79J. The user approved the design and the final copy on the canvas before it was built.
 
 - **Where:** `src/pages/HomeBrochure.tsx` and `src/styles/home.css`. `Home.tsx` shows it to signed-out visitors and keeps the old home for signed-in users. It renders nothing while the session loads, so signed-in users don't see the brochure flash.
 - **Screenshots:** WebP files in `src/assets/home/`, taken from the real app with a sample match: a copy of a real local match with made-up names (Sam Carter v Alex Morgan, "Club league, division 2"). The copy quotes its numbers, so new screenshots mean checking the copy too. The sample matches exist only on the local stack, under `summary-test@example.test`.
-- **Copy:** rewritten from a brief built on research into UK sports product sites. Recording a match means filming it; putting the points in is "enter". The headline is "Your backhand loop won 5 and lost 12."
-- **Facts still missing:** constants at the top of `HomeBrochure.tsx`, all `null`: recording time, how the coach's summary is offered, the coach's summary and pricing FAQ answers, and a contact link. Each line or question stays hidden until its value is set. Don't invent them.
-- **Sign-up:** "Record your first match" and "Create an account" link to `/auth?mode=signup`, which opens the sign-up form.
+- **Copy:** the first draft read as machine-written. It was rewritten from a brief built on research into UK sports product sites, one agent per section, then edited with the user. The brief and research are not in the repo; the lessons are: name real shots, sets and scores from the sample match, say plainly that only two shots a point are entered, and don't tell people how to film beyond "any phone will do". Playback at 1.25x or 1.5x is the user's own tip. The headline is "Your backhand loop won 5 and lost 12." Both sign-up buttons say "Create an account".
+- **Facts still missing:** constants at the top of `HomeBrochure.tsx`, all `null`: how long a match takes to enter, how the coach's summary is offered, the coach's summary and pricing FAQ answers, and a contact link. Each line or question stays hidden until its value is set. Don't invent them.
+- **Sign-up:** "Create an account" links to `/auth?mode=signup`, which opens the sign-up form.
 - **Link previews:** `index.html` has a title, description and Open Graph tags. `public/og-image.png` is a 1200x630 shot of the hero.
+- **Checked:** at 1440px and 390px wide, with no sideways scroll and no console errors, and on production after the deploy.
+- **Wording sweep:** you **film** a match and **enter** its points. "Record" and "log" were removed from everything a user reads: the tracker, match list, new match form, analysis page, coach's summary, signed-in home and admin shots page. "Other shot" became "losing shot", the admin page's "AI coach" became "the coach's summary", and "log in/out" became "sign in/out". The rule is in CLAUDE.md. Code and database names (`recordPoint`, `unforced.recorded`, `other_shot_id`) and the AI prompt were left alone.
 
 Still open:
 
-- The hero button says "Record your first match" and the closing button "Create an account". The user hasn't picked one wording.
+- Fill in the missing facts above.
 - Prerendering `/` if search traffic matters; search engines only see `index.html`.
 - Whether signed-in users should go straight to `/matches`.
 

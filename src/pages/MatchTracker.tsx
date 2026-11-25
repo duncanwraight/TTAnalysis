@@ -106,7 +106,7 @@ const MatchTracker = () => {
       }
 
       if (!userId) {
-        setError('You need to be signed in to record a match');
+        setError('You need to be signed in to enter a match');
         setLoading(false);
         return;
       }
@@ -116,7 +116,7 @@ const MatchTracker = () => {
         if (cancelled) return;
 
         if (match.user_id !== userId) {
-          setError('This match belongs to another account. You can view its analysis but not record points.');
+          setError('This match belongs to another account. You can view its analysis but not enter points.');
           return;
         }
 
@@ -201,7 +201,7 @@ const MatchTracker = () => {
 
       const noShotId = shots.find(s => s.name === NO_SHOT)?.id;
       if (!noShotId) {
-        alert('The "no shot" entry is missing from the shot list, so this service fault can\'t be recorded automatically. Pick the other shot manually.');
+        alert('The "no shot" entry is missing from the shot list, so this service fault can\'t be entered automatically. Pick the losing shot yourself.');
         return;
       }
 
@@ -310,7 +310,7 @@ const MatchTracker = () => {
           setMatchState({ ...matchState, sets, points, dbSets, currentSetId: updatedSetRow.id });
         }
       } catch (error) {
-        alert(`Failed to record point: ${errorMessage(error)}`);
+        alert(`Couldn't save the point: ${errorMessage(error)}`);
       } finally {
         resetPointFlow();
       }
@@ -457,7 +457,7 @@ const MatchTracker = () => {
     return (
       <Layout>
         <div className="state">
-          <h2>This match can't be recorded</h2>
+          <h2>You can't enter points for this match</h2>
           <p>{error ?? 'The match was not found.'}</p>
           <div className="form-actions">
             <button className="btn primary" onClick={() => navigate('/matches')}>Back to matches</button>
@@ -515,7 +515,7 @@ const MatchTracker = () => {
                 className="btn"
                 onClick={undoLastPoint}
                 disabled={isSaving || pointInProgress}
-                title={undoesEndSet ? 'Reopen the set you just ended' : 'Remove the last point recorded'}
+                title={undoesEndSet ? 'Reopen the set you just ended' : 'Remove the last point entered'}
               >
                 {undoesEndSet ? 'Undo End Set' : 'Undo point'}
               </button>
@@ -549,7 +549,7 @@ const MatchTracker = () => {
         {!pointInProgress ? (
           <p className="tracker-prompt">Who won the point? Tap their side of the score.</p>
         ) : (
-          <section className="card point-entry" aria-label="Record the point">
+          <section className="card point-entry" aria-label="Enter the point">
             <div className="point-entry-head">
               <div className="point-flags">
                 <button type="button" className="toggle" aria-pressed={isLuckyPoint} onClick={() => setIsLuckyPoint(v => !v)}>
@@ -559,7 +559,7 @@ const MatchTracker = () => {
                   Unforced error <span className="faint">losing shot</span>
                 </button>
               </div>
-              <button type="button" className="btn quiet small" onClick={resetPointFlow} title="Clear this point without recording it">
+              <button type="button" className="btn quiet small" onClick={resetPointFlow} title="Clear this point without saving it">
                 Cancel point
               </button>
             </div>

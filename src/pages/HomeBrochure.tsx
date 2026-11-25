@@ -17,7 +17,7 @@ import analysisPhone from '../assets/home/analysis-phone.webp';
  * Facts that aren't settled yet. Each line or question stays off the page
  * while its value is null.
  */
-const RECORDING_TIME: string | null = null; // e.g. 'A best-of-five takes about 20 minutes to put in.'
+const ENTRY_TIME: string | null = null; // e.g. 'A best-of-five takes about 20 minutes to enter.'
 const COACH_AVAILABILITY: string | null = null; // e.g. 'By invitation'
 const COACH_FAQ_ANSWER: string | null = null;
 const PRICING_FAQ_ANSWER: string | null = null;
@@ -28,10 +28,10 @@ const SIGN_IN = '/auth';
 
 const FAQS: { q: string; a: string | null }[] = [
   {
-    q: 'Do I have to log every shot in the rally?',
+    q: 'Do I have to enter every shot in the rally?',
     a: 'No. You enter two shots for each point: the one that won it and the one that lost it. The losing shot is either the one that set up the winner or the one that missed. You skip the rally in between.',
   },
-  { q: 'How long does a match take to put in?', a: RECORDING_TIME },
+  { q: 'How long does it take to enter a match?', a: ENTRY_TIME },
   {
     q: 'Do I need a proper camera?',
     a: 'No. Any phone video will do. You go through it afterwards on a phone or a laptop, and the tracker works on both.',
@@ -83,10 +83,10 @@ const HomeBrochure = () => (
             That's from the sample match. Film your own, enter two shots a point and you get the same count for every shot you play.
           </p>
           <div className="bro-actions">
-            <Link to={SIGN_UP} className="bro-btn light">Record your first match</Link>
+            <Link to={SIGN_UP} className="bro-btn light">Create an account</Link>
             <a href="#analysis" className="bro-btn ghost">Open the sample match</a>
           </div>
-          <p className="bro-hero-note">Record on your phone or laptop. Nobody else sees a match until you share a link to it.</p>
+          <p className="bro-hero-note">Enter matches on your phone or laptop. Nobody else sees a match until you share a link to it.</p>
         </div>
 
         <div className="bro-hero-visual">
@@ -110,10 +110,10 @@ const HomeBrochure = () => (
     <main>
       <section id="how" aria-labelledby="how-h" className="bro-wrap bro-how">
         <div className="bro-how-head">
-          <h2 id="how-h" className="bro-h2">Record the shot that won the point and the one that lost it.</h2>
+          <h2 id="how-h" className="bro-h2">Enter the shot that won the point and the one that lost it.</h2>
           <p>
-            You don't enter the rally in between, which keeps the input quick. It's also why the whole analysis talks about winning and losing shots.
-            {RECORDING_TIME && <> {RECORDING_TIME}</>}
+            You don't enter the rally in between, which keeps it quick. It's also why the whole analysis talks about winning and losing shots.
+            {ENTRY_TIME && <> {ENTRY_TIME}</>}
           </p>
         </div>
 
@@ -276,7 +276,7 @@ const HomeBrochure = () => (
                 <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
                 <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5" />
               </Icon>
-              <h3>Record a match for someone else</h3>
+              <h3>Enter a match for someone else</h3>
               <p>Analyse your clubmate's County match, or a match for a player you coach. The analysis is written to the player, so "you" still means them.</p>
             </div>
             <div>

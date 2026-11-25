@@ -222,7 +222,7 @@ const AdminShots: React.FC = () => {
                     <th scope="col">Shot</th>
                     <th scope="col">Internal name</th>
                     <th scope="col">Description</th>
-                    <th scope="col">AI coach</th>
+                    <th scope="col">Coach's summary</th>
                     <th scope="col" className="actions"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
@@ -365,7 +365,7 @@ const AdminShots: React.FC = () => {
                   </label>
                 ))}
               </div>
-              <span className="field-hint">The AI coach only suggests checking these for this shot, on either hand.</span>
+              <span className="field-hint">The coach's summary only suggests checking these for this shot, on either hand.</span>
             </fieldset>
             <label className="field">
               <span>{editingShot.name === 'serve' ? 'Technical faults to look for, serving or receiving' : 'Technical faults to look for'}</span>
@@ -378,8 +378,8 @@ const AdminShots: React.FC = () => {
               />
               <span className="field-hint">
                 {editingShot.name === 'serve'
-                  ? 'The AI coach uses these for problems with your serve and with receiving the opponent\'s. Say which notes are about receiving. '
-                  : 'The AI coach uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. '}
+                  ? 'The coach\'s summary uses these for problems with your serve and with receiving the opponent\'s. Say which notes are about receiving. '
+                  : 'The coach\'s summary uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. '}
                 {editingShot.technical_notes.length}/{MAX_TECHNICAL_NOTES}
               </span>
             </label>

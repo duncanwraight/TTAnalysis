@@ -5,16 +5,16 @@ import { UNFORCED_ERROR_DEFINITION } from '../lib/analysis';
 import HomeBrochure from './HomeBrochure';
 
 const STEPS: { title: string; body: React.ReactNode }[] = [
-  { title: 'Film the match', body: 'Any phone video will do. You record the points afterwards, not courtside.' },
+  { title: 'Film the match', body: 'Any phone video will do. You enter the points afterwards, not courtside.' },
   { title: 'Create the match', body: 'Enter the player, the opponent, who served first and how many sets it was.' },
   { title: 'Go through the video point by point', body: 'For each point, tap who won it, then the winning shot.' },
   {
-    title: 'Record the losing shot',
+    title: 'Enter the losing shot',
     body: <>The shot that set up the winner, if the loser never got the ball back, or the return that missed.</>,
   },
   {
     title: 'Tick unforced errors',
-    body: <>{UNFORCED_ERROR_DEFINITION} Tick these as you record, or afterwards in the points editor.</>,
+    body: <>{UNFORCED_ERROR_DEFINITION} Tick these as you go, or afterwards in the points editor.</>,
   },
   { title: 'Read the analysis', body: 'See where points were won and lost, the patterns, and how each set went. Share it with a link.' },
 ];
@@ -33,7 +33,7 @@ const Home = () => {
         <div className="page-head">
           <div>
             <h1>Table tennis match analysis</h1>
-            <p>Record a match from video, point by point, and see what won and lost it.</p>
+            <p>Film a match, enter it point by point, and see what won and lost it.</p>
           </div>
         </div>
 

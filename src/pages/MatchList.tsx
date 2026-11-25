@@ -94,9 +94,9 @@ const MatchList = () => {
         ) : matches.length === 0 ? (
           <div className="card dashed state">
             <h2>No matches yet</h2>
-            <p>Create a match, then record it point by point from the video.</p>
+            <p>Create a match, then enter it point by point from the video.</p>
             <div className="form-actions">
-              <Link to="/matches/new" className="btn primary">Record your first match</Link>
+              <Link to="/matches/new" className="btn primary">Enter your first match</Link>
             </div>
           </div>
         ) : (
@@ -124,7 +124,7 @@ const MatchList = () => {
                       </>
                     ) : (
                       <>
-                        <Link to={`/matches/${match.id}`} className="btn primary small">Continue recording</Link>
+                        <Link to={`/matches/${match.id}`} className="btn primary small">Continue entering points</Link>
                         <Link to={`/matches/${match.id}/analysis`} className="btn small">Analysis</Link>
                         <Link to={`/matches/${match.id}/points`} className="btn small">Edit points</Link>
                       </>

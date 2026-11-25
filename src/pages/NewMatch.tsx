@@ -73,7 +73,7 @@ const NewMatch = () => {
       
       // Check if user is authenticated
       if (!user) {
-        throw new Error('Authentication error: You must be logged in to create a match');
+        throw new Error('You need to be signed in to create a match');
       }
       
       const problem = validateDetails(formData);
@@ -118,7 +118,7 @@ const NewMatch = () => {
       }
       
       if (errorMessage.includes('JWT') || errorMessage.includes('token') || errorMessage.includes('auth')) {
-        errorMessage = 'Authentication error. Please log out and log in again.';
+        errorMessage = 'Your sign-in has expired. Sign out and sign in again.';
       }
       
       if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
@@ -301,7 +301,7 @@ const NewMatch = () => {
               className="btn primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Start recording'}
+              {isSubmitting ? 'Creating...' : 'Start entering points'}
             </button>
           </div>
         </form>
