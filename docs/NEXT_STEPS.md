@@ -24,6 +24,9 @@ Done on 2026-11-25:
 2. **Wording sweep** (section 1): "film" and "enter" used consistently across the whole site, shipped in the commit after it.
 3. **Tactical and technical** (section 2): both terms are now named and defined on `/admin/shots` and in the coach's summary.
 4. **Homepage facts, redirect and prerendering** (section 1).
+5. **Unforced errors in the coach's summary** (section 2): technical advice only, and a mental note when they bunch up late in sets. Function deployed to production.
+
+Next piece of work to design: **shot balance on the analysis page** (section 7), showing which shots a player leaned on or barely used.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. The reset link also needs `https://tt-analysis.vercel.app/reset-password` in the Supabase dashboard's allowed redirect URLs.
 
@@ -54,9 +57,9 @@ How it works:
 - **The function.** `supabase/functions/match-summary` checks the flag and that the caller owns the match. It loads the match as the caller, so RLS applies, and rebuilds the analysis with `buildAnalysis`. Then it sends the analysis, every point and the shot guide to `claude-opus-5-5` (effort `medium`, structured output). The service role is only used for the flag, the budget, and writing the summary and usage rows.
 - **Shared code.** `src/lib/aiSummary.ts` (input builder, hash, cost sum, output schema, validator) and `src/lib/shotGuide.ts` (the quality list and what each means to the model) are used by both the page and the function. That's why `src/lib` imports carry `.ts` extensions. The prompt is `supabase/functions/match-summary/prompt.ts`.
 - **Storage.** `match_summaries` holds the latest summary per match, readable by the owner and by share-token requests. `match_summary_notes` holds the owner's correction notes, owner-only, so a share link never shows them. `ai_usage` logs every call's tokens and cost, and is kept when a match is deleted. `ai_settings` holds the monthly budget, $20.
-- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 3. The page computes the same hash, and shows an "Update the summary" banner and a dot on the tab when they differ. Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a shot's guide also changes the hash for matches that use that shot.
+- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 4. The page computes the same hash, and shows an "Update the summary" banner and a dot on the tab when they differ. Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a shot's guide also changes the hash for matches that use that shot.
 - **Notes.** "Correct this summary" sends the owner's notes with the previous summary. Corrections of fact are treated as true. Saved notes are reapplied on every rewrite.
-- **Shot guide.** Each shot has `check_qualities` (tickboxes on `/admin/shots`) and free-text `technical_notes`. The output splits each problem into `tactical` ("Check") and `technical` ("If it's technical"). The technical part is empty when the shot has no notes, or the problem isn't about one shot. Serve is always in the guide, and its notes cover receiving as well as serving.
+- **Shot guide.** Each shot has `check_qualities` (tickboxes on `/admin/shots`) and free-text `technical_notes`. The output splits each problem into `tactical` and `technical`, shown as the "Tactical" and "Technical" panels. The technical part is empty when the shot has no notes, or the problem isn't about one shot. The tactical part is empty for unforced errors. The validator accepts either part empty, but not both. Serve is always in the guide, and its notes cover receiving as well as serving.
 - **The tab.** The summary lives at `/matches/:id/summary` and `/shared/:token/summary` (`src/components/analysis/CoachSummary.tsx`). Share links only show the tab when a summary exists. PDF export prints whichever tab is open.
 
 Cost and limits:
@@ -74,6 +77,8 @@ Decisions worth keeping:
 - It uses the API, not a Claude subscription. A subscription can't power a server function used by other people.
 
 Tactical and technical, added 2026-11-25: **tactical** is something a player can change during a match to influence it (placement, variation, shot choice). **Technical** is something in the stroke or in reading spin that they work on in practice. The definitions are `TACTICAL_DEFINITION` and `TECHNICAL_DEFINITION` in `src/lib/shotGuide.ts`. `/admin/shots` labels the qualities as tactical and the notes as technical, and the summary's problem panels read "Tactical" and "Technical" (they used to say "Check" and "If it's technical"), with both definitions under "Work on". The prompt uses the same definitions. `SUMMARY_VERSION` was not bumped, so existing summaries aren't marked out of date.
+
+Unforced errors, changed 2026-11-25: a problem about unforced errors gets technical advice only, because a change of tactics doesn't stop a player missing a shot nobody forced. Where a problem mixes unforced errors with shots the opponent beat, the tactical part only covers the points the opponent won. Service faults count as unforced. The mental-side checks now look for unforced errors bunched late in sets (once either player reaches 8) or in close sets (won by 3 points or fewer): 3 or more, and more than in the rest of the match. That gets a note putting it down to nerves (holding back, shortening the stroke, steering the ball) and suggesting the player commit to the shot. `SUMMARY_VERSION` went from 3 to 4, so every stored summary shows as out of date until it's regenerated.
 
 Still open:
 
@@ -155,7 +160,15 @@ Related features:
 - **Points editor:** `/matches/:id/points`. Tick lucky and unforced point by point, and edit the match details.
 - **Matches for friends:** `player_name`, `event` and `video_url` on `matches`. The user's own name lives in auth user metadata (`display_name`), because `profiles` is locked to admins. The analysis page always says "you" to the player being reviewed.
 
-Still open: editing a point's winner and shots in the points editor. The user wants this, as a separate piece of work.
+Still open:
+
+- Editing a point's winner and shots in the points editor. The user wants this, as a separate piece of work.
+- **Shot balance (needs a design).** Show shots a player leaned on or barely used. Did they push and chop a lot and hardly attack, or attack so much that they rarely pushed or blocked? The shots that matter are the forehand loop, backhand loop, push and block. The user raised this on 2026-11-25. Questions for the design:
+  - **What the data can show.** Only the last two shots of each point are entered, so this counts the shots that ended rallies, not every shot played. A player who pushes five times and then loops the sixth ball shows up as a looper. The wording has to say "shots that won or lost points", like the rest of the page, and the design should decide whether that sample is still useful enough to show.
+  - **Grouping shots.** Categories don't map cleanly to attack and control. Production's `short_game` holds both push and flick, and the pips category holds both bump and attack. So each shot probably needs its own role, set by a new input on `/admin/shots`: attack, control (push, chop, block) or neither (serve, lucky shots, no shot). Decide whether that's a fixed list or whether the user picks which shots to track.
+  - **Forehand and backhand.** There is one loop shot. The hand is stored on the point (`winning_hand`, `other_hand`), so FH loop and BH loop come from shot plus hand.
+  - **What counts as "missing" or "too much".** A raw share (attacks were 30% of your shots) needs something to compare against: the opponent in the same match, the player's other matches, or a target the user sets. A shot that never appears (no backhand loops in the whole match) is the clearest case.
+  - **Where it goes.** A panel on the analysis page, an input to the coach's summary, or both. If the summary uses it, it changes the input hash, and the prompt must still treat it as counts, not a diagnosis.
 
 ## 8. Code quality
 

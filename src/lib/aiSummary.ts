@@ -15,12 +15,12 @@ export const SUMMARY_MODEL = 'claude-opus-5-5';
 
 // Part of every input hash. Bump it when the prompt or input changes enough
 // that stored summaries should show as out of date.
-export const SUMMARY_VERSION = 3;
+export const SUMMARY_VERSION = 4;
 
 export type SummaryProblem = {
   title: string;
   detail: string;
-  // What to check and vary
+  // What to check and vary; empty for unforced errors, which only get technical advice
   tactical: string;
   // What a stroke or spin-reading fault would look like on the video; empty when it doesn't apply
   technical: string;
@@ -85,7 +85,9 @@ export const isMatchSummary = (v: unknown): v is MatchSummary => {
   const s = v as Record<string, unknown>;
   return isText(s.headline)
     && Array.isArray(s.problems)
-    && s.problems.every(p => p && isText(p.title) && isText(p.detail) && isText(p.tactical) && isOptionalText(p.technical))
+    && s.problems.every(p => p && isText(p.title) && isText(p.detail)
+      && isOptionalText(p.tactical) && isOptionalText(p.technical)
+      && (isText(p.tactical) || isText(p.technical)))
     && Array.isArray(s.mental)
     && s.mental.every(m => m && isText(m.title) && isText(m.detail));
 };

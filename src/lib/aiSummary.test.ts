@@ -129,6 +129,8 @@ describe('summary shape', () => {
     expect(isMatchSummary({ ...valid, headline: ' ' })).toBe(false);
     expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', technical: '' }] })).toBe(false);
     expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', tactical: 'z' }] })).toBe(false);
+    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', tactical: '', technical: 'z' }] })).toBe(true);
+    expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', tactical: ' ', technical: '' }] })).toBe(false);
     // A version 1 summary is still shown on the page, but the function never stores a new one
     expect(isMatchSummary({ ...valid, problems: [{ title: 'x', detail: 'y', try: 'z' }] })).toBe(false);
     expect(isMatchSummary({ ...valid, mental: undefined })).toBe(false);

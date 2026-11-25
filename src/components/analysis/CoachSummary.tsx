@@ -109,10 +109,10 @@ const CoachSummary = ({
           <ol className="cs-problems">
             {summary.problems.map((p, i) => {
               const panels = [
-                p.tactical && { kind: 'check', label: 'Tactical', text: p.tactical },
+                p.tactical?.trim() && { kind: 'check', label: 'Tactical', text: p.tactical },
                 p.technical?.trim() && { kind: 'technical', label: 'Technical', text: p.technical },
                 // Summaries written before the tactical and technical split
-                !p.tactical && p.try && { kind: 'check', label: 'Try', text: p.try },
+                !p.tactical?.trim() && !p.technical?.trim() && p.try && { kind: 'check', label: 'Try', text: p.try },
               ].filter((x): x is { kind: string; label: string; text: string } => !!x);
               return (
                 <li key={p.title} className="cs-problem">

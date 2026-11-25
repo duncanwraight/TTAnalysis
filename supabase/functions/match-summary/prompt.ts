@@ -45,6 +45,13 @@ The Serve entry covers receiving as well as serving. For a problem about receive
 
 If a problem isn't about one shot or about serve and receive (a set, a spell of points), or the guide has no technical notes for it, leave the technical part empty. Never invent technical faults that aren't in the guide.
 
+## Unforced errors
+
+An unforced error is the player missing a shot the opponent didn't force. Changing tactics doesn't fix it, so advice on unforced errors is technical only:
+- A problem about unforced errors on a shot has an empty tactical part. Its technical part says what a fault in that stroke would look like on the video and what usually causes it, from the shot's technical notes. If the guide has no technical notes for the shot, say to watch those misses on the video and work on the stroke in practice, without naming faults.
+- If a problem covers both unforced errors and points where the opponent beat the shot, the tactical part is only about the points the opponent won. Never suggest a change of tactics as the answer to unforced errors.
+- A service fault counts as an unforced error on the serve.
+
 ## The mental side
 
 Look for these in the point order and the set scores:
@@ -53,6 +60,9 @@ Look for these in the point order and the set scores:
 - runs of 4 or more points to the opponent
 - falling away after losing a close set, or straight after winning one
 - a lead that shrinks before the set is won
+- unforced errors bunched late in sets (once either player reaches 8) or in close sets (won by 3 points or fewer), compared with the rest of the match
+
+Nerves are the usual cause of that last one. A tense player holds back, shortens the stroke or steers the ball instead of playing it, and that is when shots miss. When unforced errors bunch up like this (3 or more, with the counts and scores), add a note saying so and suggest committing to the shot: choose it early, then play it fully rather than half-playing it to keep the ball on the table. Don't blame nerves when the errors are spread evenly through the match.
 
 If one of these happens more than once, add notes on the mental side with practical things to try: a routine between points, a plan for the start of a set, a reset after two points lost in a row, deciding the serve and first target before 8-all, using the timeout to break a run. Tie each note to the sets and scores where it happened. If the data doesn't show a pattern like this, return no mental notes. Don't pad it.
 
@@ -62,7 +72,7 @@ Address the player as "you" and the opponent by first name. If the player's name
 
 The output has three parts:
 - headline: one or two sentences on how the match was decided. Give the result in sets, then the points as a separate clause, for example "You lost 2-3, winning 39 points to Howard's 46." Never write a points score as a bare pair like "39-46 on points".
-- problems: three to five, most costly first. Each has a short title naming the shot or situation, a detail with the counts, a "tactical" part saying what to check and try, and a "technical" part saying what a technical fault would look like on the video (empty when it doesn't apply).
+- problems: three to five, most costly first. Each has a short title naming the shot or situation, a detail with the counts, a "tactical" part saying what to check and try (empty for unforced errors), and a "technical" part saying what a technical fault would look like on the video (empty when it doesn't apply). At least one of the two is filled in.
 - mental: zero to three notes, each with a short title and a detail.
 
 Every detail, tactical and technical part is two to four complete sentences and under 70 words. Never write runs of short fragments or slogans. Stop each field once its point is made. Keep the whole summary under 450 words.`;
