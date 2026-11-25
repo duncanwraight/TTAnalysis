@@ -30,7 +30,7 @@ Done on 2026-11-25:
 
 Next piece of work to design: **shot balance on the analysis page** (section 7), showing which shots a player leaned on or barely used.
 
-The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. It depends on the Supabase URL settings in *Domain and hosting*, which haven't been confirmed.
+The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
 
@@ -202,7 +202,7 @@ Set up on 2026-11-25.
 - **Vercel:** project `tt-analysis` (`prj_gu5fUEdIHpOM3zv2OUlviHKXSuCP`) in the user's personal team (`team_0dKSydEmVRcqft35lpxBJpw8`). It has `ttanalysis.app`, `www.ttanalysis.app` (a 308 to the apex) and the original `tt-analysis.vercel.app`. Vercel issues the certificate (Let's Encrypt).
 - **Old address:** `vercel.json` sends every path on `tt-analysis.vercel.app` to the same path on ttanalysis.app with a 308, so share links sent before the move still work. People signed in on the old address have to sign in once more, because sessions are stored per domain.
 - **Link preview:** the Open Graph tags in `index.html` point at ttanalysis.app, and `public/og-image.png` was regenerated to show the new address (section 1).
-- **Supabase auth URLs (by hand, not yet confirmed):** in the dashboard, under Authentication, then URL Configuration, the Site URL should be `https://ttanalysis.app`, and the redirect URLs should include `https://ttanalysis.app/**` as well as the old vercel.app entry. `supabase/config.toml` has the same values, but they aren't pushed from there. Until this is done, password reset emails link to the old address and rely on the redirect.
+- **Supabase auth URLs:** set by the user in the dashboard on 2026-11-25, under Authentication, then URL Configuration. The Site URL is `https://ttanalysis.app`, and the redirect URLs include `https://ttanalysis.app/**` as well as the old vercel.app entry. `supabase/config.toml` has the same values, but they aren't pushed from there. These only matter for links that leave the app and come back (password reset and sign-up confirmation emails). Email and password sign-in works on any domain without them.
 - **Vercel MCP:** the Vercel plugin's MCP server is signed in and has access to the personal team. It can add domains, read deployments and logs, and check domain configuration (`get_domain_config`), so it's the first thing to reach for instead of the dashboard.
 
 ## Shipping changes
