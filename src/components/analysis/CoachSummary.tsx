@@ -87,11 +87,10 @@ const CoachSummary = ({
   return (
     <div className="cs">
       <article className="cs-main">
-        {stale && (
-          <div className="cs-stale" role="status">
-            <p>{isOwner
-              ? 'The points or shot guide have changed since this was written, so it may be out of date.'
-              : 'The match has changed since this was written, so it may be out of date.'}</p>
+        {/* Only the owner can act on it, so share links and PDFs never say a summary is out of date */}
+        {stale && isOwner && (
+          <div className="cs-stale" role="status" data-html2canvas-ignore="true">
+            <p>The points, the shot guide or the coach's instructions have changed since this was written, so it may be out of date.</p>
             {canGenerate && (
               <button type="button" className="btn primary" onClick={onGenerate} disabled={generating} data-html2canvas-ignore="true">
                 {generating ? 'Writing the summary...' : 'Update the summary'}
