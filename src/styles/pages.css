@@ -1,17 +1,5 @@
 /* Small page-specific pieces. Everything shared lives in index.css. */
 
-/* Home */
-.home-steps { display: flex; flex-direction: column; gap: 16px; }
-.home-steps ol { list-style: none; display: flex; flex-direction: column; gap: 16px; }
-.home-steps li { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; }
-.home-steps h3 { font-size: 16px; }
-.home-steps p { font-size: 15px; }
-.home-step-number {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--surface-2); font-weight: 700; font-size: 15px;
-}
-
 /* Sign in, sign up and password reset */
 .auth-card { display: flex; flex-direction: column; gap: 16px; padding: 28px; }
 .auth-card h2 { font-size: 24px; }

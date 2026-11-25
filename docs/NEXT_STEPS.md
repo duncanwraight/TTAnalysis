@@ -23,6 +23,7 @@ Done on 2026-11-25:
 1. **Signed-out homepage brochure** (section 1), shipped in `b8d8a1e`.
 2. **Wording sweep** (section 1): "film" and "enter" used consistently across the whole site, shipped in the commit after it.
 3. **Tactical and technical** (section 2): both terms are now named and defined on `/admin/shots` and in the coach's summary.
+4. **Homepage facts, redirect and prerendering** (section 1).
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. The reset link also needs `https://tt-analysis.vercel.app/reset-password` in the Supabase dashboard's allowed redirect URLs.
 
@@ -30,20 +31,18 @@ The user has checked the admin panel, the `/debug` removal and the AI summaries 
 
 Built and shipped on 2026-11-25 from this design canvas: https://claude.ai/artifact/QEw5JW86rf8BMaRDQSm79J. The user approved the design and the final copy on the canvas before it was built.
 
-- **Where:** `src/pages/HomeBrochure.tsx` and `src/styles/home.css`. `Home.tsx` shows it to signed-out visitors and keeps the old home for signed-in users. It renders nothing while the session loads, so signed-in users don't see the brochure flash.
+- **Where:** `src/pages/HomeBrochure.tsx` and `src/styles/home.css`. `Home.tsx` shows it to signed-out visitors.
 - **Screenshots:** WebP files in `src/assets/home/`, taken from the real app with a sample match: a copy of a real local match with made-up names (Sam Carter v Alex Morgan, "Club league, division 2"). The copy quotes its numbers, so new screenshots mean checking the copy too. The sample matches exist only on the local stack, under `summary-test@example.test`.
 - **Copy:** the first draft read as machine-written. It was rewritten from a brief built on research into UK sports product sites, one agent per section, then edited with the user. The brief and research are not in the repo; the lessons are: name real shots, sets and scores from the sample match, say plainly that only two shots a point are entered, and don't tell people how to film beyond "any phone will do". Playback at 1.25x or 1.5x is the user's own tip. The headline is "Your backhand loop won 5 and lost 12." Both sign-up buttons say "Create an account".
-- **Facts still missing:** constants at the top of `HomeBrochure.tsx`, all `null`: how long a match takes to enter, how the coach's summary is offered, the coach's summary and pricing FAQ answers, and a contact link. Each line or question stays hidden until its value is set. Don't invent them.
+- **Facts:** constants at the top of `HomeBrochure.tsx`, answered by the user on 2026-11-25. Entry time: a match filmed uncut runs about 20 minutes, around 15 to enter at 1.5x, and a trimmed match often half that. The coach's summary is "By invitation". It's free with no payment to set up. There's no contact link (`CONTACT` stays `null`, so that line stays hidden).
 - **Sign-up:** "Create an account" links to `/auth?mode=signup`, which opens the sign-up form.
 - **Link previews:** `index.html` has a title, description and Open Graph tags. `public/og-image.png` is a 1200x630 shot of the hero.
+- **Signed-in users** go straight from `/` to `/matches`. The old signed-in home was removed.
+- **Prerendering:** `npm run build` also builds `src/prerender.tsx` for SSR and runs `scripts/prerender.mjs`, which writes the brochure's HTML into `dist/index.html`. That file is only served for `/`. `dist/app.html` is the same page with an empty root, and `vercel.json` rewrites every other route to it, so no other page flashes the brochure. An inline script in the head hides the prerendered brochure from browsers holding a session (`html.has-session`), and `main.tsx` removes the class before React renders. `Home` keeps the brochure on screen while auth loads unless a session is stored (`src/lib/storedSession.ts`). React replaces the prerendered HTML rather than hydrating it.
 - **Checked:** at 1440px and 390px wide, with no sideways scroll and no console errors, and on production after the deploy.
 - **Wording sweep:** you **film** a match and **enter** its points. "Record" and "log" were removed from everything a user reads: the tracker, match list, new match form, analysis page, coach's summary, signed-in home and admin shots page. "Other shot" became "losing shot", the admin page's "AI coach" became "the coach's summary", and "log in/out" became "sign in/out". The rule is in CLAUDE.md. Code and database names (`recordPoint`, `unforced.recorded`, `other_shot_id`) and the AI prompt were left alone.
 
-Still open:
-
-- Fill in the missing facts above.
-- Prerendering `/` if search traffic matters; search engines only see `index.html`.
-- Whether signed-in users should go straight to `/matches`.
+Still open: a contact link, if one is wanted.
 
 ## 2. AI coach's summary (done)
 

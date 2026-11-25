@@ -17,10 +17,10 @@ import analysisPhone from '../assets/home/analysis-phone.webp';
  * Facts that aren't settled yet. Each line or question stays off the page
  * while its value is null.
  */
-const ENTRY_TIME: string | null = null; // e.g. 'A best-of-five takes about 20 minutes to enter.'
-const COACH_AVAILABILITY: string | null = null; // e.g. 'By invitation'
-const COACH_FAQ_ANSWER: string | null = null;
-const PRICING_FAQ_ANSWER: string | null = null;
+const ENTRY_TIME: string | null = "A match filmed uncut usually runs about 20 minutes, and at 1.5x speed most take around 15 minutes to enter. It's even quicker if the video has already been trimmed between points: a trimmed match is often half that time.";
+const COACH_AVAILABILITY: string | null = 'By invitation';
+const COACH_FAQ_ANSWER: string | null = "Not straight away. It's switched on by invitation while we try it out. Everything else is open to every account.";
+const PRICING_FAQ_ANSWER: string | null = "Yes. It's free, and there's no payment to set up.";
 const CONTACT = null as { label: string; href: string } | null; // e.g. { label: 'email us', href: 'mailto:...' }
 
 const SIGN_UP = '/auth?mode=signup';
