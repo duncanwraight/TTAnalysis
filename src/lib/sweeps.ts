@@ -10,10 +10,10 @@
 
 import type { PointRow } from './analysis.ts';
 
-export type SweepTag = 'unforced' | 'attacked_first' | 'third_ball' | 'lucky';
-export const SWEEP_TAGS: SweepTag[] = ['unforced', 'attacked_first', 'third_ball', 'lucky'];
+export type SweepTag = 'unforced' | 'attacked_first' | 'early_attack' | 'lucky';
+export const SWEEP_TAGS: SweepTag[] = ['unforced', 'attacked_first', 'early_attack', 'lucky'];
 
-export type SweepFlag = 'is_unforced_error' | 'is_attacked_first' | 'is_third_ball_attack' | 'is_lucky_shot';
+export type SweepFlag = 'is_unforced_error' | 'is_attacked_first' | 'is_early_attack' | 'is_lucky_shot';
 
 export type SweepDefinition = {
   flag: SweepFlag;
@@ -21,6 +21,8 @@ export type SweepDefinition = {
   name: string;
   // The answer button
   yes: string;
+  // The answer button on the opponent's serve, when it differs
+  yesOnTheirServe?: string;
   // What to tick, shown above every point
   instruction: string;
   // Which points the sweep covers, as in "Points you lost"
@@ -29,7 +31,7 @@ export type SweepDefinition = {
   warn: boolean;
 };
 
-/** What counts as an attack, for the attacked-first and third-ball tags. */
+/** What counts as an attack, for the attacked-first and attacked-straight-away tags. */
 export const ATTACK_DEFINITION = 'Any attacking shot counts, including a flick on the receive.';
 
 export const SWEEPS: { [tag in SweepTag]: SweepDefinition } = {
@@ -49,12 +51,13 @@ export const SWEEPS: { [tag in SweepTag]: SweepDefinition } = {
     scope: 'Every point',
     warn: true,
   },
-  third_ball: {
-    flag: 'is_third_ball_attack',
-    name: 'Third-ball attack',
+  early_attack: {
+    flag: 'is_early_attack',
+    name: 'Attacked straight away',
     yes: 'Third-ball attack',
-    instruction: 'Tick when you attacked the ball after their receive. A third-ball attack also counts as attacking first.',
-    scope: 'Your serves',
+    yesOnTheirServe: 'Attacked their serve',
+    instruction: "Includes third-ball attacks from your own serves, and whether or not you attacked your opponent's serves. Tick when you attacked at your first chance: the ball after their receive when you served, or their serve itself when they served. It also counts as attacking first.",
+    scope: 'Points past the receive',
     warn: true,
   },
   lucky: {
@@ -75,10 +78,10 @@ export const sweepPoints = (tag: SweepTag, rows: PointRow[]): PointRow[] => rows
   switch (tag) {
     // Only the player's own count, and there's nothing to miss on a serve nobody touched
     case 'unforced': return r.winner === 'opponent' && r.losingShot !== null;
-    // A third-ball attack is already an attack first
-    case 'attacked_first': return !r.isThirdBall;
-    // The player's serves that went past the receive
-    case 'third_ball': return r.server === 'player' && r.decidedBy === null;
+    // Attacking straight away is already an attack first
+    case 'attacked_first': return !r.isEarlyAttack;
+    // Points decided by the serve or the receive already show whether the receive was an attack
+    case 'early_attack': return r.decidedBy === null;
     case 'lucky': return true;
   }
 });
@@ -88,7 +91,7 @@ export const isTicked = (tag: SweepTag, r: PointRow): boolean => {
   switch (tag) {
     case 'unforced': return r.isUnforced && !r.isServiceFault;
     case 'attacked_first': return r.isAttackedFirst;
-    case 'third_ball': return r.isThirdBall;
+    case 'early_attack': return r.isEarlyAttack;
     case 'lucky': return r.isLucky;
   }
 };
@@ -98,11 +101,11 @@ export const tickCount = (tag: SweepTag, rows: PointRow[]): number =>
   rows.filter(r => isTicked(tag, r) && (tag !== 'unforced' || r.winner === 'opponent')).length;
 
 /**
- * The changes to save when a point is answered. A third-ball attack is always
- * an attack first too, and the database insists on it.
+ * The changes to save when a point is answered. Attacking straight away is
+ * always an attack first too, and the database insists on it.
  */
 export const answerChanges = (tag: SweepTag, yes: boolean): Partial<Record<SweepFlag, boolean>> => {
-  if (tag === 'third_ball') return yes ? { is_third_ball_attack: true, is_attacked_first: true } : { is_third_ball_attack: false };
+  if (tag === 'early_attack') return yes ? { is_early_attack: true, is_attacked_first: true } : { is_early_attack: false };
   return { [SWEEPS[tag].flag]: yes };
 };
 

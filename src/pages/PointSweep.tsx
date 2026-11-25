@@ -236,6 +236,7 @@ const Sweep = () => {
   const setRows = points.filter(r => r.setNumber === row.setNumber);
   const setCount = analysis.sets.length;
   const ticked = isTicked(tag, row);
+  const yes = row.server === 'opponent' && sweep.yesOnTheirServe ? sweep.yesOnTheirServe : sweep.yes;
   const [winnerName, loserName] = row.winner === 'player' ? ['You', opponent] : [opponent, 'You'];
 
   return (
@@ -289,12 +290,12 @@ const Sweep = () => {
                 <dt>Losing shot</dt>
                 <dd><span className="muted">{loserName} ·</span> <strong>{shotText(row.losingShot)}</strong></dd>
               </dl>
-              {ticked && <p className="sw-current">Already marked. Press {sweep.yes} to keep it, or No to clear it.</p>}
+              {ticked && <p className="sw-current">Already marked. Press {yes} to keep it, or No to clear it.</p>}
             </div>
 
             <div className="sw-actions">
               <button type="button" className={`sw-answer yes${ticked ? ' current' : ''}`} onClick={() => answer(true)}>
-                {sweep.yes} <kbd>Y</kbd>
+                {yes} <kbd>Y</kbd>
               </button>
               <button type="button" className="sw-answer" onClick={() => answer(false)}>
                 No, next point <kbd>N</kbd>

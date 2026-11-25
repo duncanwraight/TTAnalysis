@@ -6,7 +6,7 @@ let nextId = 0;
 const row = (r: Partial<PointRow>): PointRow => ({
   id: `p${nextId++}`, setNumber: 1, number: 1, server: 'player', winner: 'player',
   playerScore: 1, opponentScore: 0, winningShot: 'Loop FH', losingShot: 'Push BH',
-  isServiceFault: false, isLucky: false, isUnforced: false, isAttackedFirst: false, isThirdBall: false,
+  isServiceFault: false, isLucky: false, isUnforced: false, isAttackedFirst: false, isEarlyAttack: false,
   decidedBy: null, ...r,
 });
 
@@ -16,11 +16,11 @@ describe('sweep points', () => {
   const ace = row({ winner: 'player', losingShot: null, decidedBy: 'serve' });
   const notTouched = row({ winner: 'opponent', server: 'opponent', losingShot: null, decidedBy: 'serve' });
   const theirServe = row({ server: 'opponent' });
-  const thirdBall = row({ isAttackedFirst: true, isThirdBall: true });
-  const rows = [fault, lost, ace, notTouched, theirServe, thirdBall];
+  const earlyAttack = row({ isAttackedFirst: true, isEarlyAttack: true });
+  const rows = [fault, lost, ace, notTouched, theirServe, earlyAttack];
 
   it('leaves service faults out of every sweep', () => {
-    for (const tag of ['unforced', 'attacked_first', 'third_ball', 'lucky'] as const) {
+    for (const tag of ['unforced', 'attacked_first', 'early_attack', 'lucky'] as const) {
       expect(sweepPoints(tag, rows)).not.toContain(fault);
     }
   });
@@ -29,11 +29,11 @@ describe('sweep points', () => {
     expect(sweepPoints('unforced', rows)).toEqual([lost]);
   });
 
-  it('only asks about the third ball on the player\'s serves past the receive', () => {
-    expect(sweepPoints('third_ball', rows)).toEqual([lost, thirdBall]);
+  it('only asks about attacking straight away on points past the receive, on either serve', () => {
+    expect(sweepPoints('early_attack', rows)).toEqual([lost, theirServe, earlyAttack]);
   });
 
-  it('skips third-ball attacks in the attacked-first sweep', () => {
+  it('skips attacks straight away in the attacked-first sweep', () => {
     expect(sweepPoints('attacked_first', rows)).toEqual([lost, ace, notTouched, theirServe]);
   });
 });
@@ -53,9 +53,9 @@ describe('ticks', () => {
     expect(unconfirmedTags(rows, ['unforced'])).toEqual([{ tag: 'attacked_first', ticks: 1 }]);
   });
 
-  it('ticks attacked first along with a third-ball attack', () => {
-    expect(answerChanges('third_ball', true)).toEqual({ is_third_ball_attack: true, is_attacked_first: true });
-    expect(answerChanges('third_ball', false)).toEqual({ is_third_ball_attack: false });
+  it('ticks attacked first along with attacking straight away', () => {
+    expect(answerChanges('early_attack', true)).toEqual({ is_early_attack: true, is_attacked_first: true });
+    expect(answerChanges('early_attack', false)).toEqual({ is_early_attack: false });
     expect(answerChanges('attacked_first', false)).toEqual({ is_attacked_first: false });
   });
 });

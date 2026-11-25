@@ -147,7 +147,7 @@ export const matchApi = {
         .select('id, set_number, player_score, opponent_score')
         .eq('match_id', id),
       client.from('points')
-        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_third_ball_attack')
+        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_early_attack')
         .eq('match_id', id)
         .order('created_at', { ascending: true }),
       client.from('shots')
@@ -338,8 +338,8 @@ export const pointApi = {
     return data;
   },
 
-  // Change the ticks on a recorded point: lucky, unforced, attacked first, third ball
-  updatePoint: async (id: string, changes: Partial<Pick<Point, 'is_lucky_shot' | 'is_unforced_error' | 'is_attacked_first' | 'is_third_ball_attack'>>) => {
+  // Change the ticks on a recorded point: lucky, unforced, attacked first, attacked straight away
+  updatePoint: async (id: string, changes: Partial<Pick<Point, 'is_lucky_shot' | 'is_unforced_error' | 'is_attacked_first' | 'is_early_attack'>>) => {
     const { error } = await supabase
       .from('points')
       .update(changes)

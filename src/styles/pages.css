@@ -46,3 +46,40 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 @media (max-width: 640px) {
   .auth-card { padding: 20px; }
 }
+
+/* Admin shot list: the same column widths in every category, so the tables line up */
+.admin-shots-table { table-layout: fixed; min-width: 900px; }
+.admin-shots-table .c-shot { width: 15%; }
+.admin-shots-table .c-name { width: 14%; }
+.admin-shots-table .c-desc { width: 20%; }
+.admin-shots-table .c-role { width: 10%; }
+.admin-shots-table .c-actions { width: 150px; }
+.admin-shots-table th[scope=row] { white-space: normal; }
+.admin-shots-table td { overflow-wrap: anywhere; }
+.admin-notes { display: block; font-size: 13px; margin-top: 4px; color: var(--ink-2); }
+
+/* The shot dialog: wide enough for the guide, with Save always in view */
+.dialog.wide { max-width: 880px; }
+.shot-dialog { padding: 0; gap: 0; overflow: hidden; }
+.shot-dialog > h2 { padding: 20px 24px 12px; border-bottom: 1px solid var(--line); }
+.shot-dialog-body { overflow-y: auto; padding: 4px 24px 20px; display: flex; flex-direction: column; }
+.shot-dialog-section { display: flex; flex-direction: column; gap: 10px; padding: 16px 0; }
+.shot-dialog-section + .shot-dialog-section { border-top: 1px solid var(--line); }
+.shot-dialog-section h3 { font-size: 15px; font-weight: 600; }
+.shot-dialog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.shot-dialog-grid .wide { grid-column: 1 / -1; }
+.shot-dialog-grid textarea { min-height: 0; }
+.shot-dialog-guide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 28px; align-items: start; border-top: 1px solid var(--line); }
+.shot-dialog-guide .shot-dialog-section { border-top: 0; }
+.shot-dialog-guide .admin-qualities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+.shot-dialog-notes {
+  width: 100%; min-height: 200px; padding: 10px 12px; line-height: 1.5; resize: vertical;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); font-size: 15px;
+}
+.shot-dialog-notes:focus { border-color: var(--ink); box-shadow: var(--focus); outline: none; }
+.shot-dialog-count { text-align: right; }
+.shot-dialog-foot { padding: 12px 24px; border-top: 1px solid var(--line); background: var(--surface); margin: 0; }
+@media (max-width: 720px) {
+  .shot-dialog-grid, .shot-dialog-guide { grid-template-columns: 1fr; }
+  .shot-dialog > h2, .shot-dialog-body, .shot-dialog-foot { padding-left: 16px; padding-right: 16px; }
+}

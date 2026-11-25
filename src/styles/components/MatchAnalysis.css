@@ -316,16 +316,15 @@
   .cs-stale .btn { width: 100%; }
 }
 
-/* Points won and lost as one bar: who attacked first, third-ball attacks */
-.ma-split-row { display: grid; grid-template-columns: minmax(140px, 240px) minmax(0, 1fr) auto; gap: 16px; align-items: center; font-size: 15px; }
-.ma-split-label { font-weight: 600; }
-.ma-split-row.quiet .ma-split-label, .ma-split-row.quiet .ma-split-count { color: var(--ma-ink-2); font-weight: 400; }
-.ma-split-track { min-width: 0; }
-.ma-split { display: flex; height: 20px; border-radius: 6px; overflow: hidden; }
-.ma-split-count { white-space: nowrap; }
+/* Points won and lost as one bar: who attacked first, attacking straight away */
+.ma-split-row { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 96px; gap: 12px; align-items: center; font-size: 14px; }
+.ma-split-label { font-weight: 500; }
+.ma-split-row.quiet .ma-split-label { color: var(--ma-ink-2); font-weight: 400; }
+.ma-split-empty { height: 20px; border-radius: 4px; background: var(--surface-2); }
+.ma-split-count { white-space: nowrap; text-align: right; }
 @media (max-width: 640px) {
   .ma-split-row { grid-template-columns: 1fr auto; gap: 6px 12px; }
-  .ma-split-track { grid-column: 1 / -1; grid-row: 2; }
+  .ma-split-row > :nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
 }
 
 /* Asks the owner whether a tag's ticks are complete */
@@ -334,3 +333,4 @@
 .ma-confirm strong { font-size: 15px; }
 .ma-confirm span { font-size: 14px; color: var(--ma-ink-2); }
 .ma-confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ma-subhead { font-size: 17px; font-weight: 600; margin-top: 8px; }

@@ -31,7 +31,7 @@ Done on 2026-11-25:
 9. **Shot balance in the coach's summary** (section 2), shipped in `76c4035`. Function deployed to production.
 10. **Analysis page and prompt review** (`docs/ANALYSIS_REVIEW.md`): close finishes from 8-all, a Serve and receive section, a new page order, problem kinds and receive guidance in the prompt, and an eval script. `SUMMARY_VERSION` is now 6, so every stored summary shows as out of date until it's regenerated.
 
-Built on 2026-11-26, **not yet shipped** (see *Sweeps* in section 7): sweeps, attacked first and third-ball attack. Migration `20261126090000_point_sweeps.sql` is applied locally only, and the function changes aren't deployed. `SUMMARY_VERSION` is now 7.
+Shipped on 2026-11-26 (see *Sweeps* in section 7): sweeps, attacked first, and attacked straight away. `SUMMARY_VERSION` is now 8.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
 
@@ -184,7 +184,7 @@ Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/
 - **What stands out**, at most three, in this order: a role share 20 points or more apart (both sides with 10+ shots); a shot and hand the opponent had 5+ times that you never had; a shot one side had 1.5x as often with 10+; a shot you had 5+ times that they never had.
 - **Cards.** "They/You did more attacking" now counts attack-role shots, falling back to "did more defending". "No backhand blocks" (or whichever shot) appears for the biggest shot you never had. "Attacking dropped off" (`attacksBySet`) counts attack-role shots too, so a pips attack filed under another category counts.
 - **In the coach's summary** since 2026-11-25 (section 2). `categories` is gone from the analysis.
-### Sweeps, attacked first and third ball (built, not shipped)
+### Sweeps, attacked first and attacked straight away (done)
 
 Designed with the user on 2026-11-26 on this canvas: https://claude.ai/artifact/5LK1fv2xobgWtKuLGWRpT9
 
@@ -198,6 +198,8 @@ Designed with the user on 2026-11-26 on this canvas: https://claude.ai/artifact/
 - **Checked** locally in Chrome on the Sam Carter sample match: a sweep by keyboard, Back, finishing, the end screen, the warning and its button, both new sections, and the sweep at 390px wide. The local test user's password was set to `sweep-test-2026` for this.
 
 To ship: the usual steps in *Shipping changes*, with the migration first, then `supabase functions deploy match-summary --use-api --yes`, then push. Then try a summary on a match with attacked first ticked (about $0.10), and check its banner clears after "Update the summary".
+
+Changed on 2026-11-26, after the first real use: attacked first is split by who served, and the third-ball sweep became **attacked straight away** (`early_attack`, `points.is_early_attack`, migration `20261126120000_early_attack.sql`). It covers points past the receive on either serve: on the player's serve it's a third-ball attack, on the opponent's it's attacking the serve, and the Yes button says which. Receives that won or lost the point count from the entered shots without a tick, in both `earlyAttack.onReceive` and attacked first. The migration kept the 7 third-ball ticks on production, dropped `third_ball` from `confirmed_tags` (it never covered their serves) and cleared the one unfinished third-ball position. `SUMMARY_VERSION` went to 8. Also fixed: moving from one sweep's end screen to the next kept the old sweep's state (`75b15bd`). A UX pass the same day: the `/admin/shots` edit dialog is now wide, in sections (the shot, role, then Tactical and Technical side by side) with short explanations and Save always in view, and the shot tables share column widths; the analysis page's new bars match the stage bars, and the 8-all figures say so when no set reached 8-all.
 
 ## 8. Code quality
 

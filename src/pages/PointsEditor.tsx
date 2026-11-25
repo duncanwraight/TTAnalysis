@@ -154,7 +154,7 @@ const PointsEditor = () => {
   const { match } = data;
   const confirmedTags = match.confirmed_tags ?? [];
   const progress = (match.sweep_progress ?? {}) as SweepProgress;
-  const thirdBallIds = new Set(sweepPoints('third_ball', analysis.rows).map(r => r.id));
+  const earlyAttackIds = new Set(sweepPoints('early_attack', analysis.rows).map(r => r.id));
   const setNumbers = analysis.sets.map(s => s.setNumber);
   const rows = analysis.rows.filter(r =>
     (setFilter === 0 || r.setNumber === setFilter) && (!onlyLost || r.winner === 'opponent'));
@@ -254,7 +254,7 @@ const PointsEditor = () => {
 
 
         <p className="muted" style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 860 }}>
-          You can also tick any point by hand, which doesn't mark a sweep as done. Tick <strong>Unforced</strong> when the losing shot was an unforced error. {UNFORCED_ERROR_DEFINITION} It applies to whoever lost the point, but only your own count towards the analysis. A service fault always counts as unforced. Tick <strong>Attacked first</strong> when you played the first attacking shot. {ATTACK_DEFINITION} <strong>Third ball</strong> is only for your serves that went past the receive, and ticks Attacked first too.
+          You can also tick any point by hand, which doesn't mark a sweep as done. Tick <strong>Unforced</strong> when the losing shot was an unforced error. {UNFORCED_ERROR_DEFINITION} It applies to whoever lost the point, but only your own count towards the analysis. A service fault always counts as unforced. Tick <strong>Attacked first</strong> when you played the first attacking shot. {ATTACK_DEFINITION} Tick <strong>Straight away</strong> when you attacked at your first chance: the third ball on your serve, or their serve itself. It only applies to points that went past the receive, and ticks Attacked first too.
         </p>
 
         <div className="pe-toolbar" role="toolbar" aria-label="Filter points">
@@ -286,7 +286,7 @@ const PointsEditor = () => {
                 <th scope="col">Losing shot</th>
                 <th scope="col" className="pe-check">Unforced</th>
                 <th scope="col" className="pe-check">Attacked first</th>
-                <th scope="col" className="pe-check">Third ball</th>
+                <th scope="col" className="pe-check">Straight away</th>
                 <th scope="col" className="pe-check">Lucky</th>
               </tr>
             </thead>
@@ -315,20 +315,21 @@ const PointsEditor = () => {
                       <input
                         type="checkbox"
                         checked={r.isAttackedFirst}
-                        disabled={r.isServiceFault || r.isThirdBall}
+                        disabled={r.isServiceFault || r.isEarlyAttack}
                         onChange={() => toggle(r, 'attacked_first')}
                         aria-label={`Attacked first, ${desc}`}
-                        title={r.isThirdBall ? 'A third-ball attack is always an attack first' : 'You played the first attacking shot'}
+                        title={r.isEarlyAttack ? 'Attacking straight away is always an attack first' : 'You played the first attacking shot'}
                       />
                     </td>
                     <td className="pe-check">
                       <input
                         type="checkbox"
-                        checked={r.isThirdBall}
-                        disabled={!thirdBallIds.has(r.id)}
-                        onChange={() => toggle(r, 'third_ball')}
-                        aria-label={`Third-ball attack, ${desc}`}
-                        title={thirdBallIds.has(r.id) ? 'You attacked the ball after their receive' : 'Only your serves that went past the receive'}
+                        checked={r.isEarlyAttack}
+                        disabled={!earlyAttackIds.has(r.id)}
+                        onChange={() => toggle(r, 'early_attack')}
+                        aria-label={`Attacked straight away, ${desc}`}
+                        title={!earlyAttackIds.has(r.id) ? 'Only points that went past the receive'
+                          : r.server === 'player' ? 'You attacked the ball after their receive' : 'You attacked their serve'}
                       />
                     </td>
                     <td className="pe-check">

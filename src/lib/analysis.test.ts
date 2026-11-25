@@ -23,7 +23,7 @@ type Spec = {
   lucky?: boolean;
   unforced?: boolean;
   attackedFirst?: boolean;
-  thirdBall?: boolean;
+  earlyAttack?: boolean;
 };
 
 let nextId = 0;
@@ -37,8 +37,8 @@ const pt = (s: Spec): AnalysisPoint => ({
   other_hand: s.loseHand ?? 'bh',
   is_lucky_shot: s.lucky ?? false,
   is_unforced_error: s.unforced ?? false,
-  is_attacked_first: s.attackedFirst ?? s.thirdBall ?? false,
-  is_third_ball_attack: s.thirdBall ?? false,
+  is_attacked_first: s.attackedFirst ?? s.earlyAttack ?? false,
+  is_early_attack: s.earlyAttack ?? false,
 });
 
 // n points in a row to one side, all in the same set
@@ -515,13 +515,16 @@ describe('who attacked first', () => {
       // No attack in the last two shots
       pt({ winner: 'opponent', win: 'push', lose: 'push' }),
     ]);
-    expect(a.attackFirst).toEqual({
+    expect(a.attackFirst).toMatchObject({
       confirmed: false,
       player: { won: 1, lost: 0 },
       opponent: { won: 1, lost: 1 },
       unclear: { won: 0, lost: 1 },
     });
-    expect(a.rows[0]).toMatchObject({ isAttackedFirst: true, isThirdBall: false });
+    // Player serves points 1 and 2, opponent 3 and 4
+    expect(a.attackFirst?.byServer.player).toEqual({ player: { won: 1, lost: 0 }, opponent: { won: 1, lost: 0 }, unclear: { won: 0, lost: 0 } });
+    expect(a.attackFirst?.byServer.opponent).toEqual({ player: { won: 0, lost: 0 }, opponent: { won: 0, lost: 1 }, unclear: { won: 0, lost: 1 } });
+    expect(a.rows[0]).toMatchObject({ isAttackedFirst: true, isEarlyAttack: false });
   });
 
   it('leaves service faults out', () => {
@@ -543,11 +546,11 @@ describe('who attacked first', () => {
   });
 });
 
-describe('third-ball attack', () => {
-  it('only counts the player\'s serves that went past the receive', () => {
+describe('attacking straight away', () => {
+  it('counts third-ball attacks on the player\'s serves that went past the receive', () => {
     const a = analyse([
       // Player serves points 1 and 2
-      pt({ winner: 'player', win: 'loop', lose: 'push', thirdBall: true }),
+      pt({ winner: 'player', win: 'loop', lose: 'push', earlyAttack: true }),
       pt({ winner: 'player', win: 'serve', lose: 'push' }),
       // Opponent serves points 3 and 4
       pt({ winner: 'opponent', win: 'loop', lose: 'push' }),
@@ -555,13 +558,30 @@ describe('third-ball attack', () => {
       // Player serves again
       pt({ winner: 'opponent', win: 'loop', lose: 'block' }),
     ]);
-    expect(a.thirdBall).toEqual({ confirmed: false, attacked: { won: 1, lost: 0 }, other: { won: 0, lost: 1 } });
-    expect(a.rows[0]).toMatchObject({ isAttackedFirst: true, isThirdBall: true });
+    expect(a.earlyAttack?.onServe).toEqual({ attacked: { won: 1, lost: 0 }, other: { won: 0, lost: 1 } });
+    expect(a.rows[0]).toMatchObject({ isAttackedFirst: true, isEarlyAttack: true });
     expect(a.attackFirst?.player).toEqual({ won: 1, lost: 0 });
   });
 
   it('is left out until a point is ticked or the tag is confirmed', () => {
-    expect(analyse([pt({ winner: 'player', win: 'loop', lose: 'push' })]).thirdBall).toBeNull();
+    expect(analyse([pt({ winner: 'player', win: 'loop', lose: 'push' })]).earlyAttack).toBeNull();
+  });
+
+  it('reads receives that decided the point from the entered shots', () => {
+    const a = analyse([
+      // Opponent serves points 1 and 2: a receive loop that won, then a missed receive loop
+      pt({ winner: 'player', win: 'loop', lose: 'serve' }),
+      pt({ winner: 'opponent', win: 'serve', lose: 'loop' }),
+      // Player serves 3 and 4
+      pt({ winner: 'player', win: 'loop', lose: 'push' }),
+      pt({ winner: 'player', win: 'loop', lose: 'push' }),
+      // Opponent serves 5 and 6: a missed receive push, then a ticked receive attack past the receive
+      pt({ winner: 'opponent', win: 'serve', lose: 'push' }),
+      pt({ winner: 'player', win: 'loop', lose: 'block', earlyAttack: true }),
+    ], 'opponent');
+    expect(a.earlyAttack?.onReceive).toEqual({ attacked: { won: 2, lost: 1 }, other: { won: 0, lost: 1 } });
+    // The receive attacks were first attacks, ticked or not
+    expect(a.attackFirst?.byServer.opponent.player).toEqual({ won: 2, lost: 1 });
   });
 });
 

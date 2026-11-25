@@ -67,7 +67,7 @@ export type Point = {
   is_lucky_shot?: boolean; // Tracks whether the winning shot was lucky (e.g., hit net or edge)
   is_unforced_error?: boolean; // The losing shot was a mistake the winner didn't force
   is_attacked_first?: boolean; // The player played the first attacking shot
-  is_third_ball_attack?: boolean; // The player served and attacked the ball after the receive
+  is_early_attack?: boolean; // The player served and attacked the ball after the receive
   created_at: string;
 };
 

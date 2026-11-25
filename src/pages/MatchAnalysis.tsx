@@ -94,21 +94,21 @@ const ServeCard = ({ title, stats, yours }: { title: string; stats: ServeStats; 
   );
 };
 
-/** Points won and lost as one bar, scaled to the biggest row. Won is blue, lost orange. */
-const SplitRow = ({ label, tally, max, quiet }: { label: string; tally: Tally; max: number; quiet?: boolean }) => {
+const count = (t: Tally) => t.won + t.lost;
+
+/** Points won and lost as one full-width bar, like the stage bars. Won is blue, lost orange. */
+const SplitRow = ({ label, tally, quiet }: { label: string; tally: Tally; quiet?: boolean }) => {
   const total = tally.won + tally.lost;
   return (
     <div className={`ma-split-row${quiet ? ' quiet' : ''}`}>
       <span className="ma-split-label">{label}</span>
-      <div className="ma-split-track">
-        {total > 0 && (
-          <div className="ma-split" style={{ width: `${(100 * total) / Math.max(max, 1)}%` }} title={`Won ${tally.won}, lost ${tally.lost}`}>
-            <div className="ma-fill-you" style={{ flexGrow: tally.won }} />
-            <div className="ma-fill-opp" style={{ flexGrow: tally.lost }} />
-          </div>
-        )}
-      </div>
-      <span className="ma-split-count">Won <strong>{tally.won}</strong> of {total}</span>
+      {total > 0 ? (
+        <div className="ma-stage-bar" title={`Won ${tally.won}, lost ${tally.lost}`}>
+          {tally.won > 0 && <div style={{ flex: `${tally.won} 1 0` }} />}
+          {tally.lost > 0 && <div style={{ flex: `${tally.lost} 1 0` }} className={tally.won === 0 ? 'ma-fill-opp' : undefined} />}
+        </div>
+      ) : <div className="ma-split-empty" />}
+      <span className="ma-split-count">{total > 0 ? <>Won <strong>{tally.won}</strong> of {total}</> : <span className="faint">None</span>}</span>
     </div>
   );
 };
@@ -384,7 +384,7 @@ const MatchAnalysis = () => {
           <div>
             <strong>
               {tag === 'unforced' ? `${ticks} unforced ${ticks === 1 ? 'error is' : 'errors are'} ticked`
-                : `${ticks} ${ticks === 1 ? 'point is' : 'points are'} marked: ${SWEEPS[tag].name.toLowerCase()}`}. Is that all of them?
+                : `${SWEEPS[tag].name} is ticked on ${ticks} ${ticks === 1 ? 'point' : 'points'}`}. Is that all of them?
             </strong>
             <span>No sweep has been done for these, so some could be missing. Only you see this.</span>
             {confirmError && <span className="status error">{confirmError}</span>}
@@ -407,7 +407,11 @@ const MatchAnalysis = () => {
               of={`${a.onServe.won} of ${a.onServe.won + a.onServe.lost}`} note="Points won while serving" />
             <Tile label="On their serve" value={`${pct(a.onReceive.won, a.onReceive.won + a.onReceive.lost)}%`}
               of={`${a.onReceive.won} of ${a.onReceive.won + a.onReceive.lost}`} note="Points won while receiving" />
-            <Tile label="From 8-all" value={`${a.fromEightAll.won}`} of={`of ${eightAllTotal}`} note="Points won with both players on 8 or more" />
+            {eightAllTotal > 0 ? (
+              <Tile label="From 8-all" value={`${a.fromEightAll.won}`} of={`of ${eightAllTotal}`} note="Points won with both players on 8 or more" />
+            ) : (
+              <Tile label="From 8-all" value="–" empty note="No set reached 8-all" />
+            )}
             {a.unforced.recorded ? (
               <Tile label="Your unforced errors" value={`${a.unforced.total}`} of={`of ${a.points.lost} lost`}
                 note={`${pct(a.unforced.total, a.points.lost)}% of the points you lost`} />
@@ -441,19 +445,34 @@ const MatchAnalysis = () => {
               <ServeCard title="Your serve" stats={a.serveReceive.player} yours />
               <ServeCard title="Their serve" stats={a.serveReceive.opponent} yours={false} />
             </div>
-            {a.thirdBall && (
-              <div className="card ma-list">
-                <h3>Attacking after your serve</h3>
-                <p className="ma-small muted">
-                  Your serves that went past the receive. You attacked the third ball after {a.thirdBall.attacked.won + a.thirdBall.attacked.lost} of {a.thirdBall.attacked.won + a.thirdBall.attacked.lost + a.thirdBall.other.won + a.thirdBall.other.lost}.
-                  {!a.thirdBall.confirmed && ' Not every point has been checked, so some may be missing.'}
-                </p>
-                <SplitRow label="Third-ball attack" tally={a.thirdBall.attacked}
-                  max={Math.max(a.thirdBall.attacked.won + a.thirdBall.attacked.lost, a.thirdBall.other.won + a.thirdBall.other.lost)} />
-                <SplitRow label="Other serve points" tally={a.thirdBall.other}
-                  max={Math.max(a.thirdBall.attacked.won + a.thirdBall.attacked.lost, a.thirdBall.other.won + a.thirdBall.other.lost)} />
-              </div>
-            )}
+            {a.earlyAttack && (() => {
+              const ea = a.earlyAttack;
+              return (
+                <>
+                  <div className="section-head">
+                    <h3 className="ma-subhead">Attacking straight away</h3>
+                    <p>
+                      Includes third-ball attacks from your own serves, and whether or not you attacked your opponent's serves.
+                      {!ea.confirmed && ' Not every point has been checked, so some may be missing.'}
+                    </p>
+                  </div>
+                  <div className="ma-grid halves">
+                    <div className="card ma-list">
+                      <h3>After your serve</h3>
+                      <p className="ma-small muted">Your serves that went past the receive.</p>
+                      <SplitRow label="Third-ball attack" tally={ea.onServe.attacked} />
+                      <SplitRow label="No third-ball attack" tally={ea.onServe.other} quiet />
+                    </div>
+                    <div className="card ma-list">
+                      <h3>Receiving their serve</h3>
+                      <p className="ma-small muted">Includes receives that won or lost the point, which the entered shots already show.</p>
+                      <SplitRow label="Attacked their serve" tally={ea.onReceive.attacked} />
+                      <SplitRow label="Didn't attack it" tally={ea.onReceive.other} quiet />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </section>
 
           <section aria-labelledby="ma-you" className="section">
@@ -511,13 +530,17 @@ const MatchAnalysis = () => {
                     note={`${pct(a.unforced.total, a.points.lost)}% of the points you lost`} />
                   <Tile label="Forced" value={`${a.points.lost - a.unforced.total}`} of={`of ${a.points.lost} lost`}
                     note="The opponent won the point" />
-                  <Tile label="From 8-all" value={`${a.fromEightAll.unforced}`} of={`of ${a.fromEightAll.lost} lost`}
-                    note="Unforced, at the close of sets" />
+                  {a.fromEightAll.lost > 0 ? (
+                    <Tile label="From 8-all" value={`${a.fromEightAll.unforced}`} of={`of ${a.fromEightAll.lost} lost`}
+                      note="Unforced, at the close of sets" />
+                  ) : (
+                    <Tile label="From 8-all" value="–" empty note="No points lost from 8-all" />
+                  )}
                 </div>
                 <div className="ma-grid pairs">
                   <div className="card ma-list">
                     <h3>By stage of the set</h3>
-                    {[...a.stages, { label: 'From 8-all', ...a.fromEightAll }].map(st => (
+                    {[...a.stages, { label: 'From 8-all', ...a.fromEightAll }].filter(st => st.lost > 0 || st.label !== 'From 8-all').map(st => (
                       <div key={st.label} className="ma-pair-row"><span className="muted">{st.label}</span><strong>{st.unforced} of {st.lost} lost</strong></div>
                     ))}
                   </div>
@@ -556,22 +579,27 @@ const MatchAnalysis = () => {
 
           {a.attackFirst && (() => {
             const af = a.attackFirst;
-            const max = Math.max(...[af.player, af.opponent, af.unclear].map(t => t.won + t.lost));
+            const total = count(af.player) + count(af.opponent) + count(af.unclear);
             return (
               <section aria-labelledby="ma-first" className="section">
                 <div className="section-head">
                   <h2 id="ma-first">Who attacked first</h2>
                   <p>
-                    Points where you played the first attacking shot, against the rest. {ATTACK_DEFINITION} Points you won are blue, points you lost orange.
+                    You attacked first in {count(af.player)} of {total} points and won {af.player.won} of them. {ATTACK_DEFINITION} Points you won are blue, points you lost orange.
                     {!af.confirmed && ' Not every point has been checked, so some may be missing.'}
                   </p>
                 </div>
-                <div className="card ma-list">
-                  <SplitRow label="You attacked first" tally={af.player} max={max} />
-                  <SplitRow label="They attacked first" tally={af.opponent} max={max} />
-                  <SplitRow label="No attack in the last two shots" tally={af.unclear} max={max} quiet />
-                  <p className="ma-small muted">Only the last two shots of each point are entered. In the last group, nobody attacked, or they attacked earlier in the rally and it ended with a push or a block.</p>
+                <div className="ma-grid halves">
+                  {(['player', 'opponent'] as const).map(server => (
+                    <div key={server} className="card ma-list">
+                      <h3>{server === 'player' ? 'On your serve' : 'On their serve'}</h3>
+                      <SplitRow label="You attacked first" tally={af.byServer[server].player} />
+                      <SplitRow label="They attacked first" tally={af.byServer[server].opponent} />
+                      <SplitRow label="No attack in the last two shots" tally={af.byServer[server].unclear} quiet />
+                    </div>
+                  ))}
                 </div>
+                <p className="ma-small muted">Only the last two shots of each point are entered. In the last group, nobody attacked, or they attacked earlier in the rally and it ended with a push or a block.</p>
               </section>
             );
           })()}

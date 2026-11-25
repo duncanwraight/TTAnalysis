@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     const [sets, points, shots] = await Promise.all([
       asUser.from('sets').select('id, set_number, player_score, opponent_score').eq('match_id', matchId),
       asUser.from('points')
-        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_third_ball_attack')
+        .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_early_attack')
         .eq('match_id', matchId)
         .order('created_at', { ascending: true }),
       asUser.from('shots').select('id, name, display_name, check_qualities, technical_notes, role, shot_categories(name, display_order)'),

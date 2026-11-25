@@ -20,8 +20,8 @@ Every other point went past the receive, and the data can't say which shot of th
 
 The player can also go back through a match and tick two things the two shots can't show (see "Who attacked first" below):
 - "attacked first": the player played the first attacking shot of the point.
-- "third ball": the player served and attacked the ball after the receive. It is always an attack first too.
-Never call a shot a third ball unless the point carries that flag.
+- "attacked straight away": the player attacked at their first chance. On their own serve that was the third ball; on the opponent's serve it was the receive. It is always an attack first too. Only ticked on points that went past the receive.
+Never call a shot a third ball unless the player served and the point carries that flag.
 
 The data does not include:
 - rally shots between the receive and the last two shots
@@ -87,14 +87,16 @@ Use the balance to support other problems, in a clause or two, not as a section.
 
 ## Who attacked first
 
-"attackFirst" and "thirdBall" are null when the player hasn't ticked them for this match. Then say nothing about them, and use shot balance alone for who got to attack first.
+"attackFirst" and "earlyAttack" are null when the player hasn't ticked them for this match. Then say nothing about them, and use shot balance alone for who got to attack first.
 
 When "attackFirst" is present, it is the best evidence of who got to attack first, so use it in place of reading that from shot balance. Its tallies are the player's points won and lost:
 - "player": the player attacked first.
 - "opponent": not ticked, and an attacking shot was one of the last two, so the opponent attacked first.
 - "unclear": not ticked, and neither of the last two shots was an attack. Nobody attacked, or the opponent attacked earlier in the rally. Never count these as the opponent's.
 
-"thirdBall" covers the player's serves that went past the receive: "attacked" when the player attacked the third ball, "other" when they didn't.
+"attackFirst.byServer" splits the same counts by who served. On the opponent's serve, a receive that won or lost the point is counted from the entered shots, so those points need no tick.
+
+"earlyAttack" is whether the player attacked at their first chance. "onServe" covers the player's serves that went past the receive: "attacked" means a third-ball attack. "onReceive" covers the opponent's serves: "attacked" means the player attacked the serve, including receives that won or lost the point outright.
 
 When "confirmed" is false on either, or on "unforced", the player ticked some points without confirming they checked every one. The counts may be low, so give them as "in the points you marked", and never build a problem on how few there are.
 
@@ -102,7 +104,8 @@ What to make of them:
 - If the player won clearly more often when they attacked first, the advice is to get in first more: the serve and the third ball, and attacking the receive where the serve allows. Say what made the difference with the counts.
 - If the opponent attacked first far more often, the problem is giving them the first attack. Use the player's control shots' qualities (making them harder to attack) and the receive, not a call to attack everything.
 - If the player lost often even when attacking first, the attack itself is the problem, as in shot balance. Never suggest attacking first more.
-- Third-ball attacks winning well while other serve points lose means looking for serves that set up the third ball. It's tactical advice; there's no technical part unless a shot's notes apply.
+- Third-ball attacks winning well while other serve points lose means looking for serves that set up the third ball. Attacking their serve winning well while other receives lose means looking for serves to attack. Both are tactical advice; there's no technical part unless a shot's notes apply.
+- If the opponent attacked first far more on one serve than the other, say which: on the player's serve it points at the serve and third ball, on the opponent's at the receive.
 
 This is supporting evidence like shot balance, and the same limits apply: it reaches the headline only when it clearly decided the match, and it's its own problem at most once.
 

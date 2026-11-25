@@ -4,7 +4,7 @@ import { useApi } from '../lib/useApi';
 import Button from '../components/ui/Button';
 import Layout from '../components/Layout';
 import { ROLES, ROLE_LABEL, type Role } from '../lib/analysis';
-import { MAX_TECHNICAL_NOTES, QUALITIES, RECEIVE_GUIDANCE, TACTICAL_DEFINITION, TECHNICAL_DEFINITION, qualityLabel, sortQualities } from '../lib/shotGuide';
+import { MAX_TECHNICAL_NOTES, QUALITIES, qualityLabel, sortQualities } from '../lib/shotGuide';
 
 interface EditingCategory {
   id?: string;
@@ -26,7 +26,7 @@ interface EditingShot {
   role: Role | null;
 }
 
-const ROLE_HINT = 'Attack: shots that go for the point. Control: shots at the table that keep the ball in play, such as pushes and blocks. Defence: shots that defend with backspin or from distance, such as chops, chop blocks and lobs. None: left out of shot balance, as serves are.';
+const ROLE_HINT = 'Attack goes for the point. Control keeps the ball in play at the table (pushes, blocks). Defence uses backspin or distance (chops, chop blocks, lobs). None leaves the shot out, as for serves.';
 
 const AdminShots: React.FC = () => {
   const api = useApi();
@@ -225,14 +225,22 @@ const AdminShots: React.FC = () => {
                   <Button variant="danger" className="small" onClick={() => handleDeleteCategory(category.id)}>Delete</Button>
                 </div>
               </div>
-              <table className="data-table" style={{ minWidth: 760 }}>
+              <table className="data-table admin-shots-table">
+                <colgroup>
+                  <col className="c-shot" />
+                  <col className="c-name" />
+                  <col className="c-desc" />
+                  <col className="c-role" />
+                  <col />
+                  <col className="c-actions" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th scope="col">Shot</th>
                     <th scope="col">Internal name</th>
                     <th scope="col">Description</th>
-                    <th scope="col">Shot balance</th>
-                    <th scope="col">Coach's summary</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Coach's summary guide</th>
                     <th scope="col" className="actions"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
@@ -245,10 +253,11 @@ const AdminShots: React.FC = () => {
                       <td>{shot.role ? <span className="chip small">{ROLE_LABEL[shot.role]}</span> : <span className="faint">None</span>}</td>
                       <td>
                         <span className="admin-guide">
+                          {(shot.check_qualities ?? []).length === 0 && <span className="faint">Nothing to check</span>}
                           {sortQualities(shot.check_qualities ?? []).map(q => <span key={q} className="chip small">{qualityLabel(q)}</span>)}
-                          {shot.technical_notes?.trim()
-                            ? <span className="chip small">Technical notes</span>
-                            : <span className="faint">No technical notes</span>}
+                        </span>
+                        <span className={`admin-notes${shot.technical_notes?.trim() ? '' : ' faint'}`}>
+                          {shot.technical_notes?.trim() ? 'Technical notes written' : 'No technical notes'}
                         </span>
                       </td>
                       <td className="actions">
@@ -309,131 +318,147 @@ const AdminShots: React.FC = () => {
         </div>
       )}
 
-      {showShotForm && editingShot && (
-        <div className="dialog-backdrop">
-          <form
-            className="card dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="shot-dialog-title"
-            onSubmit={(e) => { e.preventDefault(); handleSaveShot(); }}
-          >
-            <h2 id="shot-dialog-title">{editingShot.id ? 'Edit shot' : 'Add shot'}</h2>
-            <label className="field">
-              <span>Category</span>
-              <select
-                value={editingShot.category_id}
-                onChange={(e) => setEditingShot({ ...editingShot, category_id: e.target.value })}
-              >
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>{categoryLabel(category.name)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Display name</span>
-              <input
-                type="text"
-                value={editingShot.display_name}
-                onChange={(e) => setEditingShot({ ...editingShot, display_name: e.target.value })}
-                required
-                autoFocus
-              />
-            </label>
-            <label className="field">
-              <span>Internal name</span>
-              <input
-                type="text"
-                value={editingShot.name}
-                onChange={(e) => setEditingShot({ ...editingShot, name: e.target.value })}
-                required
-              />
-              <span className="field-hint">Lower case with underscores. serve, service_fault and no_shot have special handling.</span>
-            </label>
-            <label className="field">
-              <span>Description</span>
-              <textarea
-                value={editingShot.description}
-                onChange={(e) => setEditingShot({ ...editingShot, description: e.target.value })}
-              />
-            </label>
-            <fieldset className="field admin-role">
-              <legend>Role in shot balance</legend>
-              <div className="segmented compact">
-                {[...ROLES, null].map(role => (
-                  <button
-                    key={role ?? 'none'}
-                    type="button"
-                    aria-pressed={editingShot.role === role}
-                    onClick={() => setEditingShot({ ...editingShot, role })}
-                  >
-                    {role ? ROLE_LABEL[role] : 'None'}
-                  </button>
-                ))}
-              </div>
-              <span className="field-hint">{ROLE_HINT}</span>
-            </fieldset>
-            <fieldset className="field admin-qualities">
-              <legend>Tactical: what to check when this shot keeps losing points</legend>
-              <div>
-                {QUALITIES.map(q => (
-                  <label key={q.key} className="admin-quality" title={q.meaning}>
-                    <input
-                      type="checkbox"
-                      checked={editingShot.check_qualities.includes(q.key)}
-                      onChange={(e) => setEditingShot({
-                        ...editingShot,
-                        check_qualities: e.target.checked
-                          ? [...editingShot.check_qualities, q.key]
-                          : editingShot.check_qualities.filter(k => k !== q.key),
-                      })}
+      {showShotForm && editingShot && (() => {
+        const close = () => {
+          setEditingShot(null);
+          setShowShotForm(false);
+        };
+        const isServe = editingShot.name === 'serve';
+        return (
+          <div className="dialog-backdrop">
+            <form
+              className="card dialog wide shot-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="shot-dialog-title"
+              onSubmit={(e) => { e.preventDefault(); handleSaveShot(); }}
+            >
+              <h2 id="shot-dialog-title">{editingShot.id ? `Edit ${editingShot.display_name || 'shot'}` : 'Add shot'}</h2>
+
+              <div className="shot-dialog-body">
+                <section className="shot-dialog-section" aria-labelledby="shot-basics">
+                  <h3 id="shot-basics">The shot</h3>
+                  <div className="shot-dialog-grid">
+                    <label className="field">
+                      <span>Display name</span>
+                      <input
+                        type="text"
+                        value={editingShot.display_name}
+                        onChange={(e) => setEditingShot({ ...editingShot, display_name: e.target.value })}
+                        required
+                        autoFocus
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Category</span>
+                      <select
+                        value={editingShot.category_id}
+                        onChange={(e) => setEditingShot({ ...editingShot, category_id: e.target.value })}
+                      >
+                        {categories.map(category => (
+                          <option key={category.id} value={category.id}>{categoryLabel(category.name)}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Internal name</span>
+                      <input
+                        type="text"
+                        value={editingShot.name}
+                        onChange={(e) => setEditingShot({ ...editingShot, name: e.target.value })}
+                        required
+                      />
+                      <span className="field-hint">Lower case with underscores. serve, service_fault and no_shot have special handling.</span>
+                    </label>
+                    <label className="field">
+                      <span>Display order</span>
+                      <input
+                        type="number"
+                        value={editingShot.display_order}
+                        onChange={(e) => setEditingShot({ ...editingShot, display_order: parseInt(e.target.value) || 0 })}
+                      />
+                    </label>
+                    <label className="field wide">
+                      <span>Description <span className="optional">(optional)</span></span>
+                      <textarea
+                        rows={2}
+                        value={editingShot.description}
+                        onChange={(e) => setEditingShot({ ...editingShot, description: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                </section>
+
+                <section className="shot-dialog-section" aria-labelledby="shot-role">
+                  <h3 id="shot-role">Role in shot balance</h3>
+                  <p className="field-hint">{ROLE_HINT}</p>
+                  <div className="segmented compact" role="group" aria-labelledby="shot-role">
+                    {[...ROLES, null].map(role => (
+                      <button
+                        key={role ?? 'none'}
+                        type="button"
+                        aria-pressed={editingShot.role === role}
+                        onClick={() => setEditingShot({ ...editingShot, role })}
+                      >
+                        {role ? ROLE_LABEL[role] : 'None'}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="shot-dialog-guide">
+                  <section className="shot-dialog-section" aria-labelledby="shot-tactical">
+                    <h3 id="shot-tactical">Tactical</h3>
+                    <p className="field-hint">What to check on the video when this shot keeps losing points. The coach's summary only suggests the ticked ones.</p>
+                    <div className="admin-qualities" role="group" aria-labelledby="shot-tactical">
+                      {QUALITIES.map(q => (
+                        <label key={q.key} className="admin-quality" title={q.meaning}>
+                          <input
+                            type="checkbox"
+                            checked={editingShot.check_qualities.includes(q.key)}
+                            onChange={(e) => setEditingShot({
+                              ...editingShot,
+                              check_qualities: e.target.checked
+                                ? [...editingShot.check_qualities, q.key]
+                                : editingShot.check_qualities.filter(k => k !== q.key),
+                            })}
+                          />
+                          {q.label}
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                  <section className="shot-dialog-section" aria-labelledby="shot-technical">
+                    <h3 id="shot-technical">Technical</h3>
+                    <p className="field-hint" id="shot-technical-hint">
+                      {isServe
+                        ? 'Faults in your own serve: what each looks like on the video and what usually causes it. Receiving has its own fixed guidance.'
+                        : 'Faults in this stroke or in reading spin: what each looks like on the video and what usually causes it.'}
+                      {' '}The coach's summary picks the faults that fit the counts and never adds its own, so with no notes it gives no technical advice for this shot.
+                    </p>
+                    <textarea
+                      className="shot-dialog-notes"
+                      aria-labelledby="shot-technical"
+                      aria-describedby="shot-technical-hint"
+                      rows={9}
+                      maxLength={MAX_TECHNICAL_NOTES}
+                      value={editingShot.technical_notes}
+                      onChange={(e) => setEditingShot({ ...editingShot, technical_notes: e.target.value })}
+                      placeholder="For example: into the net against backspin, not enough lift or the bat closing too early."
                     />
-                    {q.label}
-                  </label>
-                ))}
+                    <span className="field-hint shot-dialog-count">{editingShot.technical_notes.length} of {MAX_TECHNICAL_NOTES} characters</span>
+                  </section>
+                </div>
               </div>
-              <span className="field-hint">{TACTICAL_DEFINITION} The coach's summary only suggests checking these for this shot, on either hand.</span>
-            </fieldset>
-            <label className="field">
-              <span>{editingShot.name === 'serve' ? 'Technical: faults to look for when serving' : 'Technical: faults to look for'}</span>
-              <textarea
-                rows={5}
-                maxLength={MAX_TECHNICAL_NOTES}
-                value={editingShot.technical_notes}
-                onChange={(e) => setEditingShot({ ...editingShot, technical_notes: e.target.value })}
-                placeholder="What a fault looks like on video and what usually causes it. For example: into the net against backspin means not enough lift, or the bat closing too early."
-              />
-              <span className="field-hint">
-                {TECHNICAL_DEFINITION}{' '}
-                {editingShot.name === 'serve'
-                  ? `The coach's summary uses these for problems with your own serve. Receiving has fixed guidance, used whatever the receive shot was: "${RECEIVE_GUIDANCE}" `
-                  : 'The coach\'s summary uses these to explain what a stroke or spin-reading problem would look like. Without notes it leaves that part out. '}
-                {editingShot.technical_notes.length}/{MAX_TECHNICAL_NOTES}
-              </span>
-            </label>
-            <label className="field">
-              <span>Display order</span>
-              <input
-                type="number"
-                value={editingShot.display_order}
-                onChange={(e) => setEditingShot({ ...editingShot, display_order: parseInt(e.target.value) || 0 })}
-              />
-            </label>
-            <div className="form-actions end">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setEditingShot(null);
-                  setShowShotForm(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Save</Button>
-            </div>
-          </form>
-        </div>
-      )}
+
+              <div className="form-actions end shot-dialog-foot">
+                <Button variant="secondary" onClick={close}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        );
+      })()}
     </Layout>
   );
 };
