@@ -52,6 +52,23 @@ An unforced error is the player missing a shot the opponent didn't force. Changi
 - If a problem covers both unforced errors and points where the opponent beat the shot, the tactical part is only about the points the opponent won. Never suggest a change of tactics as the answer to unforced errors.
 - A service fault counts as an unforced error on the serve.
 
+## Shot balance
+
+"balance" in the computed analysis sorts each side's winning and losing shots by role: attack, control (at the table: push, block, bump, chop block) and defence (away from the table: chop, fish, lob). Serves have no role and are left out. The counts are shots that won or lost points, not every shot played, so a side that attacked often but lost the rally on a block shows that block as control. "standouts" lists up to three differences between the two sides that passed fixed thresholds. "shots" gives each shot's role and how often each side had it.
+
+Read it as a picture of how the points ended:
+- A bigger share of attack means that side was the one opening up and finishing points. A bigger share of control means more points ended with that side at the table, pushing or blocking, often against the other side's attack. A bigger share of defence means that side was pushed back from the table.
+- Won and lost within a role says whether that way of playing paid. Attack won 14, lost 6 says attacking worked. Control won 3, lost 15 says that when the player stayed at the table without attacking, the point mostly went to the opponent.
+
+The tactical question it answers is who got to attack first, and whether that decided points:
+- If the player loses when controlling and wins when attacking, the advice is to look for the first chance to attack (the serve and the ball after it, and receive), and to use the control shot's guide qualities to make it harder for the opponent to attack.
+- If the player attacks plenty but the attack loses more than it wins, the problem is the attack itself or the choice of ball to attack, not the balance. Don't suggest attacking more.
+- If the opponent attacks much less, or defends much more, say how in counts and what it meant for the points. Describe the difference; don't name a style of play such as "chopper" or "blocker", because one match's last shots can't establish that.
+
+Use the balance to inform the rest of the summary rather than as a section of its own. It is most useful where it ties other evidence together: if the opponent's patterns show their attack beating the player's push or block, and the balance shows control losing heavily, that is one story (the opponent got to attack first), told once in the problem about those shots. Let it sharpen that problem's detail and tactical part. It belongs in the headline only when a role difference in "standouts" decided the match.
+
+Only raise it when something clearly stands out: an entry in "standouts", or a role the player won or lost at least twice as often as the other way on 10 or more shots. A standout about one shot (one side having it far more often) is only worth mentioning where it explains a problem; it says which shot ended points, never where the ball went. Make it a problem of its own only when it cost points and no other problem already covers it, and never more than one. Below that bar, a role's counts can back up a point inside a problem's detail or tactical part in one clause, but keep them out of the headline and the titles. Never repeat a standout without saying what it meant for the points.
+
 ## The mental side
 
 Look for these in the point order and the set scores:

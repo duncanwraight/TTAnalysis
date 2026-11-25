@@ -78,7 +78,7 @@ describe('winning and losing shots', () => {
   it('ignores "no shot" as a losing shot', () => {
     const a = analyse([pt({ winner: 'player', win: 'serve', lose: 'none' })]);
     expect(a.shots.opponent).toEqual([]);
-    expect(a.categories.opponent).toEqual([]);
+    expect(a.balance.opponent.total).toBe(0);
   });
 
   it('keeps pips and inverted pushes apart', () => {
@@ -97,17 +97,6 @@ describe('winning and losing shots', () => {
     ]);
     expect(a.shots.player[0]).toMatchObject({ shot: 'Chop', lost: 2 });
     expect(a.shots.opponent[0]).toMatchObject({ shot: 'Loop', won: 2 });
-  });
-
-  it('groups by category for each side', () => {
-    const a = analyse([
-      pt({ winner: 'player', win: 'loop', lose: 'chop' }),
-      pt({ winner: 'opponent', win: 'loop', lose: 'chop' }),
-    ]);
-    expect(a.categories.player).toMatchObject([
-      { category: 'attacks', won: 1, lost: 0 },
-      { category: 'defence / blocks', won: 0, lost: 1 },
-    ]);
   });
 
   it('leaves serves out of the hand split', () => {
@@ -299,6 +288,17 @@ describe('cards', () => {
       { tag: 'Scouting', title: 'Their forehand loop', text: 'Won them 5 of their 5 points.' },
       { tag: 'Scouting', title: 'Their backhand loop', text: 'Their losing shot 4 times. Their winning shot never.' },
     ]);
+  });
+
+  it('counts attacks by role, not by category', () => {
+    // A pips attack filed under another category still counts as an attack
+    const a = buildAnalysis({
+      initialServer: 'player',
+      sets: [{ id: 'set-1', set_number: 1, player_score: 2, opponent_score: 0 }],
+      points: [pt({ winner: 'player', win: 'pips-hit' }), pt({ winner: 'player', win: 'loop' })],
+      shots: [...SHOTS, { id: 'pips-hit', name: 'hit', display_name: 'Hit', category: 'pips / anti', category_order: 3, role: 'attack' }],
+    });
+    expect(a.attacksBySet[0].player).toEqual({ won: 2, lost: 0 });
   });
 
   it('notes attacking winners dropping off in a later set', () => {

@@ -81,7 +81,7 @@ Wording on the site: you **film** a match (the video) and **enter** its points (
 
 Each point records two shots: the winner's winning shot and the loser's losing shot ("other shot" in the schema), which is either the shot that set up the winner or the one that missed. Rally shots aren't recorded, so the analysis page always talks about winning and losing shots, never shots played. The page is built by `buildAnalysis` in `src/lib/analysis.ts` from the raw match, sets, points and shots, and is covered by `src/lib/analysis.test.ts`. A service fault is recorded as the receiver's winning shot with `no_shot` for the server; the analysis charges it to the server as an unforced losing shot.
 
-Each shot has a `role` (attack, control at the table, defence away from it, or null for serves), edited on `/admin/shots`. The Shot balance section (`ShotBalance` in `src/components/analysis`, data from `buildBalance`) compares each side's winning and losing shots by role and by shot. It is deliberately left out of the coach's summary input for now.
+Each shot has a `role` (attack, control at the table, defence away from it, or null for serves), edited on `/admin/shots`. The Shot balance section (`ShotBalance` in `src/components/analysis`, data from `buildBalance`) compares each side's winning and losing shots by role and by shot. The coach's summary gets it too, but only uses it to back up other problems (who got to attack first), and only when something clearly stands out.
 
 The page also lists patterns: winning/losing shot pairs that happened three times or more for each side, excluding unforced errors. The user's own name for defaulting the player lives in auth user metadata (`display_name`), not in `profiles`, which only admins can update.
 

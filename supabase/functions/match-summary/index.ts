@@ -91,13 +91,14 @@ Deno.serve(async (req) => {
         .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error')
         .eq('match_id', matchId)
         .order('created_at', { ascending: true }),
-      asUser.from('shots').select('id, name, display_name, check_qualities, technical_notes, shot_categories(name, display_order)'),
+      asUser.from('shots').select('id, name, display_name, check_qualities, technical_notes, role, shot_categories(name, display_order)'),
     ]);
     for (const result of [sets, points, shots]) if (result.error) throw result.error;
     if (!points.data?.length) return fail(400, 'Record some points before asking for a summary.');
 
     type ShotRow = {
       id: string; name: string; display_name: string; check_qualities: string[] | null; technical_notes: string | null;
+      role: AnalysisShot['role'];
       shot_categories: { name: string; display_order: number } | null;
     };
     const shotList = (shots.data as unknown as ShotRow[]).map((s): AnalysisShot => ({
@@ -108,6 +109,7 @@ Deno.serve(async (req) => {
       category_order: s.shot_categories?.display_order ?? 0,
       check_qualities: s.check_qualities ?? [],
       technical_notes: s.technical_notes,
+      role: s.role,
     }));
     const analysis = buildAnalysis({
       initialServer: match.initial_server ?? 'player',

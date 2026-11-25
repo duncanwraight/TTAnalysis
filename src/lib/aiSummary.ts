@@ -15,7 +15,7 @@ export const SUMMARY_MODEL = 'claude-opus-5-5';
 
 // Part of every input hash. Bump it when the prompt or input changes enough
 // that stored summaries should show as out of date.
-export const SUMMARY_VERSION = 4;
+export const SUMMARY_VERSION = 5;
 
 export type SummaryProblem = {
   title: string;
@@ -130,15 +130,13 @@ const buildShotGuide = (analysis: Analysis, shots: AnalysisShot[]): string[] => 
 /** The user message sent to the model: match details, computed analysis, every point, then the shot guide. */
 export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots: AnalysisShot[]): string => {
   // Ids, row keys and the page's own cards add tokens without adding information.
-  // Shot balance is left out until the prompt is changed to use it, so adding it
-  // to the page didn't mark every stored summary out of date.
   // JSON.stringify leaves out the undefined fields.
   const { rows, ...rest } = analysis;
   const noKey = <T extends { key: string }>(item: T) => ({ ...item, key: undefined });
   const computed = {
     ...rest,
     cards: undefined,
-    balance: undefined,
+    balance: { ...rest.balance, shots: rest.balance.shots.map(noKey) },
     shots: { player: rest.shots.player.map(noKey), opponent: rest.shots.opponent.map(noKey) },
     patterns: { player: rest.patterns.player.map(noKey), opponent: rest.patterns.opponent.map(noKey) },
   };

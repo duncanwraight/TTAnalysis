@@ -63,7 +63,6 @@ export const UNFORCED_ERROR_DEFINITION =
   "An unforced error is a shot you would typically expect to make. You weren't out of position, you read the spin, you went for the right type of shot, and it still missed.";
 export const NO_SHOT = 'no_shot';
 const SERVE_CATEGORY = 'serve';
-const ATTACK_CATEGORY = 'attacks';
 const PIPS_CATEGORY = 'pips / anti';
 
 /** Points won and lost. */
@@ -82,7 +81,6 @@ export type ShotRow = {
   unforced: number;
 };
 
-export type CategoryRow = { category: string; order: number; won: number; lost: number };
 
 export type PointRow = {
   id: string;
@@ -156,9 +154,6 @@ export type Analysis = {
   stages: Stage[];
   runs: Run[];
   lucky: { player: number; opponent: number };
-  // By shot category. Not shown on the page any more, but still part of the
-  // coach's summary input, which shot balance hasn't been added to yet
-  categories: { player: CategoryRow[]; opponent: CategoryRow[] };
   balance: Balance;
   shots: { player: ShotRow[]; opponent: ShotRow[] };
   // Winning and losing shots by hand, serves left out
@@ -207,7 +202,6 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   const setCounts = new Map<number, number>();
 
   const shotRows = { player: new Map<string, ShotRow>(), opponent: new Map<string, ShotRow>() };
-  const categoryRows = { player: new Map<string, CategoryRow>(), opponent: new Map<string, CategoryRow>() };
   const hands = {
     player: { fh: emptyRecord(), bh: emptyRecord() },
     opponent: { fh: emptyRecord(), bh: emptyRecord() },
@@ -237,10 +231,6 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     if (result === 'lost' && isUnforced) row.unforced += 1;
     shotRows[side].set(key, row);
 
-    const cat = categoryRows[side].get(shot.category) ?? { category: shot.category, order: shot.category_order, won: 0, lost: 0 };
-    cat[result] += 1;
-    categoryRows[side].set(shot.category, cat);
-
     if (hand && shot.category !== SERVE_CATEGORY) hands[side][hand][result] += 1;
 
     if (shot.role) {
@@ -250,7 +240,7 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       balanceShots.set(key, shotRow);
     }
 
-    if (shot.category === ATTACK_CATEGORY) {
+    if (shot.role === 'attack') {
       const setAttacks = attacksBySet.get(setNumber) ?? { player: emptyRecord(), opponent: emptyRecord() };
       setAttacks[side][result] += 1;
       attacksBySet.set(setNumber, setAttacks);
@@ -379,10 +369,6 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     stages: [...stages.values()],
     runs: runs.filter(r => r.length >= 3).sort((a, b) => b.length - a.length).slice(0, 4),
     lucky,
-    categories: {
-      player: [...categoryRows.player.values()].sort((a, b) => a.order - b.order),
-      opponent: [...categoryRows.opponent.values()].sort((a, b) => a.order - b.order),
-    },
     shots: {
       // Player: most costly first. Opponent: their best first.
       player: [...shotRows.player.values()].sort(byNet),

@@ -55,12 +55,16 @@ describe('summary input', () => {
     expect(input).not.toContain('p0');
   });
 
-  it('leaves shot balance out, so giving shots a role does not change the input', () => {
+  it('includes shot balance without row keys, so a change of role changes the input', () => {
     const roles = { push: 'control', loop: 'attack', block: 'control', chop: 'defence' } as const;
     const withRoles = SHOTS.map(s => ({ ...s, role: roles[s.id as keyof typeof roles] ?? null }));
     const balanced = buildAnalysis({ initialServer: 'player', sets: [{ id: 'set-1', set_number: 1, player_score: 2, opponent_score: 1 }], points: POINTS, shots: withRoles });
-    expect(balanced.balance.player.total).toBeGreaterThan(0);
-    expect(buildSummaryInput(MATCH, balanced, withRoles)).toBe(input);
+    const withBalance = buildSummaryInput(MATCH, balanced, withRoles);
+    const json = JSON.parse(withBalance.split('\n')[3]);
+    expect(json.balance.player.roles).toContainEqual({ role: 'attack', won: 2, lost: 1 });
+    expect(json.balance.shots[0]).toEqual({ shot: 'Forehand loop', role: 'attack', player: 3, opponent: 0 });
+    expect(json).not.toHaveProperty('categories');
+    expect(withBalance).not.toBe(input);
   });
 
   it('lists every point with its score and flags', () => {
