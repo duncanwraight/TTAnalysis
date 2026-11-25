@@ -96,9 +96,8 @@ Still open:
   - How it reaches the prompt without the model treating it as evidence. The rule that only the counts are stated as fact has to hold, so player and style notes can only shape what to check.
   - Privacy on share links: notes about a player's weaknesses probably shouldn't be visible, like the correction notes today.
   - Effect on the input hash, cost and the token budget.
-- The technical notes are the user's to write and refine. My drafts from the A/B test were never put on production.
+- The technical notes are the user's to write and refine. They were rewritten into one pattern on 2026-11-25 (*Shot notes* in `docs/ANALYSIS_REVIEW.md`), and new ones should follow it. Serve, sideswipe, pips block, pips chop block and lob have none.
 - The eval (`scripts/summary-eval.ts`) checks rules by pattern, not the truth of each count. Claims like "won 5, lost 12" could be checked against the analysis if a wrong count ever turns up.
-- The user's Serve and Push notes need a rewrite now that receive has its own guidance (see *Left for the user* in `docs/ANALYSIS_REVIEW.md`).
 - Possibly let the user choose Sonnet 5.5 for half the cost, if quality holds on a side-by-side.
 
 ## 3. Deploying and testing the Edge Function

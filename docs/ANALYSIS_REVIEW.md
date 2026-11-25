@@ -71,7 +71,14 @@ Item 11 was settled by the user: chop block is defence.
 
 Run on 2026-11-25 against the three production matches: 9 summaries in all, no failures, about $0.90. The problem kinds were the same across two runs for two of the three matches. Every run went over the original 450-word cap, so the cap became 550, which is what the model writes in practice.
 
-## Left for the user
+## Shot notes
 
-- **Serve notes.** The user is clearing them. The production Serve notes are about receiving ("watching the service motion... stepping back for long serves"). The receive guidance now covers that, so rewrite them on `/admin/shots` as notes on serving, or clear them.
-- **Push notes.** The user is updating them. The push notes put long pushes down to misreading the incoming spin. For unforced push errors the summary is told not to blame spin reading, so a line on execution (contact, bat angle, length control) would give it something to use.
+Done on 2026-11-25, after the review shipped.
+
+- **Serve.** The user cleared the notes. They were about receiving, which `RECEIVE_GUIDANCE` now covers. A problem with the player's own serve has no technical part until serving notes are written.
+- **Push.** The user added the fix for a long push: close the bat angle, or add speed to make more spin.
+- **Rewritten for the model.** The 12 notes on production were rewritten without changing what they say, with the user's approval of the final text. Each one now follows the same order: what shows on the video, then the cause, then the fix ("Into the net: not enough lift; lift the ball as part of the stroke"). There's no "you", "the player" or "they", so a note reads correctly for the user's own matches and for friends'. Questions became statements. Advice about choosing a shot is labelled "Shot choice:" (fish, counter-loop, pips bump), and equipment points "Equipment:" (pips bump, pips attack), so the model doesn't treat them as stroke faults.
+- **Two notes expanded, with the user's answers.** Flat-hit was just "Timing" and became "Timing: contact at the top of the bounce." The smash note described the correct technique, so it's labelled that way, with the faults added as its reverse: the ball taken before it has dropped, or a stroke started from a low arm.
+- **No notes:** serve, sideswipe, pips block, pips chop block and lob.
+
+Write new notes in the same pattern: what shows on the video, the cause, the fix, each part labelled. The production notes can be read with `supabase db query --remote --read-only`.
