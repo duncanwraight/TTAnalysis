@@ -72,7 +72,7 @@ The `start-dev.sh` script handles:
 
 - **Users**: id, email, name, preferences
 - **Shot Categories**: id, name, display_order
-- **Shots**: id, category_id, name, display_name, description, display_order
+- **Shots**: id, category_id, name, display_name, description, display_order, role (attack, control, defence or null)
 - **Matches**: id, user_id, player_name (who the analysis is about; empty on older matches, which are the owner's own), opponent_name, event (free text), video_url (http(s) only, enforced by a check constraint), date, match_score, notes, initial_server, best_of, is_complete, share_token (random UUID set when sharing; RLS grants public read only to requests sending it in the x-share-token header)
 - **Sets**: id, match_id, set_number, score, player_score, opponent_score
 - **Points**: id, set_id, match_id, point_number (restarts each set; order by created_at across a match), winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error (the losing shot was unforced; ticked in the tracker or the points editor), notes
@@ -80,6 +80,8 @@ The `start-dev.sh` script handles:
 Wording on the site: you **film** a match (the video) and **enter** its points (the tracker). Don't use "record" or "log" for either in anything a user reads, and say "losing shot", never "other shot". The AI feature is "the coach's summary". Advice is **tactical** (something a player can change during a match) or **technical** (something to work on in practice); the definitions live in `src/lib/shotGuide.ts`.
 
 Each point records two shots: the winner's winning shot and the loser's losing shot ("other shot" in the schema), which is either the shot that set up the winner or the one that missed. Rally shots aren't recorded, so the analysis page always talks about winning and losing shots, never shots played. The page is built by `buildAnalysis` in `src/lib/analysis.ts` from the raw match, sets, points and shots, and is covered by `src/lib/analysis.test.ts`. A service fault is recorded as the receiver's winning shot with `no_shot` for the server; the analysis charges it to the server as an unforced losing shot.
+
+Each shot has a `role` (attack, control at the table, defence away from it, or null for serves), edited on `/admin/shots`. The Shot balance section (`ShotBalance` in `src/components/analysis`, data from `buildBalance`) compares each side's winning and losing shots by role and by shot. It is deliberately left out of the coach's summary input for now.
 
 The page also lists patterns: winning/losing shot pairs that happened three times or more for each side, excluding unforced errors. The user's own name for defaulting the player lives in auth user metadata (`display_name`), not in `profiles`, which only admins can update.
 

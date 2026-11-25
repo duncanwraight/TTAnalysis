@@ -6,10 +6,11 @@ const SHOTS: AnalysisShot[] = [
   { id: 'serve', name: 'serve', display_name: 'Serve', category: 'serve', category_order: 1 },
   { id: 'fault', name: 'service_fault', display_name: 'Service fault', category: 'serve', category_order: 1 },
   { id: 'none', name: 'no_shot', display_name: 'No shot', category: 'serve', category_order: 1 },
-  { id: 'push', name: 'push', display_name: 'Push', category: 'short_game', category_order: 2 },
-  { id: 'pips-push', name: 'push', display_name: 'Push', category: 'pips / anti', category_order: 3 },
-  { id: 'loop', name: 'loop', display_name: 'Loop', category: 'attacks', category_order: 4 },
-  { id: 'chop', name: 'chop', display_name: 'Chop', category: 'defence / blocks', category_order: 5 },
+  { id: 'push', name: 'push', display_name: 'Push', category: 'short_game', category_order: 2, role: 'control' },
+  { id: 'pips-push', name: 'push', display_name: 'Push', category: 'pips / anti', category_order: 3, role: 'control' },
+  { id: 'loop', name: 'loop', display_name: 'Loop', category: 'attacks', category_order: 4, role: 'attack' },
+  { id: 'chop', name: 'chop', display_name: 'Chop', category: 'defence / blocks', category_order: 5, role: 'defence' },
+  { id: 'block', name: 'block', display_name: 'Block', category: 'defence / blocks', category_order: 5, role: 'control' },
 ];
 
 type Spec = {
@@ -336,5 +337,88 @@ describe('cards', () => {
 
   it('has no cards for a match with no points', () => {
     expect(analyse([]).cards).toEqual([]);
+  });
+});
+
+describe('shot balance', () => {
+  it('counts each side\'s winning and losing shots by role, leaving out serves and faults', () => {
+    const a = analyse([
+      pt({ winner: 'player' }), // your FH loop, their BH chop
+      pt({ winner: 'opponent', win: 'push', winHand: 'bh', lose: 'loop', loseHand: 'fh' }),
+      pt({ winner: 'player', win: 'serve', lose: 'none' }),
+      pt({ winner: 'opponent', win: 'fault' }),
+    ]);
+    expect(a.balance.player).toEqual({
+      total: 2,
+      roles: [{ role: 'attack', won: 1, lost: 1 }, { role: 'control', won: 0, lost: 0 }, { role: 'defence', won: 0, lost: 0 }],
+    });
+    expect(a.balance.opponent).toEqual({
+      total: 2,
+      roles: [{ role: 'attack', won: 0, lost: 0 }, { role: 'control', won: 1, lost: 0 }, { role: 'defence', won: 0, lost: 1 }],
+    });
+  });
+
+  it('lists shots by role, then most used, with the hand and pips kept apart', () => {
+    const a = analyse([
+      ...many(2, 'player', 1, { win: 'push', winHand: 'bh', lose: 'push', loseHand: 'bh' }),
+      ...many(3, 'player', 1, { win: 'pips-push', winHand: 'bh', lose: 'loop', loseHand: 'fh' }),
+      pt({ winner: 'opponent', win: 'chop', winHand: 'bh', lose: 'loop', loseHand: 'bh' }),
+    ]);
+    expect(a.balance.shots.map(s => [s.shot, s.player, s.opponent])).toEqual([
+      ['Forehand loop', 0, 3],
+      ['Backhand loop', 1, 0],
+      ['Backhand push', 2, 2],
+      ['Backhand pips push', 3, 0],
+      ['Backhand chop', 0, 1],
+    ]);
+  });
+
+  it('picks out a role share 20 points apart, a shot you never had, and a shot one side had far more', () => {
+    const a = analyse([
+      // You: 12 FH loops, 6 BH chops. Them: 4 FH loops, 6 BH blocks, 8 BH chops
+      ...many(4, 'player', 1, { win: 'loop', winHand: 'fh', lose: 'loop', loseHand: 'fh' }),
+      ...many(8, 'player', 1, { win: 'loop', winHand: 'fh', lose: 'chop', loseHand: 'bh' }),
+      ...many(6, 'opponent', 1, { win: 'block', winHand: 'bh', lose: 'chop', loseHand: 'bh' }),
+    ]);
+    expect(a.balance.standouts).toEqual([
+      'Attack was 12 of your 18 shots. It was 4 of their 18.',
+      'Control was 0 of your 18 shots. It was 6 of their 18.',
+      'You never had a backhand block as your winning or losing shot. They had 6.',
+    ]);
+  });
+
+  it('words the ratio both ways and leaves out small numbers', () => {
+    const youMore = analyse([
+      ...many(10, 'player', 1, { win: 'push', winHand: 'fh', lose: 'chop', loseHand: 'bh' }),
+      ...many(4, 'opponent', 1, { win: 'push', winHand: 'fh', lose: 'chop', loseHand: 'bh' }),
+    ]);
+    expect(youMore.balance.standouts).toContain('You had 10 forehand pushes to their 4.');
+    const small = analyse([
+      ...many(9, 'player', 1, { win: 'push', winHand: 'fh', lose: 'push', loseHand: 'fh' }),
+      ...many(2, 'opponent', 1, { win: 'push', winHand: 'fh', lose: 'push', loseHand: 'fh' }),
+    ]);
+    expect(small.balance.standouts).toEqual([]);
+  });
+
+  it('has nothing to show when no shot has a role', () => {
+    const bare = buildAnalysis({ initialServer: 'player', sets: SETS, points: many(5, 'player'), shots: SHOTS.map(s => ({ ...s, role: null })) });
+    expect(bare.balance.player.total).toBe(0);
+    expect(bare.balance.shots).toEqual([]);
+    expect(bare.balance.standouts).toEqual([]);
+  });
+
+  it('notes who did more attacking, or failing that more defending', () => {
+    const attack = analyse(many(10, 'player'));
+    expect(attack.cards).toContainEqual({ tag: 'Match story', title: 'You did more attacking', text: 'An attack was your winning or losing shot in 10 points. Theirs: 0.' });
+    const defence = analyse([
+      ...many(6, 'player', 1, { win: 'chop', winHand: 'bh', lose: 'push', loseHand: 'bh' }),
+      ...many(6, 'opponent', 1, { win: 'push', winHand: 'bh', lose: 'chop', loseHand: 'bh' }),
+    ]);
+    expect(defence.cards).toContainEqual({ tag: 'Match story', title: 'You did more defending', text: 'Defence was your winning or losing shot in 12 points. Theirs: 0.' });
+  });
+
+  it('notes a shot they kept having that you never did', () => {
+    const a = analyse(many(6, 'opponent', 1, { win: 'block', winHand: 'bh', lose: 'loop', loseHand: 'fh' }));
+    expect(a.cards).toContainEqual({ tag: 'Match story', title: 'No backhand blocks', text: 'A backhand block was never your winning or losing shot. It was theirs in 6 points.' });
   });
 });

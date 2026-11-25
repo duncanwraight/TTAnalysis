@@ -4,19 +4,16 @@ import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import type { AnalysisData } from '../lib/api';
-import { Analysis, CategoryRow, Pattern, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
+import { Analysis, Pattern, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
 import { buildSummaryInput, hashInput } from '../lib/aiSummary';
 import CoachSummary from '../components/analysis/CoachSummary';
+import ShotBalance from '../components/analysis/ShotBalance';
 import '../styles/components/MatchAnalysis.css';
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((100 * n) / d) : 0);
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
 const handLabel = (hand: string | null) => (hand ? hand.toUpperCase() : '');
-const categoryLabel = (name: string) => {
-  const words = name.replace(/_/g, ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
-};
 const formatDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -51,39 +48,6 @@ const Tile = ({ label, value, of, note, empty }: { label: string; value: string;
     <span className="ma-tile-note">{note}</span>
   </div>
 );
-
-const CategoryTable = ({ title, rows, yours }: { title: string; rows: CategoryRow[]; yours: boolean }) => {
-  const max = Math.max(1, ...rows.map(r => Math.max(r.won, r.lost)));
-  return (
-    <div className="card table-card">
-      <table className="data-table" style={{ minWidth: 380 }}>
-        <caption>{title}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Category</th>
-            <th scope="col" className="bar-col"><span className="ma-split-head"><span>Losing shot</span><span>Winning shot</span></span></th>
-            <th scope="col" className="num">Won · Lost</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.category}>
-              <th scope="row">{categoryLabel(r.category)}</th>
-              <td>
-                <Diverge
-                  left={r.lost} right={r.won} max={max}
-                  leftClass={yours ? 'ma-fill-opp' : 'ma-fill-you'} rightClass={yours ? 'ma-fill-you' : 'ma-fill-opp'}
-                  title={`${categoryLabel(r.category)}: winning shot ${r.won}, losing shot ${r.lost}`}
-                />
-              </td>
-              <td className="num">{r.won} · {r.lost}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
 
 const PatternList = ({ title, patterns, yours }: { title: string; patterns: Pattern[]; yours: boolean }) => (
   <div className="card ma-list">
@@ -528,16 +492,15 @@ const MatchAnalysis = () => {
             </div>
           </section>
 
-          <section aria-labelledby="ma-cat" className="section">
-            <div className="section-head">
-              <h2 id="ma-cat">Categories</h2>
-              <p>Winning and losing shots grouped by type, for both players. Shows who was attacking and who defended effectively.</p>
-            </div>
-            <div className="ma-grid halves">
-              <CategoryTable title="You" rows={a.categories.player} yours />
-              <CategoryTable title="Opponent" rows={a.categories.opponent} yours={false} />
-            </div>
-          </section>
+          {(a.balance.player.total > 0 || a.balance.opponent.total > 0) && (
+            <section aria-labelledby="ma-balance" className="section">
+              <div className="section-head">
+                <h2 id="ma-balance">Shot balance</h2>
+                <p>Your winning and losing shots against theirs, by role: attack (loops, flicks), control at the table (pushes, blocks) and defence away from it (chops, lobs).</p>
+              </div>
+              <ShotBalance balance={a.balance} />
+            </section>
+          )}
 
           <section aria-labelledby="ma-patterns" className="section">
             <div className="section-head">

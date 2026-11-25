@@ -92,6 +92,8 @@ export type Shot = {
   // Shot guide for the AI summary; see src/lib/shotGuide.ts
   check_qualities?: string[];
   technical_notes?: string | null;
+  // Shot balance role; null leaves the shot out. See Role in src/lib/analysis.ts
+  role?: 'attack' | 'control' | 'defence' | null;
   created_at?: string;
   updated_at?: string;
 };

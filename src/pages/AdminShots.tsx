@@ -3,6 +3,7 @@ import { ShotCategory, Shot } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import Button from '../components/ui/Button';
 import Layout from '../components/Layout';
+import { ROLES, ROLE_LABEL, type Role } from '../lib/analysis';
 import { MAX_TECHNICAL_NOTES, QUALITIES, TACTICAL_DEFINITION, TECHNICAL_DEFINITION, qualityLabel, sortQualities } from '../lib/shotGuide';
 
 interface EditingCategory {
@@ -21,7 +22,11 @@ interface EditingShot {
   // Shot guide for the AI summary
   check_qualities: string[];
   technical_notes: string;
+  // Shot balance on the analysis page; null leaves the shot out
+  role: Role | null;
 }
+
+const ROLE_HINT = 'Attack: shots that go for the point. Control: shots at the table that keep the ball in play. Defence: shots away from the table. None: left out of shot balance, as serves are.';
 
 const AdminShots: React.FC = () => {
   const api = useApi();
@@ -121,7 +126,8 @@ const AdminShots: React.FC = () => {
           description: editingShot.description,
           display_order: editingShot.display_order,
           check_qualities: sortQualities(editingShot.check_qualities),
-          technical_notes: editingShot.technical_notes.trim() || null
+          technical_notes: editingShot.technical_notes.trim() || null,
+          role: editingShot.role
         });
       } else {
         await api.shot.createShot({
@@ -131,7 +137,8 @@ const AdminShots: React.FC = () => {
           description: editingShot.description,
           display_order: editingShot.display_order,
           check_qualities: sortQualities(editingShot.check_qualities),
-          technical_notes: editingShot.technical_notes.trim() || null
+          technical_notes: editingShot.technical_notes.trim() || null,
+          role: editingShot.role
         });
       }
       
@@ -166,7 +173,8 @@ const AdminShots: React.FC = () => {
       description: shot.description || '',
       display_order: shot.display_order,
       check_qualities: shot.check_qualities ?? [],
-      technical_notes: shot.technical_notes ?? ''
+      technical_notes: shot.technical_notes ?? '',
+      role: shot.role ?? null
     } : {
       category_id: targetCategoryId,
       name: '',
@@ -174,7 +182,8 @@ const AdminShots: React.FC = () => {
       description: '',
       display_order: Math.max(...categoryShots.map(s => s.display_order), 0) + 1,
       check_qualities: [],
-      technical_notes: ''
+      technical_notes: '',
+      role: null
     });
     setShowShotForm(true);
   };
@@ -222,6 +231,7 @@ const AdminShots: React.FC = () => {
                     <th scope="col">Shot</th>
                     <th scope="col">Internal name</th>
                     <th scope="col">Description</th>
+                    <th scope="col">Shot balance</th>
                     <th scope="col">Coach's summary</th>
                     <th scope="col" className="actions"><span className="sr-only">Actions</span></th>
                   </tr>
@@ -232,6 +242,7 @@ const AdminShots: React.FC = () => {
                       <th scope="row">{shot.display_name}</th>
                       <td className="muted"><code>{shot.name}</code></td>
                       <td className="muted">{shot.description}</td>
+                      <td>{shot.role ? <span className="chip small">{ROLE_LABEL[shot.role]}</span> : <span className="faint">None</span>}</td>
                       <td>
                         <span className="admin-guide">
                           {sortQualities(shot.check_qualities ?? []).map(q => <span key={q} className="chip small">{qualityLabel(q)}</span>)}
@@ -346,6 +357,22 @@ const AdminShots: React.FC = () => {
                 onChange={(e) => setEditingShot({ ...editingShot, description: e.target.value })}
               />
             </label>
+            <fieldset className="field admin-role">
+              <legend>Role in shot balance</legend>
+              <div className="segmented compact">
+                {[...ROLES, null].map(role => (
+                  <button
+                    key={role ?? 'none'}
+                    type="button"
+                    aria-pressed={editingShot.role === role}
+                    onClick={() => setEditingShot({ ...editingShot, role })}
+                  >
+                    {role ? ROLE_LABEL[role] : 'None'}
+                  </button>
+                ))}
+              </div>
+              <span className="field-hint">{ROLE_HINT}</span>
+            </fieldset>
             <fieldset className="field admin-qualities">
               <legend>Tactical: what to check when this shot keeps losing points</legend>
               <div>

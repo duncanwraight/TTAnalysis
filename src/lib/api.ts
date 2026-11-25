@@ -7,7 +7,7 @@ import { Match, MatchSet, Point } from '../types/database.types';
 import { supabase, createSharedClient } from './supabase';
 import { invalidateShotData } from './shotsApi';
 import { FunctionsHttpError, PostgrestError, SupabaseClient } from '@supabase/supabase-js';
-import type { AnalysisPoint, AnalysisSet, AnalysisShot } from './analysis';
+import type { AnalysisPoint, AnalysisSet, AnalysisShot, Role } from './analysis';
 import type { StoredMatchSummary } from './aiSummary';
 
 export type AnalysisMatch = Pick<Match, 'id' | 'opponent_name' | 'player_name' | 'event' | 'video_url' | 'date' | 'best_of' | 'initial_server' | 'share_token'>;
@@ -151,7 +151,7 @@ export const matchApi = {
         .eq('match_id', id)
         .order('created_at', { ascending: true }),
       client.from('shots')
-        .select('id, name, display_name, check_qualities, technical_notes, shot_categories(name, display_order)'),
+        .select('id, name, display_name, check_qualities, technical_notes, role, shot_categories(name, display_order)'),
       // Readable by the owner, or with the share token on a shared client
       client.from('match_summaries')
         .select('summary, input_hash, model, created_at')
@@ -169,6 +169,7 @@ export const matchApi = {
 
     type ShotRow = {
       id: string; name: string; display_name: string; check_qualities: string[] | null; technical_notes: string | null;
+      role: Role | null;
       shot_categories: { name: string; display_order: number } | null;
     };
     return {
@@ -183,6 +184,7 @@ export const matchApi = {
         category_order: s.shot_categories?.display_order ?? 0,
         check_qualities: s.check_qualities ?? [],
         technical_notes: s.technical_notes,
+        role: s.role,
       })),
       // A summary that fails to load shouldn't take the analysis down with it
       summary: summary.error ? null : (summary.data as StoredSummary | null),
@@ -432,6 +434,7 @@ export const shotApi = {
     display_order: number;
     check_qualities?: string[];
     technical_notes?: string | null;
+    role?: Role | null;
   }) => {
     const { data, error } = await supabase
       .from('shots')
@@ -453,6 +456,7 @@ export const shotApi = {
     display_order?: number;
     check_qualities?: string[];
     technical_notes?: string | null;
+    role?: Role | null;
   }) => {
     const { data, error } = await supabase
       .from('shots')

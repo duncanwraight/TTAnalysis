@@ -130,12 +130,15 @@ const buildShotGuide = (analysis: Analysis, shots: AnalysisShot[]): string[] => 
 /** The user message sent to the model: match details, computed analysis, every point, then the shot guide. */
 export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots: AnalysisShot[]): string => {
   // Ids, row keys and the page's own cards add tokens without adding information.
+  // Shot balance is left out until the prompt is changed to use it, so adding it
+  // to the page didn't mark every stored summary out of date.
   // JSON.stringify leaves out the undefined fields.
   const { rows, ...rest } = analysis;
   const noKey = <T extends { key: string }>(item: T) => ({ ...item, key: undefined });
   const computed = {
     ...rest,
     cards: undefined,
+    balance: undefined,
     shots: { player: rest.shots.player.map(noKey), opponent: rest.shots.opponent.map(noKey) },
     patterns: { player: rest.patterns.player.map(noKey), opponent: rest.patterns.opponent.map(noKey) },
   };

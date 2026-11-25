@@ -27,8 +27,7 @@ Done on 2026-11-25:
 5. **Unforced errors in the coach's summary** (section 2): technical advice only, and a mental note when they bunch up late in sets. Function deployed to production.
 6. **No out-of-date banner on share links** (section 2), shipped in `bf523cc`.
 7. **Own domain** (*Domain and hosting*): the app moved to ttanalysis.app in `f6eaa13`. The user has checked it works.
-
-Next piece of work to design: **shot balance on the analysis page** (section 7), showing which shots a player leaned on or barely used.
+8. **Shot balance** (section 7): a new section on the analysis page in place of Categories, a role per shot on `/admin/shots`, and two new cards.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
 
@@ -165,13 +164,16 @@ Related features:
 Still open:
 
 - Editing a point's winner and shots in the points editor. The user wants this, as a separate piece of work.
-- **Shot balance (needs a design).** Show shots a player leaned on or barely used. Did they push and chop a lot and hardly attack, or attack so much that they rarely pushed or blocked? The shots that matter are the forehand loop, backhand loop, push and block. The user raised this on 2026-11-25. Questions for the design:
-  - **What the data can show.** Only the last two shots of each point are entered, so this counts the shots that ended rallies, not every shot played. A player who pushes five times and then loops the sixth ball shows up as a looper. The wording has to say "shots that won or lost points", like the rest of the page, and the design should decide whether that sample is still useful enough to show.
-  - **Grouping shots.** Categories don't map cleanly to attack and control. Production's `short_game` holds both push and flick, and the pips category holds both bump and attack. So each shot probably needs its own role, set by a new input on `/admin/shots`: attack, control (push, chop, block) or neither (serve, lucky shots, no shot). Decide whether that's a fixed list or whether the user picks which shots to track.
-  - **Forehand and backhand.** There is one loop shot. The hand is stored on the point (`winning_hand`, `other_hand`), so FH loop and BH loop come from shot plus hand.
-  - **What counts as "missing" or "too much".** A raw share (attacks were 30% of your shots) needs something to compare against: the opponent in the same match, the player's other matches, or a target the user sets. A shot that never appears (no backhand loops in the whole match) is the clearest case.
-  - **Where it goes.** A panel on the analysis page, an input to the coach's summary, or both. If the summary uses it, it changes the input hash, and the prompt must still treat it as counts, not a diagnosis.
+- **Shot balance in the coach's summary.** Held back on purpose until the user has seen the section on real matches. `buildSummaryInput` leaves `balance` out, so adding it didn't mark stored summaries out of date. To add it: drop `balance: undefined` there, tell the prompt the counts are shots that won or lost points (not every shot played), and bump `SUMMARY_VERSION`. At the same point, consider switching `attacksBySet` and the "attacking dropped off" card from the attacks category to the attack role, and dropping `categories`; both are still in the AI input, which is the only reason they're kept.
 
+### Shot balance (done)
+
+Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/FrhvxN3b9vbEQGZ8hounA2
+
+- **Roles.** `shots.role` is `attack`, `control` (at the table: push, block, bump, chop block), `defence` (away from it: chop, fish, lob) or null (serve, no shot, service fault), set by migration `20261125120000_shot_roles.sql` by shot name and edited on `/admin/shots`. Pips shots take the same role as the inverted ones. Three roles, not two, so a chopper and a pusher look different.
+- **The section** (`src/components/analysis/ShotBalance.tsx`, built by `buildBalance` in `analysis.ts`) replaced Categories. Each side's winning and losing shots by role, "What stands out", and a by-shot chart with you on the left and the opponent on the right. Pips shots stay separate rows. The comparison is always the opponent in the same match.
+- **What stands out**, at most three, in this order: a role share 20 points or more apart (both sides with 10+ shots); a shot and hand the opponent had 5+ times that you never had; a shot one side had 1.5x as often with 10+; a shot you had 5+ times that they never had.
+- **Cards.** "They/You did more attacking" now counts attack-role shots, falling back to "did more defending". "No backhand blocks" (or whichever shot) appears for the biggest shot you never had.
 ## 8. Code quality
 
 - **`any` types:** `@typescript-eslint/no-explicit-any` is switched off in `eslint.config.js`. Type the rest, then turn the rule back on.

@@ -11,6 +11,11 @@ import { Side, getServer, otherSide } from './scoring.ts';
 
 export type Hand = 'fh' | 'bh';
 
+/** What a shot does in a rally, for shot balance. Set per shot on /admin/shots. */
+export type Role = 'attack' | 'control' | 'defence';
+export const ROLES: Role[] = ['attack', 'control', 'defence'];
+export const ROLE_LABEL: { [role in Role]: string } = { attack: 'Attack', control: 'Control', defence: 'Defence' };
+
 export type AnalysisShot = {
   id: string;
   name: string;
@@ -20,6 +25,8 @@ export type AnalysisShot = {
   // Shot guide for the AI summary; see shotGuide.ts
   check_qualities?: string[];
   technical_notes?: string | null;
+  // Shots with no role (serve, no shot, service fault) are left out of shot balance
+  role?: Role | null;
 };
 
 export type AnalysisPoint = {
@@ -120,6 +127,21 @@ export type Pattern = {
 /** Attacks as each side's winning and losing shot in one set. */
 export type SetAttacks = { setNumber: number; points: number; player: Tally; opponent: Tally };
 
+/** One side's winning and losing shots with a role, by role. */
+export type BalanceSide = { total: number; roles: ({ role: Role } & Tally)[] };
+
+/** How often a shot and hand was each side's winning or losing shot. */
+export type BalanceShot = { key: string; shot: string; role: Role; player: number; opponent: number };
+
+export type Balance = {
+  player: BalanceSide;
+  opponent: BalanceSide;
+  // By role, then most used first
+  shots: BalanceShot[];
+  // Up to three plain counts worth pointing out
+  standouts: string[];
+};
+
 export type Card = { tag: 'Match story' | 'Work on' | 'Scouting'; title: string; text: string };
 
 export type Analysis = {
@@ -134,7 +156,10 @@ export type Analysis = {
   stages: Stage[];
   runs: Run[];
   lucky: { player: number; opponent: number };
+  // By shot category. Not shown on the page any more, but still part of the
+  // coach's summary input, which shot balance hasn't been added to yet
   categories: { player: CategoryRow[]; opponent: CategoryRow[] };
+  balance: Balance;
   shots: { player: ShotRow[]; opponent: ShotRow[] };
   // Winning and losing shots by hand, serves left out
   hands: { player: { fh: Tally; bh: Tally }; opponent: { fh: Tally; bh: Tally } };
@@ -197,6 +222,11 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   const rows: PointRow[] = [];
   const patterns = { player: new Map<string, Pattern>(), opponent: new Map<string, Pattern>() };
   const attacksBySet = new Map<number, { player: Tally; opponent: Tally }>();
+  const roleTallies = {
+    player: new Map(ROLES.map(role => [role, emptyRecord()])),
+    opponent: new Map(ROLES.map(role => [role, emptyRecord()])),
+  };
+  const balanceShots = new Map<string, BalanceShot>();
   let current: Run | null = null;
 
   const tallyShot = (side: Side, shot: AnalysisShot, hand: Hand | null, result: 'won' | 'lost', isUnforced: boolean, setNumber: number) => {
@@ -212,6 +242,13 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
     categoryRows[side].set(shot.category, cat);
 
     if (hand && shot.category !== SERVE_CATEGORY) hands[side][hand][result] += 1;
+
+    if (shot.role) {
+      roleTallies[side].get(shot.role)![result] += 1;
+      const shotRow = balanceShots.get(key) ?? { key, shot: shotWithHand(label, hand), role: shot.role, player: 0, opponent: 0 };
+      shotRow[side] += 1;
+      balanceShots.set(key, shotRow);
+    }
 
     if (shot.category === ATTACK_CATEGORY) {
       const setAttacks = attacksBySet.get(setNumber) ?? { player: emptyRecord(), opponent: emptyRecord() };
@@ -351,6 +388,7 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
       player: [...shotRows.player.values()].sort(byNet),
       opponent: [...shotRows.opponent.values()].sort((a, b) => byNet(b, a)),
     },
+    balance: buildBalance(roleTallies, [...balanceShots.values()]),
     hands,
     attacksBySet: setSummaries.map(s => ({
       setNumber: s.setNumber,
@@ -367,6 +405,75 @@ export const buildAnalysis = ({ initialServer, sets, points, shots }: AnalysisIn
   };
   analysis.cards = buildCards(analysis);
   return analysis;
+};
+
+const balanceSide = (tallies: Map<Role, Tally>): BalanceSide => {
+  const roles = ROLES.map(role => ({ role, ...tallies.get(role)! }));
+  return { total: roles.reduce((n, r) => n + r.won + r.lost, 0), roles };
+};
+
+const buildBalance = (tallies: { player: Map<Role, Tally>; opponent: Map<Role, Tally> }, shots: BalanceShot[]): Balance => {
+  const balance: Balance = {
+    player: balanceSide(tallies.player),
+    opponent: balanceSide(tallies.opponent),
+    shots: shots.sort((a, b) =>
+      ROLES.indexOf(a.role) - ROLES.indexOf(b.role)
+      || (b.player + b.opponent) - (a.player + a.opponent)
+      || a.shot.localeCompare(b.shot)),
+    standouts: [],
+  };
+  balance.standouts = balanceFindings(balance).slice(0, 3).map(f => f.text);
+  return balance;
+};
+
+// "Backhand block" to "backhand blocks". Fish is its own plural.
+const pluralShot = (shot: string) => {
+  const s = shot.toLowerCase();
+  return s.endsWith('fish') ? s : /(s|sh|ch|x)$/.test(s) ? `${s}es` : `${s}s`;
+};
+const withArticle = (shot: string) => `${/^[aeiou]/i.test(shot) ? 'an' : 'a'} ${shot.toLowerCase()}`;
+
+// What shot balance picks out, most telling first
+const MIN_ROLE_TOTAL = 10;
+const ROLE_GAP = 20;
+const MISSING_MIN = 5;
+const RATIO_MIN = 10;
+const RATIO = 1.5;
+
+type BalanceFinding = { kind: 'role' | 'you-missing' | 'ratio' | 'they-missing'; size: number; text: string; shot?: BalanceShot };
+
+const balanceFindings = (b: Balance): BalanceFinding[] => {
+  const found: BalanceFinding[] = [];
+  if (b.player.total >= MIN_ROLE_TOTAL && b.opponent.total >= MIN_ROLE_TOTAL) {
+    ROLES.forEach((role, i) => {
+      const yours = b.player.roles[i].won + b.player.roles[i].lost;
+      const theirs = b.opponent.roles[i].won + b.opponent.roles[i].lost;
+      const gap = Math.abs(pct(yours, b.player.total) - pct(theirs, b.opponent.total));
+      if (gap >= ROLE_GAP) {
+        found.push({ kind: 'role', size: gap, text: `${ROLE_LABEL[role]} was ${yours} of your ${b.player.total} shots. It was ${theirs} of their ${b.opponent.total}.` });
+      }
+    });
+  }
+  for (const s of b.shots) {
+    const shot = s.shot.toLowerCase();
+    if (s.player === 0 && s.opponent >= MISSING_MIN) {
+      found.push({ kind: 'you-missing', size: s.opponent, shot: s, text: `You never had ${withArticle(shot)} as your winning or losing shot. They had ${s.opponent}.` });
+    } else if (s.opponent === 0 && s.player >= MISSING_MIN) {
+      found.push({ kind: 'they-missing', size: s.player, shot: s, text: `They never had ${withArticle(shot)} as their winning or losing shot. You had ${s.player}.` });
+    } else if (s.player > 0 && s.opponent > 0) {
+      const [more, fewer] = [Math.max(s.player, s.opponent), Math.min(s.player, s.opponent)];
+      if (more >= RATIO_MIN && more >= RATIO * fewer) {
+        found.push({
+          kind: 'ratio', size: more, shot: s,
+          text: s.player > s.opponent
+            ? `You had ${s.player} ${pluralShot(shot)} to their ${s.opponent}.`
+            : `They had ${s.opponent} ${pluralShot(shot)} to your ${s.player}.`,
+        });
+      }
+    }
+  }
+  const order = ['role', 'you-missing', 'ratio', 'they-missing'];
+  return found.sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind) || y.size - x.size);
 };
 
 const MIN_PATTERN_COUNT = 3;
@@ -470,17 +577,32 @@ export const buildCards = (a: Analysis): Card[] => {
     }
   }
 
-  // Who attacked more: attacks as winning or losing shot
-  const attacks = (rows: CategoryRow[]) => {
-    const row = rows.find(r => r.category === ATTACK_CATEGORY);
-    return row ? row.won + row.lost : 0;
+  // Who did more attacking, or failing that more defending, by shot role
+  const roleCount = (side: BalanceSide, role: Role) => {
+    const r = side.roles.find(x => x.role === role)!;
+    return r.won + r.lost;
   };
-  const yourAttacks = attacks(a.categories.player);
-  const theirAttacks = attacks(a.categories.opponent);
-  if (theirAttacks >= 10 && theirAttacks >= 1.4 * yourAttacks) {
-    story.push({ tag: 'Match story', title: 'They did more attacking', text: `An attack was their winning or losing shot in ${theirAttacks} points. Yours: ${yourAttacks}.` });
-  } else if (yourAttacks >= 10 && yourAttacks >= 1.4 * theirAttacks) {
-    story.push({ tag: 'Match story', title: 'You did more attacking', text: `An attack was your winning or losing shot in ${yourAttacks} points. Theirs: ${theirAttacks}.` });
+  for (const [role, noun, verb] of [['attack', 'An attack', 'attacking'], ['defence', 'Defence', 'defending']] as const) {
+    const yours = roleCount(a.balance.player, role);
+    const theirs = roleCount(a.balance.opponent, role);
+    if (theirs >= 10 && theirs >= 1.4 * yours) {
+      story.push({ tag: 'Match story', title: `They did more ${verb}`, text: `${noun} was their winning or losing shot in ${theirs} points. Yours: ${yours}.` });
+      break;
+    }
+    if (yours >= 10 && yours >= 1.4 * theirs) {
+      story.push({ tag: 'Match story', title: `You did more ${verb}`, text: `${noun} was your winning or losing shot in ${yours} points. Theirs: ${theirs}.` });
+      break;
+    }
+  }
+
+  // A shot they kept having that you never did
+  const missing = balanceFindings(a.balance).find(f => f.kind === 'you-missing');
+  if (missing?.shot) {
+    story.push({
+      tag: 'Match story',
+      title: `No ${pluralShot(missing.shot.shot)}`,
+      text: `${withArticle(missing.shot.shot).replace(/^a/, 'A')} was never your winning or losing shot. It was theirs in ${missing.shot.opponent} points.`,
+    });
   }
 
   // Work on: unforced errors first when they've been recorded
