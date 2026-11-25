@@ -28,9 +28,12 @@ Done on 2026-11-25:
 6. **No out-of-date banner on share links** (section 2), shipped in `bf523cc`.
 7. **Own domain** (*Domain and hosting*): the app moved to ttanalysis.app in `f6eaa13`. The user has checked it works.
 8. **Shot balance** (section 7): a new section on the analysis page in place of Categories, a role per shot on `/admin/shots`, and two new cards.
-9. **Shot balance in the coach's summary** (section 2). `SUMMARY_VERSION` is now 5.
+9. **Shot balance in the coach's summary** (section 2), shipped in `76c4035`. Function deployed to production. `SUMMARY_VERSION` is now 5, so every stored summary shows as out of date until it's regenerated.
 
-The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person: the password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
+The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
+
+- The password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
+- A summary written with shot balance. Press "Update the summary" on a match: the banner should go away afterwards. If it stays, the page and the function are hashing different input (most likely the shot roles).
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
 
@@ -66,7 +69,7 @@ How it works:
 
 Cost and limits:
 
-- A summary costs about $0.07 to $0.09 on Opus 5.5: roughly 7,000 to 9,000 input tokens and 2,000 to 3,000 output tokens, including thinking. Regenerating an unchanged summary costs nothing, because the stored one is returned.
+- A summary costs about $0.10 to $0.12 on Opus 5.5 since shot balance was added (it was $0.07 to $0.09 before): roughly 9,000 to 11,000 input tokens and 2,500 to 3,500 output tokens, including thinking. Regenerating an unchanged summary costs nothing, because the stored one is returned.
 - The function refuses new calls once this month's logged spend reaches `ai_settings.monthly_budget_usd`. The hard stop is the spend limit on the "TT Analysis" workspace in the Claude Console, which the user set to $20 a month. Keep the two in step.
 - The Anthropic API key is the `ANTHROPIC_API_KEY` function secret, set on production and in `supabase/functions/.env` locally (gitignored). It's named TTAnalysisSummaries, lives in the TT Analysis workspace and **expires on 1 December 2027**. Summaries stop working on that date unless it's renewed.
 
@@ -82,7 +85,7 @@ Tactical and technical, added 2026-11-25: **tactical** is something a player can
 
 Unforced errors, changed 2026-11-25: a problem about unforced errors gets technical advice only, because a change of tactics doesn't stop a player missing a shot nobody forced. Where a problem mixes unforced errors with shots the opponent beat, the tactical part only covers the points the opponent won. Service faults count as unforced. The mental-side checks now look for unforced errors bunched late in sets (once either player reaches 8) or in close sets (won by 3 points or fewer): 3 or more, and more than in the rest of the match. That gets a note putting it down to nerves (holding back, shortening the stroke, steering the ball) and suggesting the player commit to the shot. `SUMMARY_VERSION` went from 3 to 4, so every stored summary shows as out of date until it's regenerated.
 
-Shot balance, added 2026-11-25: the input now includes `balance` (role tallies for each side, the standouts, and each shot's role and counts, without row keys), and `categories` was dropped from the analysis altogether. The prompt reads the balance as who got to attack first: a bigger attack share means that side opened up and finished points, and won and lost within a role says whether that way of playing paid. If the player loses when controlling and wins when attacking, the advice is to look for the first chance to attack and make the control shot harder to attack. If the attack itself loses, the advice is never to attack more. A different style is described in counts, never named ("chopper"), because one match's last shots can't establish it. The balance is supporting evidence, not a section: it only comes up when something is in `standouts`, or a role was won or lost 2 to 1 on 10+ shots, and then mostly inside another problem. It gets a problem of its own at most once, and only reaches the headline when a role standout decided the match. Tested on the two local sample matches before shipping (about $0.10 each): the first run put role counts in the headline of a match with no role standout, which is why that last rule exists. The Edge Function now loads `shots.role`. Without it, the function's hash would never match the page's. `SUMMARY_VERSION` went from 4 to 5.
+Shot balance, added 2026-11-25: the input now includes `balance` (role tallies for each side, the standouts, and each shot's role and counts, without row keys), and `categories` was dropped from the analysis altogether. The prompt reads the balance as who got to attack first: a bigger attack share means that side opened up and finished points, and won and lost within a role says whether that way of playing paid. If the player loses when controlling and wins when attacking, the advice is to look for the first chance to attack and make the control shot harder to attack. If the attack itself loses, the advice is never to attack more. A different style is described in counts, never named ("chopper"), because one match's last shots can't establish it. The balance is supporting evidence, not a section: it only comes up when something is in `standouts`, or a role was won or lost 2 to 1 on 10+ shots, and then mostly inside another problem. It gets a problem of its own at most once, and only reaches the headline when a role standout decided the match. Tested on the two local sample matches before shipping (about $0.10 each): the first run put role counts in the headline of a match with no role standout, which is why that last rule exists. Neither local match has a role standout (one is a copy of the other), so a match where the styles clearly differ hasn't been tried yet. The Edge Function now loads `shots.role`. Without it, the function's hash would never match the page's. `SUMMARY_VERSION` went from 4 to 5.
 
 Still open:
 
@@ -93,14 +96,15 @@ Still open:
   - Privacy on share links: notes about a player's weaknesses probably shouldn't be visible, like the correction notes today.
   - Effect on the input hash, cost and the token budget.
 - The technical notes are the user's to write and refine. My drafts from the A/B test were never put on production.
-- There's no eval set. Prompt changes have been judged by reading outputs for the Duncan and James matches. If changes become frequent, build a small eval: a handful of matches, plus a checklist covering counts with every claim, no placement guesses, no invented technical faults, and the length limits.
+- There's no eval set. Prompt changes have been judged by reading outputs for the Duncan and James matches. If changes become frequent, build a small eval: a handful of matches, plus a checklist covering counts with every claim, no placement guesses, no invented technical faults, shot balance kept out of the headline without a role standout, and the length limits.
 - Possibly let the user choose Sonnet 5.5 for half the cost, if quality holds on a side-by-side.
 
 ## 3. Deploying and testing the Edge Function
 
 - **Deploy** with `supabase functions deploy match-summary --use-api --yes`. Docker bundling fails on this machine with "Permission denied (os error 13)" because of SELinux. `--use-api` bundles on Supabase's side and picks up the `src/lib` imports.
 - **Serve locally** with `supabase functions serve --env-file supabase/functions/.env`. It needs the source labelled for containers first: `chcon -R -t container_file_t supabase/functions src/lib src/types`. New files need the label again; `restorecon -R` on those folders undoes it.
-- **A test call costs real money**, about $0.08. To test without the app, sign in a local test user through the REST API and POST `{ "matchId": ... }` to `http://127.0.0.1:54321/functions/v1/match-summary` with their token.
+- **A test call costs real money**, about $0.10. To test without the app, sign in a local test user through the REST API and POST `{ "matchId": ... }` to `http://127.0.0.1:54321/functions/v1/match-summary` with their token.
+- **Testing a prompt without serving the function:** a throwaway script run with `npx vite-node` can load a local match with the service role key, build the input with `buildAnalysis` and `buildSummaryInput`, and POST it to the Messages API with `SYSTEM_PROMPT`, `SUMMARY_SCHEMA` and the function's settings (`max_tokens` 16000, effort `medium`), using `ANTHROPIC_API_KEY` from `supabase/functions/.env`. That bills the TT Analysis workspace. This is how the shot balance prompt was tested.
 - **Testing a prompt outside the app:** the `ant` CLI has a `dev` profile (`ant auth login --profile dev`) whose token can call the Messages API (`ant auth print-credentials --access-token --profile dev`, plus the `anthropic-beta: oauth-2025-04-20` header). It bills the Wraight Consulting API account's Default workspace, not the user's Claude subscription. The `admin` profile can't call models.
 
 ## 4. Site-wide redesign (done)
@@ -119,7 +123,7 @@ Still to do:
 
 ## 5. Tests for the scoring rules (done)
 
-`npm test` runs Vitest: 115 tests across `scoring.test.ts`, `analysis.test.ts`, `aiSummary.test.ts` and `matchDetails.test.ts`. `src/lib/scoring.test.ts` covers every function in `src/lib/scoring.ts`, including `buildMatchState`, the reload logic.
+`npm test` runs Vitest: 123 tests across `scoring.test.ts`, `analysis.test.ts`, `aiSummary.test.ts` and `matchDetails.test.ts`. `src/lib/scoring.test.ts` covers every function in `src/lib/scoring.ts`, including `buildMatchState`, the reload logic.
 
 Decided while writing the tests:
 
