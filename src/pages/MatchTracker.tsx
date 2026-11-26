@@ -123,8 +123,22 @@ const MatchTracker = () => {
           return;
         }
 
-        setMatch(match);
-        setMatchState(buildMatchState(sets, points, match.best_of ?? DEFAULT_BEST_OF, match.is_complete));
+        const state = buildMatchState(sets, points, match.best_of ?? DEFAULT_BEST_OF, match.is_complete);
+
+        // The match list reads match_score and is_complete, not the sets. If a
+        // save at the end of a set failed they fall behind, so put them right.
+        const stored = {
+          match_score: matchScoreString(state.isMatchComplete ? state.sets : finishedSets(state.sets)),
+          is_complete: state.isMatchComplete,
+        };
+        const outOfStep = stored.match_score !== match.match_score || stored.is_complete !== match.is_complete;
+        if (outOfStep) {
+          api.match.updateMatch(match.id, stored)
+            .catch(err => console.error('Failed to repair the match score:', err));
+        }
+
+        setMatch(outOfStep ? { ...match, ...stored } : match);
+        setMatchState(state);
       } catch (err) {
         if (!cancelled) setError(`Failed to load match: ${errorMessage(err)}`);
       } finally {
@@ -296,9 +310,10 @@ const MatchTracker = () => {
 
         if (isSetOver(newScore)) {
           const isComplete = isMatchOver(sets, bestOf);
-          await syncMatchResult(sets, true, isComplete).catch(err =>
-            console.error('Failed to update match score:', err)
-          );
+          await syncMatchResult(sets, true, isComplete).catch(err => {
+            console.error('Failed to update match score:', err);
+            setNotice("The point saved, but the match score on your matches list didn't update. Reload the page to fix it.");
+          });
 
           setMatchState(isComplete
             ? { currentSet: matchState.currentSet, sets, points, isMatchComplete: true, dbSets, currentSetId: updatedSetRow.id }
