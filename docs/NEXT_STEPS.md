@@ -47,6 +47,7 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 12. **Keyboard shortcuts in the tracker** (section 4), in `bad9350`.
 13. **Editing a point's winner and shots** (section 7), in `a123532` and `96bb7ce`. Migration `20261128130000_edit_points.sql` applied to production on 2026-11-26.
 14. **No service fault as a losing shot** (section 4), in `ff29493`.
+15. **Production checks:** no old points with a service fault as the losing shot, and no other account with a friend as its self player (sections 0 and 4). Adding or deleting a point mid-match was dropped: editing a point covers every mistake that keeps the point count right, and the tracker's score shows a missed point while it's being entered.
 
 Items 11 to 13 were checked on the local stack (REST and Chrome), and item 14 by its tests. All four are live, but nobody has tried them on production yet.
 
@@ -85,10 +86,10 @@ The "You" bug, found on 2026-11-26:
 - The old new match form had "This is me. Fill it in on new matches." ticked by default, so entering a friend's match on an account with no saved name saved the friend's name as `display_name`. The players migration trusted `display_name`, so the user's account (dunc@seriouslyfish.com) got James Moore as its self player, with two old blank-name matches (Lee Dorning 2025-02-09, Pit 2025-05-25) linked to him.
 - Fixed by hand on production: James Moore is no longer self, the existing Duncan Wraight player is, those two matches moved to Duncan Wraight with `player_name` set, and `display_name` is now Duncan Wraight. Checked by reading it back.
 - The new form had copied the same default; `ae30fd2` leaves the box unticked.
+- Every other account was checked on production on 2026-11-26. None has matches or a friend as its self player. Three have a "Me" self player and no matches, left by the migration from test matches deleted the same day. If it happens again, an owner can fix it themselves: open their own player on `/players`, tick "This is me" and save. That calls `set_self_player`, which makes the old self player an ordinary one (keeping the matches entered under their name), moves matches with no player name to the new self player, and saves the name as `display_name`.
 
 Still to do:
 
-- Other accounts may have the same problem (a friend's name as their self player). Only the user's account was checked. Since 2026-11-26 an owner can fix it themselves: open their own player on `/players`, tick "This is me" and save. That calls `set_self_player`, which makes the old self player an ordinary one (keeping the matches entered under their name), moves matches with no player name to the new self player, and saves the name as `display_name`. Nobody has been told about it yet.
 - Watching the next summaries for any mention of player notes is parked until 2027-01-01 (section 2).
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
@@ -190,7 +191,7 @@ The 0-3 match against Lee Tinkler (2025-09-16) was the user's own, entered on a 
 
 - **Keyboard shortcuts (2026-11-26).** On screens wider than 768px: 1 or 2 for who won and Z to undo, then left and right arrows for the shot category, a shot's number then F or B for the hand, U and L for unforced and lucky, Backspace to change the winning shot and Escape to cancel the point. Only the picker waiting for a shot listens. The keys are shown under the prompt and in the point entry. Checked in Chrome on a local match.
 
-- **No service fault as a losing shot (2026-11-26).** The losing shot picker used to offer "Service fault", which can't happen: a service fault is only ever the receiver's winning shot. `ShotPicker` now takes a `losing` prop, used by the tracker and the points editor, and `checkPointEdits` refuses an edited point with a service fault as its losing shot. In `ff29493`. Old points saved that way on production haven't been looked for.
+- **No service fault as a losing shot (2026-11-26).** The losing shot picker used to offer "Service fault", which can't happen: a service fault is only ever the receiver's winning shot. `ShotPicker` now takes a `losing` prop, used by the tracker and the points editor, and `checkPointEdits` refuses an edited point with a service fault as its losing shot. In `ff29493`. Production was checked the same day and has no points with a service fault as the losing shot.
 
 ## 5. Tests for the scoring rules (done)
 
@@ -247,10 +248,6 @@ Editing a point's winner and shots (2026-11-26):
 - Changing one winner in a set that reached 11 never adds up on its own: the set would end a point early or not at all. So the dialog offers "Keep and edit another point", the change is held as pending (highlighted in the table, which shows the scores as if it were saved), and the ticks are locked until the pending changes are saved or discarded. The usual fix is two points entered the wrong way round.
 - Saving goes through `edit_points` (migration `20261128130000_edit_points.sql`), which writes the points, the set scores and `matches.match_score`/`is_complete` in one transaction. It runs as the caller and checks every point and set belongs to the match. Editing a point that no longer goes past the receive clears its "attacked straight away" tick. Coach's summaries for an edited match show as out of date.
 - A winner change in the set still being entered can finish that set, or the match. Changing who won a set is refused.
-
-Still open:
-
-- Adding or deleting a single point in the middle of a match. A missed point can only be fixed now by undoing back to it in the tracker.
 
 ### Shot balance (done)
 
