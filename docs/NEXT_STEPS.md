@@ -198,7 +198,7 @@ Still open:
 - **Supabase dashboard (by hand):** upgrade Postgres (the advisor reports security patches for 15.8.1.091), shorten the email OTP expiry to under an hour, turn on leaked password protection if the plan includes it, and set the minimum password length to 8 (Authentication, then Policies) to match the app.
 - **Minimum password length (app side done 2026-11-26):** the sign-up and reset forms now ask for 8 characters (`MIN_PASSWORD_LENGTH` in `src/lib/password.ts`, shown as a hint under the field), and `config.toml` matches. Existing passwords still work: Supabase only checks the length when a password is set. Until the dashboard says 8 too, someone calling the API directly can still set a 6-character password.
 - **React Router (done 2026-11-26):** upgraded to v7 (`react-router` 7.18, replacing `react-router-dom`). `npm audit` reports nothing. Every link is absolute and the only splat route is the catch-all, so v7's changes to relative paths don't apply.
-- **Logout on every deploy:** `src/lib/supabase.ts` clears the stored session whenever the deployed commit changes. It isn't needed for security. Decide whether to keep it.
+- **Logout on every deploy (removed 2026-11-26):** `src/lib/supabase.ts` used to clear the stored session whenever the deployed commit changed, which signed everyone out on each push. It wasn't needed for security and was taken out at the user's go-ahead; the leftover `app_version` key is removed on load.
 
 ## 7. Analysis page, unforced errors and points editor (done)
 
@@ -259,7 +259,7 @@ Still open on sweeps:
 - **Supabase CLI v4 warnings (done 2026-11-26):** `config.toml` uses `auth.email.enabled` and `auth.sms.enabled`, so `supabase status` no longer warns.
 - **Bundle size (done 2026-11-26):** every page except Home and Auth is loaded with `React.lazy` (`src/App.tsx`), which took the main chunk from 601 kB to 444 kB. PDF export imports html2pdf's source (`html2pdf.js/src/index.js`) rather than its prebuilt bundle, and `vite.config.ts` puts jspdf and html2canvas in chunks of their own: about 600 kB on the click instead of 985 kB, and no chunk over 500 kB. Vite's preload helper has its own chunk, because otherwise Rollup put it in the jspdf chunk and every page loaded jspdf. Export was checked on a production build against the local stack.
 - **Stale tabs after a deploy (done 2026-11-26):** with pages loaded on demand, a tab opened before a deploy asks for chunks that no longer exist. `main.tsx` reloads once on `vite:preloadError` (a timestamp in session storage stops a loop), `vercel.json` no longer rewrites `/assets/` to `app.html` so a missing chunk is a 404 rather than HTML, and `PageErrorBoundary` shows "This page didn't load" with Reload and Your matches buttons instead of a blank screen. It resets when the path changes rather than by key, so the analysis page's tabs don't remount. Tested by deleting a chunk from a preview build. Vercel's Skew Protection would also cover this, but it's a paid feature.
-- **Unused SQL views (done 2026-11-26):** `point_shots`, the six views on it and `match_summary` were dropped by `20261127140000_drop_analysis_views.sql`. Nothing in the app, the function or the scripts read them.
+- **Unused SQL views (done 2026-11-26):** `point_shots`, the six views on it and `match_summary` were dropped by `20261127140000_drop_analysis_views.sql`, applied to production the same day. Nothing in the app, the function or the scripts read them.
 
 ## Testing against a local stack
 

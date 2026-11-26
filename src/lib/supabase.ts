@@ -41,18 +41,10 @@ export const createSharedClient = (shareToken: string) =>
     }
   );
 
-// Force session invalidation on new deployments
-const currentVersion = import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA || 'dev';
-const storedVersion = localStorage.getItem('app_version');
-
-if (storedVersion && storedVersion !== currentVersion) {
-  // Clear all auth-related localStorage
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
-      localStorage.removeItem(key);
-    }
-  });
-  // Clear session storage as well
-  sessionStorage.clear();
+// Every deploy used to sign everyone out, keyed on this. It's gone, so tidy
+// up the key it left behind.
+try {
+  localStorage.removeItem('app_version');
+} catch {
+  // Storage blocked; nothing to tidy
 }
-localStorage.setItem('app_version', currentVersion);
