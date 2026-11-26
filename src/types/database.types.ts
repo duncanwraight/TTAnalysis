@@ -3,7 +3,7 @@ export type User = {
   id: string;
   email: string;
   name?: string;
-  preferences?: any;
+  preferences?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };

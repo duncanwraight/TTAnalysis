@@ -254,8 +254,8 @@ Still open on sweeps:
 
 ## 8. Code quality
 
-- **`any` types:** `@typescript-eslint/no-explicit-any` is switched off in `eslint.config.js`. Type the rest, then turn the rule back on.
-- **Supabase CLI v4 warnings:** `config.toml` uses `auth.email.enable_signup` and `auth.sms.enable_signup`, which v4 renames to `enabled`.
+- **`any` types (done 2026-11-26):** the last ones (the eval script and `User.preferences`) are typed, and `@typescript-eslint/no-explicit-any` is back on.
+- **Supabase CLI v4 warnings (done 2026-11-26):** `config.toml` uses `auth.email.enabled` and `auth.sms.enabled`, so `supabase status` no longer warns.
 - **Bundle size:** `html2pdf.js` loads on the Export to PDF click. Its own chunk is still over 500 kB, which the build warns about.
 - **Unused SQL views:** see section 7.
 

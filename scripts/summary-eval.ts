@@ -22,11 +22,13 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildAnalysis, type Analysis, type AnalysisShot } from '../src/lib/analysis.ts';
-import { SUMMARY_MODEL, SUMMARY_SCHEMA, buildSummaryInput, costUsd, enforceKinds, isMatchSummary, type SummaryMatch } from '../src/lib/aiSummary.ts';
+import { buildAnalysis, type Analysis, type AnalysisPoint, type AnalysisSet, type AnalysisShot } from '../src/lib/analysis.ts';
+import { SUMMARY_MODEL, SUMMARY_SCHEMA, buildSummaryInput, costUsd, enforceKinds, isMatchSummary, type SummaryMatch, type SummaryNote, type SummaryProblem } from '../src/lib/aiSummary.ts';
 import { SYSTEM_PROMPT } from '../supabase/functions/match-summary/prompt.ts';
 
 type Match = SummaryMatch & { id: string; initial_server: 'player' | 'opponent' | null };
+// What the model sent back, before validation, so any field can be missing
+type RawSummary = { headline?: string; problems?: Partial<SummaryProblem>[]; mental?: Partial<SummaryNote>[] };
 type Result = { matchId: string; label: string; run: number; raw: unknown; costUsd: number };
 
 const QUERIES = {
@@ -56,7 +58,7 @@ const exportMatches = (dir: string) => {
 
 const load = (dir: string) => {
   const read = (name: string) => JSON.parse(readFileSync(join(dir, `${name}.json`), 'utf8'));
-  const [matches, sets, points, shots] = ['matches', 'sets', 'points', 'shots'].map(read) as [Match[], any[], any[], AnalysisShot[]];
+  const [matches, sets, points, shots] = ['matches', 'sets', 'points', 'shots'].map(read) as [Match[], (AnalysisSet & { match_id: string })[], (AnalysisPoint & { match_id: string })[], AnalysisShot[]];
   return matches.map(match => {
     const analysis = buildAnalysis({
       initialServer: match.initial_server ?? 'player',
@@ -89,8 +91,8 @@ const summarise = async (input: string, key: string) => {
     }),
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-  const body = await res.json();
-  const text = body.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+  const body = await res.json() as { content: { type: string; text?: string }[]; usage: { input_tokens: number; output_tokens: number } };
+  const text = body.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
   let raw: unknown = null;
   try { raw = JSON.parse(text); } catch { raw = text; }
   return { raw, costUsd: costUsd(SUMMARY_MODEL, body.usage) };
@@ -100,23 +102,24 @@ const summarise = async (input: string, key: string) => {
 type Finding = { level: 'fail' | 'warn'; text: string };
 const words = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
-const check = (raw: any, analysis: Analysis): Finding[] => {
+const check = (output: unknown, analysis: Analysis): Finding[] => {
   const found: Finding[] = [];
   const fail = (text: string) => found.push({ level: 'fail', text });
   const warn = (text: string) => found.push({ level: 'warn', text });
-  if (!raw || typeof raw !== 'object') return [{ level: 'fail', text: 'not JSON' }];
+  if (!output || typeof output !== 'object') return [{ level: 'fail', text: 'not JSON' }];
+  const raw = output as RawSummary;
 
   for (const p of raw.problems ?? []) {
     if (p.kind === 'unforced' && p.tactical?.trim()) fail(`"${p.title}": unforced problem with tactical advice (cleared on save)`);
     if (p.kind === 'situation' && p.technical?.trim()) fail(`"${p.title}": situation with technical advice (cleared on save)`);
   }
-  const summary = enforceKinds(raw) as any;
+  const summary = enforceKinds(raw) as RawSummary;
   if (!isMatchSummary(summary)) fail('fails the validator, so the function would refuse it');
 
   const fields: [string, string][] = [
     ['headline', summary.headline ?? ''],
-    ...(summary.problems ?? []).flatMap((p: any) => [[`${p.title} / detail`, p.detail], [`${p.title} / tactical`, p.tactical], [`${p.title} / technical`, p.technical]]),
-    ...(summary.mental ?? []).map((m: any) => [`${m.title} (mental)`, m.detail]),
+    ...(summary.problems ?? []).flatMap((p): [string, string][] => [[`${p.title} / detail`, p.detail ?? ''], [`${p.title} / tactical`, p.tactical ?? ''], [`${p.title} / technical`, p.technical ?? '']]),
+    ...(summary.mental ?? []).map((m): [string, string] => [`${m.title} (mental)`, m.detail ?? '']),
   ];
   const all = fields.map(([, text]) => text ?? '').join('\n');
 
@@ -129,13 +132,13 @@ const check = (raw: any, analysis: Analysis): Finding[] => {
   if (/data (does not|doesn't) (show|record)/i.test(all)) fail('talks about gaps in the data');
   if (/\b(record|recorded|recording|log|logged)\b/i.test(all)) fail('says "record" or "log" (the site says film and enter)');
   if (/\b(nerves|nervous|tension|tense)\b/i.test(all) && !analysis.unforced.bunchedLate) fail('puts errors down to nerves when bunchedLate is false');
-  if (analysis.unforced.bunchedLate && !(summary.mental ?? []).some((m: any) => /nerv|tens/i.test(m.detail))) warn('bunchedLate is true but no mental note on nerves');
+  if (analysis.unforced.bunchedLate && !(summary.mental ?? []).some(m => /nerv|tens/i.test(m.detail ?? ''))) warn('bunchedLate is true but no mental note on nerves');
 
   for (const p of summary.problems ?? []) {
-    if (!/\d/.test(p.detail)) fail(`"${p.title}": detail has no counts`);
-    if (p.kind === 'receive' && /footwork/i.test(p.technical)) fail(`"${p.title}": receive advice uses footwork`);
-    if (p.kind === 'unforced' && /misread|misjudg|read(ing)? (the )?spin|incoming spin/i.test(p.technical)) fail(`"${p.title}": unforced error put down to reading spin`);
-    if (!['receive', 'serve'].includes(p.kind) && /\b(receive|receiving|third ball|against (his|her|their) serve)\b/i.test(`${p.tactical} ${p.technical}`)) {
+    if (!/\d/.test(p.detail ?? '')) fail(`"${p.title}": detail has no counts`);
+    if (p.kind === 'receive' && /footwork/i.test(p.technical ?? '')) fail(`"${p.title}": receive advice uses footwork`);
+    if (p.kind === 'unforced' && /misread|misjudg|read(ing)? (the )?spin|incoming spin/i.test(p.technical ?? '')) fail(`"${p.title}": unforced error put down to reading spin`);
+    if (!['receive', 'serve'].includes(p.kind ?? '') && /\b(receive|receiving|third ball|against (his|her|their) serve)\b/i.test(`${p.tactical} ${p.technical}`)) {
       warn(`"${p.title}" (${p.kind}): mentions receive or the third ball`);
     }
   }
@@ -161,7 +164,7 @@ const report = (results: Result[], matches: ReturnType<typeof load>) => {
     if (!runs.length) continue;
     console.log(`\n## ${m.label}`);
     for (const r of runs) {
-      const raw = r.raw as any;
+      const raw = r.raw as RawSummary | null;
       const findings = check(raw, m.analysis);
       fails += findings.filter(f => f.level === 'fail').length;
       console.log(`\nRun ${r.run} ($${r.costUsd.toFixed(3)}): ${raw?.headline ?? ''}`);
@@ -170,7 +173,7 @@ const report = (results: Result[], matches: ReturnType<typeof load>) => {
       for (const f of findings) console.log(`  ${f.level.toUpperCase()}: ${f.text}`);
     }
     if (runs.length > 1) {
-      const sets = runs.map(r => ((r.raw as any)?.problems ?? []).map((p: any) => p.kind).sort().join(','));
+      const sets = runs.map(r => ((r.raw as RawSummary | null)?.problems ?? []).map(p => p.kind).sort().join(','));
       console.log(`\n  Problem kinds per run: ${sets.join(' | ')}`);
     }
   }
