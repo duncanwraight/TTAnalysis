@@ -10,6 +10,7 @@ import { UNFORCED_ERROR_DEFINITION, buildAnalysis, type PointRow } from '../lib/
 import { ATTACK_DEFINITION, SWEEPS, SWEEP_TAGS, answerChanges, isTicked, scoreBefore, sweepPoints, sweepStatus, type SweepProgress, type SweepTag } from '../lib/sweeps';
 import { checkPointEdits, editChanges, editFromPoint, normaliseEdit, type PointEdit } from '../lib/pointEdits';
 import PointEditDialog from '../components/PointEditDialog';
+import { DEFAULT_BEST_OF } from '../lib/scoring';
 import '../styles/components/MatchAnalysis.css';
 import '../styles/sweep.css';
 
@@ -100,7 +101,7 @@ const PointsEditor = () => {
 
   const checkEdits = useCallback((edits: PointEdit[]) => data && isComplete !== null ? checkPointEdits({
     initialServer: data.match.initial_server ?? 'player',
-    bestOf: data.match.best_of,
+    bestOf: data.match.best_of || DEFAULT_BEST_OF,
     isComplete,
     sets: data.sets,
     points: data.points,
@@ -173,7 +174,7 @@ const PointsEditor = () => {
   };
 
   const keepFromDialog = (edit: PointEdit) => {
-    setPending(prev => mergeEdits(prev, prepare([edit])));
+    setPending(prev => prepare(mergeEdits(prev, [edit])));
     setEditingId(null);
     setEditProblems(null);
   };
