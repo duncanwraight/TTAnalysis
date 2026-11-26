@@ -26,6 +26,8 @@ const Players = () => {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [saving, setSaving] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  // Tick "This is me" on someone who isn't the self player yet
+  const [makeSelf, setMakeSelf] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirm();
 
   useEffect(() => {
@@ -41,10 +43,12 @@ const Players = () => {
       });
   }, [api]);
 
-  const hasSelf = !!players?.some(p => p.is_self);
+  const self = players?.find(p => p.is_self) ?? null;
+  const hasSelf = !!self;
 
   const open = (player?: Player) => {
     setDialogError(null);
+    setMakeSelf(false);
     setEditing(player ? { ...player } : blankPlayer(!hasSelf, hasSelf ? '' : displayName ?? ''));
   };
 
@@ -56,22 +60,52 @@ const Players = () => {
       setDialogError('Give the player a name.');
       return;
     }
+    const switching = makeSelf && !editing.is_self;
+    if (switching && self) {
+      const ok = await confirm({
+        title: `Make ${name} you?`,
+        message: `${self.name} stops being you and becomes one of your other players, keeping the matches entered under their name. Older matches entered with no player name are your own, so they move to ${name}.`,
+        confirmLabel: `Yes, I'm ${name}`,
+      });
+      if (!ok) return;
+    }
     setSaving(true);
     setDialogError(null);
+    let playerSaved = false;
     try {
-      const saved = await api.player.savePlayer({ ...editing, name, notes: editing.notes.trim() });
+      let saved = await api.player.savePlayer({ ...editing, name, notes: editing.notes.trim() });
+      playerSaved = true;
+      if (switching) {
+        // If the next step fails, a retry must update this player rather than add them again
+        if (!editing.id) {
+          const id = saved.id;
+          setEditing(prev => (prev ? { ...prev, id } : prev));
+          setPlayers(prev => [...(prev ?? []), saved]);
+        }
+        await api.player.setSelfPlayer(saved.id);
+        saved = { ...saved, is_self: true };
+      }
       if (saved.is_self && name !== displayName) {
         // The account's name fills in "you" around the app; not worth failing over
         await saveDisplayName(name).catch(err => console.error('Failed to save your name:', err));
       }
-      setPlayers(prev => {
-        const rest = (prev ?? []).filter(p => p.id !== saved.id);
-        return [...rest, saved].sort((a, b) => Number(b.is_self) - Number(a.is_self) || a.name.localeCompare(b.name));
-      });
+      if (switching) {
+        // The old self player changed and matches may have moved, so load both again
+        const [loadedPlayers, matchCounts] = await Promise.all([api.player.getPlayers(), api.player.getMatchCounts()]);
+        setPlayers(loadedPlayers);
+        setCounts(matchCounts);
+      } else {
+        setPlayers(prev => {
+          const rest = (prev ?? []).filter(p => p.id !== saved.id);
+          return [...rest, saved].sort((a, b) => Number(b.is_self) - Number(a.is_self) || a.name.localeCompare(b.name));
+        });
+      }
       setEditing(null);
     } catch (err) {
       console.error('Failed to save player:', err);
-      setDialogError('The player did not save. Check your connection and try again.');
+      setDialogError(playerSaved
+        ? 'The player saved, but they were not made you. Check your connection and try again.'
+        : 'The player did not save. Check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -181,8 +215,23 @@ const Players = () => {
                     autoFocus
                     autoComplete="off"
                   />
-                  {editing.is_self && <span className="field-hint">This is you. Your matches show as "you" around the app.</span>}
+                  {editing.is_self && (
+                    <span className="field-hint">
+                      This is you. New matches fill in your name, and your own matches are linked here. If this isn't you, open your own player and tick "This is me".
+                    </span>
+                  )}
                 </label>
+                {!editing.is_self && (
+                  <>
+                    <label className="check">
+                      <input type="checkbox" checked={makeSelf} onChange={e => setMakeSelf(e.target.checked)} disabled={saving} />
+                      This is me
+                    </label>
+                    {makeSelf && self && (
+                      <span className="field-hint">{self.name} is you at the moment. Saving makes {editing.name.trim() || 'this player'} you instead.</span>
+                    )}
+                  </>
+                )}
               </section>
               <section className="shot-dialog-section" aria-labelledby="player-style-h">
                 <h3 id="player-style-h">Style</h3>

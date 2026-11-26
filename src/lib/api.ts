@@ -594,6 +594,13 @@ export const playerApi = {
     return data as Player;
   },
 
+  // Make this player "you". The old self player becomes an ordinary player, and
+  // matches with no player name (the owner's own, from before players) move across.
+  setSelfPlayer: async (id: string) => {
+    const { error } = await supabase.rpc('set_self_player', { target: id });
+    if (error) throw error;
+  },
+
   deletePlayer: async (id: string) => {
     const { error } = await supabase.from('players').delete().eq('id', id);
     if (error) throw error;
