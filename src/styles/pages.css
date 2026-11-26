@@ -99,6 +99,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .player-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .player-card-head h2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .player-card-count { font-size: 13px; }
+.player-card-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .player-card-style { display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
 .player-card-style .muted { font-size: 14px; }
 .player-card-notes { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -138,6 +139,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .ma-details dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px 24px; }
 .ma-details dt { font-size: 13px; color: var(--ink-3); }
 .ma-details dd { margin: 0; font-weight: 600; }
+.ma-details-history { font-size: 14px; }
 .ma-details-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; }
 .ma-details-side { border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
 .ma-details-side.you { background: #eef5fd; }

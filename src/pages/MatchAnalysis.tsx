@@ -7,6 +7,7 @@ import type { AnalysisData } from '../lib/api';
 import { Analysis, Pattern, ServeStats, ShotCount, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
 import { ATTACK_DEFINITION, SWEEPS, unconfirmedTags, type SweepTag } from '../lib/sweeps';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
+import { createSharedClient } from '../lib/supabase';
 import { buildSummaryInput, hashInput } from '../lib/aiSummary';
 import { describeHandAndRubbers, hasKit, opponentKit, playerKit, type Kit, type PlayStyle } from '../lib/styles';
 import CoachSummary from '../components/analysis/CoachSummary';
@@ -153,16 +154,22 @@ const MatchAnalysis = () => {
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const isSharedView = location.pathname.startsWith('/shared/');
+  // A match opened from a shared player history: /shared/history/:token/matches/:id
+  const isHistoryShare = location.pathname.startsWith('/shared/history/');
   const isOwnerView = !!user && !isSharedView;
   // The coach's summary is its own tab, at /matches/:id/summary or /shared/:token/summary
   const view: 'analysis' | 'summary' = location.pathname.endsWith('/summary') ? 'summary' : 'analysis';
-  const analysisPath = isSharedView ? `/shared/${token}` : `/matches/${id}/analysis`;
-  const summaryPath = isSharedView ? `/shared/${token}/summary` : `/matches/${id}/summary`;
+  const sharedBase = isHistoryShare ? `/shared/history/${token}/matches/${id}` : `/shared/${token}`;
+  const analysisPath = isSharedView ? sharedBase : `/matches/${id}/analysis`;
+  const summaryPath = isSharedView ? `${sharedBase}/summary` : `/matches/${id}/summary`;
 
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        if (isSharedView) {
+        if (isHistoryShare) {
+          if (!token || !id) throw new Error('Missing share token');
+          setData(await api.match.getAnalysis(id, createSharedClient(token)));
+        } else if (isSharedView) {
           if (!token) throw new Error('Missing share token');
           setData(await api.match.getSharedAnalysis(token));
         } else {
@@ -180,7 +187,7 @@ const MatchAnalysis = () => {
     };
 
     fetchAnalysis();
-  }, [id, token, isSharedView, api]);
+  }, [id, token, isSharedView, isHistoryShare, api]);
 
   const analysis: Analysis | null = useMemo(() => data && buildAnalysis({
     initialServer: data.match.initial_server ?? 'player',
@@ -409,6 +416,13 @@ const MatchAnalysis = () => {
             <SideStyle name={cleanText(match.player_name) ?? 'You'} kit={playerKit(match)} styles={data.styles.styles} side="you" />
             <SideStyle name={match.opponent_name} kit={opponentKit(match)} styles={data.styles.styles} side="opp" />
           </div>
+        )}
+        {isOwnerView && match.player_id && (
+          <p className="ma-details-history" data-html2canvas-ignore="true">
+            <Link to={`/players/${match.player_id}/history`}>
+              {cleanText(match.player_name) ? `All of ${cleanText(match.player_name)}'s matches` : 'All your matches'}
+            </Link>
+          </p>
         )}
       </section>
 
@@ -768,9 +782,11 @@ const MatchAnalysis = () => {
           <button type="button" className="btn" onClick={handleStopSharing}>Stop sharing</button>
         )}
         {isOwnerView && <Link to={editorPath} className="btn quiet">Edit points and sweeps</Link>}
-        {isSharedView
-          ? <Link to="/" className="btn quiet">Go to home</Link>
-          : <Link to="/matches" className="btn quiet">Back to matches</Link>}
+        {isHistoryShare
+          ? <Link to={`/shared/history/${token}`} className="btn quiet">Back to all matches</Link>
+          : isSharedView
+            ? <Link to="/" className="btn quiet">Go to home</Link>
+            : <Link to="/matches" className="btn quiet">Back to matches</Link>}
       </footer>
       {shareError && <div className="notice error">{shareError}</div>}
       {manualShareUrl && (

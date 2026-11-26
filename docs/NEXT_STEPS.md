@@ -1,6 +1,6 @@
 # Next steps
 
-Last updated: 2026-11-26
+Last updated: 2026-11-26 (player history built, not yet shipped)
 
 Handover notes for picking this work up in a fresh session. Section 0 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
 
@@ -50,9 +50,25 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 15. **Production checks:** no old points with a service fault as the losing shot, and no other account with a friend as its self player (sections 0 and 4). Adding or deleting a point mid-match was dropped: editing a point covers every mistake that keeps the point count right, and the tracker's score shows a missed point while it's being entered.
 16. **Aesthetic sweep** (section 4), in `059a531`.
 
+Built on 2026-11-26, not yet committed or shipped (see *Player history* below):
+
+1. **Player history** at `/players/:id/history`, with sharing by link. Migration `20261129120000_player_history_sharing.sql` is applied on the local stack only.
+
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. On 2026-11-26 they also confirmed on production the "This is me" box on the Players page, the tracker's keyboard shortcuts, the Edit button in the points editor and the password reset email (the link lands on ttanalysis.app/reset-password). Nothing shipped is waiting on a check by a person.
+
+## Player history (built, not shipped)
+
+Designed with the user on 2026-11-26 on this canvas: https://claude.ai/artifact/JpbbeN917uCogDkWvT69Gp. The user's one change was to lead the Opponents tab with sets rather than points, because sets win matches, and to show the gap between the two: a player who wins points but loses sets is losing them at the end, through a stroke under pressure or nerves.
+
+- **Where:** `src/pages/PlayerHistory.tsx`, `src/components/history/` (Overview, Shots, Opponents), `src/styles/components/PlayerHistory.css`, and `buildHistory` in `src/lib/history.ts` (21 tests). Reached from a History button on each player card with matches, and an "All of X's matches" link on the analysis page's Match details card (owner only).
+- **Filters:** 3, 6 or 12 months or all (the default), finished matches only (on by default), and event.
+- **Overview:** totals, What stands out (at most three), seven trend charts (sets, points, serve, receive, close finishes, unforced errors per 10 points, attacked first), and the match list.
+- **Sharing:** `players.share_token`, Share and Stop sharing in a dialog. The link shows the same tabs read-only, and each match opens under it with its coach's summary if it has one. The player's notes and summary notes are never readable through it.
+- **Decided while building:** sharing uses RLS policies keyed on the player's token, not a single JSON function as first planned, so the shared view loads through the same queries as the owner's and can't leak a column the owner's view doesn't. PDF export of the history was left out.
+- **Checked:** RLS over REST on the local stack. The token reads only that player's matches, sets, points and summaries; summary notes and players are refused; a wrong or malformed token reads nothing; another signed-in user can't set a player's token or see their matches; Stop sharing kills the link. In headless Chromium at 1440px and 390px with six temporary copies of the local Sam Carter matches (deleted afterwards): every tab, the share dialog, the shared history and a shared match, with no sideways scrolling. The trend comparisons and What stands out haven't been seen on real data with 6 or more matches.
+- **To ship:** commit, `supabase db push --remote --dry-run` (only `20261129120000_player_history_sharing.sql` pending), `supabase db push --remote --yes`, then push `main`. The Edge Function doesn't change. Production has 7 matches, so most charts there will say "Too few matches to compare yet".
 
 ## 0. Players, styles of play and notes (shipped)
 

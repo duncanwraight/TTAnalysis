@@ -14,6 +14,7 @@ const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const AdminShots = lazy(() => import('./pages/AdminShots'));
 const AdminStyles = lazy(() => import('./pages/AdminStyles'));
 const Players = lazy(() => import('./pages/Players'));
+const PlayerHistory = lazy(() => import('./pages/PlayerHistory'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -95,6 +96,12 @@ function App() {
               {/* Public shared analysis route - no authentication required */}
               <Route path="/shared/:token" element={<MatchAnalysis />} />
               <Route path="/shared/:token/summary" element={<MatchAnalysis />} />
+              {/* A player's history shared by link, and each match in it */}
+              <Route path="/shared/history/:token" element={<PlayerHistory />} />
+              <Route path="/shared/history/:token/shots" element={<PlayerHistory />} />
+              <Route path="/shared/history/:token/opponents" element={<PlayerHistory />} />
+              <Route path="/shared/history/:token/matches/:id" element={<MatchAnalysis />} />
+              <Route path="/shared/history/:token/matches/:id/summary" element={<MatchAnalysis />} />
               {/* Old-style links (match ID instead of token) now show the invalid link message */}
               <Route path="/shared/matches/:token/analysis" element={<MatchAnalysis />} />
               
@@ -128,6 +135,30 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Players />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/players/:id/history"
+                element={
+                  <ProtectedRoute>
+                    <PlayerHistory />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/players/:id/history/shots"
+                element={
+                  <ProtectedRoute>
+                    <PlayerHistory />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/players/:id/history/opponents"
+                element={
+                  <ProtectedRoute>
+                    <PlayerHistory />
                   </ProtectedRoute>
                 }
               />

@@ -47,6 +47,28 @@ function isPostgrestError(error: unknown): error is PostgrestError {
   return error !== null && typeof error === 'object' && typeof e.code === 'string' && typeof e.message === 'string';
 }
 
+// The shot list with its guide, in the shape buildAnalysis takes
+const fetchAnalysisShots = async (client: SupabaseClient): Promise<AnalysisShot[]> => {
+  type ShotRow = {
+    id: string; name: string; display_name: string; check_qualities: string[] | null; technical_notes: string | null;
+    role: Role | null;
+    shot_categories: { name: string; display_order: number } | null;
+  };
+  const { data, error } = await client.from('shots')
+    .select('id, name, display_name, check_qualities, technical_notes, role, shot_categories(name, display_order)');
+  if (error) throw new Error(`Shots query failed: ${error.message}`);
+  return (data as unknown as ShotRow[]).map(s => ({
+    id: s.id,
+    name: s.name,
+    display_name: s.display_name,
+    category: s.shot_categories?.name ?? '',
+    category_order: s.shot_categories?.display_order ?? 0,
+    check_qualities: s.check_qualities ?? [],
+    technical_notes: s.technical_notes,
+    role: s.role,
+  }));
+};
+
 /**
  * Match API functions
  */
@@ -165,8 +187,7 @@ export const matchApi = {
         .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_early_attack')
         .eq('match_id', id)
         .order('created_at', { ascending: true }),
-      client.from('shots')
-        .select('id, name, display_name, check_qualities, technical_notes, role, shot_categories(name, display_order)'),
+      fetchAnalysisShots(client),
       // Readable by the owner, or with the share token on a shared client
       client.from('match_summaries')
         .select('summary, input_hash, model, created_at')
@@ -177,17 +198,12 @@ export const matchApi = {
       styleApi.getStyleData(client),
     ]);
 
-    for (const [name, result] of [['Match', match], ['Sets', sets], ['Points', points], ['Shots', shots]] as const) {
+    for (const [name, result] of [['Match', match], ['Sets', sets], ['Points', points]] as const) {
       if (result.error) {
         throw new Error(`${name} query failed: ${isPostgrestError(result.error) ? result.error.message : 'unknown error'}`);
       }
     }
 
-    type ShotRow = {
-      id: string; name: string; display_name: string; check_qualities: string[] | null; technical_notes: string | null;
-      role: Role | null;
-      shot_categories: { name: string; display_order: number } | null;
-    };
     const analysisMatch = match.data as AnalysisMatch;
     // Players are owner only, so a shared client gets nothing back
     let playerNotes: string | null = null;
@@ -200,16 +216,7 @@ export const matchApi = {
       match: analysisMatch,
       sets: sets.data as AnalysisSet[],
       points: points.data as AnalysisPoint[],
-      shots: (shots.data as unknown as ShotRow[]).map(s => ({
-        id: s.id,
-        name: s.name,
-        display_name: s.display_name,
-        category: s.shot_categories?.name ?? '',
-        category_order: s.shot_categories?.display_order ?? 0,
-        check_qualities: s.check_qualities ?? [],
-        technical_notes: s.technical_notes,
-        role: s.role,
-      })),
+      shots,
       // A summary that fails to load shouldn't take the analysis down with it
       summary: summary.error ? null : (summary.data as StoredSummary | null),
       summaryNotes: notes.error ? null : (notes.data?.notes ?? null),
@@ -644,6 +651,123 @@ export const playerApi = {
   },
 };
 
+/** The player a history is about. share_token is only read on the owner's view. */
+export type HistoryPlayer = Kit & { id: string; name: string; is_self?: boolean; share_token?: string | null };
+
+export type HistoryMatchRow = MatchKit & Pick<Match, 'id' | 'opponent_name' | 'event' | 'video_url' | 'date' | 'initial_server' | 'is_complete' | 'confirmed_tags'>;
+
+export type HistoryData = {
+  player: HistoryPlayer;
+  matches: { match: HistoryMatchRow; sets: AnalysisSet[]; points: AnalysisPoint[] }[];
+  shots: AnalysisShot[];
+  styles: StyleData;
+};
+
+// PostgREST returns at most this many rows a request
+const PAGE = 1000;
+// Match ids per request, to keep the URL short
+const IDS_PER_REQUEST = 40;
+
+const chunks = <T>(list: T[], size: number) =>
+  Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
+
+type PointRow = AnalysisPoint & { match_id: string };
+type SetRow = AnalysisSet & { match_id: string };
+
+/** Every set and point of these matches, a page at a time. Points come back in the order they were entered. */
+const fetchSetsAndPoints = async (client: SupabaseClient, matchIds: string[]) => {
+  const sets: SetRow[] = [];
+  const points: PointRow[] = [];
+  for (const ids of chunks(matchIds, IDS_PER_REQUEST)) {
+    const setResult = await client.from('sets').select('id, match_id, set_number, player_score, opponent_score').in('match_id', ids);
+    if (setResult.error) throw new Error(`Sets query failed: ${setResult.error.message}`);
+    sets.push(...(setResult.data as SetRow[]));
+    for (let from = 0; ; from += PAGE) {
+      const pointResult = await client.from('points')
+        .select('id, match_id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_early_attack')
+        .in('match_id', ids)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (pointResult.error) throw new Error(`Points query failed: ${pointResult.error.message}`);
+      points.push(...(pointResult.data as PointRow[]));
+      if (pointResult.data.length < PAGE) break;
+    }
+  }
+  return { sets, points };
+};
+
+/** A player's matches for the history page, for the owner or through a history share link. */
+export const historyApi = {
+  getHistory: async (playerId: string): Promise<HistoryData> => {
+    const { data, error } = await supabase
+      .from('players')
+      .select('id, name, is_self, style_id, hand, forehand_rubber, backhand_rubber, share_token')
+      .eq('id', playerId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error('Player not found');
+    return historyApi.loadHistory(data as HistoryPlayer, supabase);
+  },
+
+  // Throws if the token is unknown or sharing has been turned off
+  getSharedHistory: async (shareToken: string): Promise<HistoryData> => {
+    const client = createSharedClient(shareToken);
+    const { data, error } = await client.rpc('shared_history_player');
+    if (error) throw error;
+    const player = (data as HistoryPlayer[] | null)?.[0];
+    if (!player) throw new Error('Shared history not found');
+    return historyApi.loadHistory(player, client);
+  },
+
+  loadHistory: async (player: HistoryPlayer, client: SupabaseClient): Promise<HistoryData> => {
+    const [matchResult, shots, styles] = await Promise.all([
+      client.from('matches')
+        .select(`id, opponent_name, event, video_url, date, initial_server, is_complete, confirmed_tags, ${MATCH_KIT_COLUMNS}`)
+        .eq('player_id', player.id)
+        .order('date', { ascending: true })
+        .order('created_at', { ascending: true }),
+      fetchAnalysisShots(client),
+      styleApi.getStyleData(client),
+    ]);
+    if (matchResult.error) throw new Error(`Matches query failed: ${matchResult.error.message}`);
+    const rows = matchResult.data as HistoryMatchRow[];
+    const { sets, points } = await fetchSetsAndPoints(client, rows.map(m => m.id));
+    const strip = <T extends { match_id: string }>(r: T): Omit<T, 'match_id'> => {
+      const rest: Partial<T> = { ...r };
+      delete rest.match_id;
+      return rest as Omit<T, 'match_id'>;
+    };
+    return {
+      player,
+      matches: rows.map(match => ({
+        match,
+        sets: sets.filter(x => x.match_id === match.id).map(strip),
+        points: points.filter(x => x.match_id === match.id).map(strip),
+      })),
+      shots,
+      styles,
+    };
+  },
+
+  // Turn on sharing for a player's history, returning the token (reuses an existing one)
+  enableSharing: async (playerId: string): Promise<string> => {
+    const { data, error } = await supabase.from('players').select('share_token').eq('id', playerId).single();
+    if (error) throw error;
+    if (data.share_token) return data.share_token as string;
+    const shareToken = crypto.randomUUID();
+    const update = await supabase.from('players').update({ share_token: shareToken }).eq('id', playerId);
+    if (update.error) throw update.error;
+    return shareToken;
+  },
+
+  // Turn off sharing. The old link stops working for good.
+  disableSharing: async (playerId: string) => {
+    const { error } = await supabase.from('players').update({ share_token: null }).eq('id', playerId);
+    if (error) throw error;
+  },
+};
+
 export default {
   match: matchApi,
   set: setApi,
@@ -651,4 +775,5 @@ export default {
   shot: shotApi,
   style: styleApi,
   player: playerApi,
+  history: historyApi,
 };

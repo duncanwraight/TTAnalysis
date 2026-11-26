@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import StyleFields from '../components/StyleFields';
@@ -173,7 +174,10 @@ const Players = () => {
                       <h2>{p.name} {p.is_self && <span className="chip small">You</span>}</h2>
                       <span className="muted player-card-count">{matches} {matches === 1 ? 'match' : 'matches'}</span>
                     </div>
-                    <button type="button" className="btn small" onClick={() => open(p)}>Edit</button>
+                    <div className="player-card-actions">
+                      {matches > 0 && <Link to={`/players/${p.id}/history`} className="btn small primary">History</Link>}
+                      <button type="button" className="btn small" onClick={() => open(p)}>Edit</button>
+                    </div>
                   </div>
                   {style || kit ? (
                     <div className="player-card-style">
