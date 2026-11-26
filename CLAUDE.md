@@ -107,7 +107,7 @@ The database uses PostgreSQL with Supabase for Auth and Row Level Security. The 
 - `/src/pages`: Main application pages/screens. `Home` shows `HomeBrochure` (the marketing page, styles in `src/styles/home.css`, screenshots in `src/assets/home/`) to signed-out visitors and sends signed-in users to `/matches`. Its facts are constants at the top of `HomeBrochure.tsx`; a `null` one stays hidden. The build prerenders it into `dist/index.html` (`src/prerender.tsx`, `scripts/prerender.mjs`), served only for `/`; every other route is rewritten to `dist/app.html`
 - `/src/lib`: Utilities and external clients (Supabase). `password.ts` holds the minimum password length (8), which must match Supabase's own setting
 - `/src/types`: TypeScript definitions for database entities
-- `/src/styles`: Page stylesheets. Tokens and shared pieces (cards, `.btn`, fields, `.segmented`, `.data-table`, `.chip`, `.notice`, `.state`) live in `src/index.css`; blue `--you` and orange `--opp` mean player and opponent and aren't used as general accents
+- `/src/styles`: Page stylesheets. Tokens and shared pieces (cards, `.btn`, fields, `.segmented`, `.data-table` inside a `.table-card` scroller, `.chip`, `.notice`, `.notice-with-action` for a notice with a button under it, `.state`) live in `src/index.css`; blue `--you` and orange `--opp` mean player and opponent and aren't used as general accents
 - `/docs`: Project documentation
 
 ## Key Features
