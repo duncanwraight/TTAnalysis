@@ -177,7 +177,7 @@ const Players = () => {
                   </div>
                   {style || kit ? (
                     <div className="player-card-style">
-                      <strong>{style ?? 'No style set'}</strong>
+                      {style ? <strong>{style}</strong> : <span className="faint">No style set yet</span>}
                       {kit && <span className="muted">{kit}</span>}
                     </div>
                   ) : (

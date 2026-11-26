@@ -151,7 +151,7 @@ const AdminPanel = () => {
               </p>
             </section>
 
-            <div className="card table-card">
+            <div className="card table-card admin-users">
               <table className="data-table" style={{ minWidth: 720 }}>
                 <thead>
                   <tr>
@@ -166,7 +166,7 @@ const AdminPanel = () => {
                   {users.map(user => (
                     <tr key={user.id}>
                       <th scope="row">{user.email}</th>
-                      <td className="muted">{new Date(user.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                      <td className="muted nowrap">{new Date(user.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       <td>{user.is_admin ? <span className="chip small">Admin</span> : <span className="muted">User</span>}</td>
                       <td>
                         {user.ai_summaries_enabled ? <span className="chip small">On</span> : <span className="muted">Off</span>}

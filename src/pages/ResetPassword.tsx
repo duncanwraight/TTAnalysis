@@ -64,12 +64,12 @@ const ResetPassword = () => {
             <h2>Choose a new password</h2>
 
             {done ? (
-              <div className="notice success" role="status">
-                <p>Your password has been updated.</p>
+              <div className="notice-with-action">
+                <div className="notice success" role="status">Your password has been updated.</div>
                 <Button variant="primary" onClick={() => navigate('/matches')}>Go to your matches</Button>
               </div>
             ) : hasSession === false ? (
-              <div>
+              <div className="notice-with-action">
                 <div className="notice error" role="alert">
                   This reset link is invalid or has expired. Request a new one from the sign-in page.
                 </div>

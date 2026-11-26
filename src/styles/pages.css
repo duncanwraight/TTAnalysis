@@ -15,7 +15,8 @@
 .match-card-head .chip { flex: none; }
 .match-card-meta { font-size: 14px; color: var(--ink-2); }
 .match-card-notes { font-size: 14px; color: var(--ink-3); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.match-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 10px; }
+.match-card-actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 10px; }
+.match-card-actions > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .match-card-actions .btn.small { min-height: var(--tap); }
 .match-card-delete { margin-left: auto; }
 
@@ -26,7 +27,10 @@
 .admin-category-head .faint { font-weight: 400; font-size: 14px; }
 .admin-empty { font-size: 14px; padding: 8px 0; }
 .admin-actions { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.admin-ai { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.admin-ai { display: flex; flex-direction: column; gap: 12px; }
+.admin-users td.nowrap { white-space: nowrap; }
+/* Same width whichever label a button has, so the rows line up */
+.admin-users .admin-actions .btn { min-width: 128px; justify-content: center; }
 .admin-ai-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; }
 .admin-ai-head h2 { font-size: 18px; margin-bottom: 4px; }
 .admin-ai-head p { font-size: 14px; }
@@ -108,6 +112,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 
 /* Admin styles */
 .admin-styles-table th[scope=row] { font-weight: 600; white-space: nowrap; }
+.admin-styles-table thead th { white-space: nowrap; }
+.admin-styles-table td:nth-child(2) { min-width: 240px; }
 .admin-written { color: var(--success); font-weight: 600; }
 .admin-actions { text-align: right; }
 .admin-notes-card { display: flex; flex-direction: column; gap: 14px; }

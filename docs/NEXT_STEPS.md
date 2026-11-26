@@ -49,14 +49,9 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 14. **No service fault as a losing shot** (section 4), in `ff29493`.
 15. **Production checks:** no old points with a service fault as the losing shot, and no other account with a friend as its self player (sections 0 and 4). Adding or deleting a point mid-match was dropped: editing a point covers every mistake that keeps the point count right, and the tracker's score shows a missed point while it's being entered.
 
-Items 11 to 13 were checked on the local stack (REST and Chrome), and item 14 by its tests. All four are live, but nobody has tried them on production yet.
-
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
-The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
-
-- The "This is me" box on the Players page, the tracker's keyboard shortcuts and the Edit button in the points editor (items 11 to 13).
-- The password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
+The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. On 2026-11-26 they also confirmed on production the "This is me" box on the Players page, the tracker's keyboard shortcuts, the Edit button in the points editor and the password reset email (the link lands on ttanalysis.app/reset-password). Nothing shipped is waiting on a check by a person.
 
 ## 0. Players, styles of play and notes (shipped)
 

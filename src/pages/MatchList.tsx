@@ -129,27 +129,30 @@ const MatchList = () => {
                   </p>
                   {match.notes && <p className="match-card-notes">{match.notes}</p>}
                   <div className="match-card-actions">
-                    {match.is_complete ? (
-                      <>
-                        <Link to={`/matches/${match.id}/analysis`} className="btn primary small">Analysis</Link>
-                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points and sweeps</Link>
-                        <Link to={`/matches/${match.id}`} className="btn small">Tracker</Link>
-                      </>
-                    ) : (
-                      <>
-                        <Link to={`/matches/${match.id}`} className="btn primary small">Continue entering points</Link>
-                        <Link to={`/matches/${match.id}/analysis`} className="btn small">Analysis</Link>
-                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points and sweeps</Link>
-                      </>
-                    )}
-                    <button
-                      onClick={(e) => handleDeleteMatch(match.id, e)}
-                      className="btn danger small match-card-delete"
-                      disabled={isDeleting}
-                      aria-label={`Delete the match against ${match.opponent_name}`}
-                    >
-                      Delete
-                    </button>
+                    <div>
+                      {match.is_complete ? (
+                        <>
+                          <Link to={`/matches/${match.id}/analysis`} className="btn primary small">Analysis</Link>
+                          <Link to={`/matches/${match.id}`} className="btn small">Tracker</Link>
+                        </>
+                      ) : (
+                        <>
+                          <Link to={`/matches/${match.id}`} className="btn primary small">Continue entering points</Link>
+                          <Link to={`/matches/${match.id}/analysis`} className="btn small">Analysis</Link>
+                        </>
+                      )}
+                    </div>
+                    <div>
+                      <Link to={`/matches/${match.id}/points`} className="btn small">Edit points and sweeps</Link>
+                      <button
+                        onClick={(e) => handleDeleteMatch(match.id, e)}
+                        className="btn danger small match-card-delete"
+                        disabled={isDeleting}
+                        aria-label={`Delete the match against ${match.opponent_name}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </li>
               );

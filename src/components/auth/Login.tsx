@@ -54,8 +54,10 @@ const Login = ({ onToggleView }: LoginProps) => {
         <h2>Reset your password</h2>
         <p className="muted">We'll email you a link to choose a new one.</p>
         {resetSent ? (
-          <div className="notice success" role="status">
-            <p>If there's an account for {email}, a reset link is on its way. Check your inbox.</p>
+          <div className="notice-with-action">
+            <div className="notice success" role="status">
+              If there's an account for {email}, a reset link is on its way. Check your inbox.
+            </div>
             <Button onClick={() => setResetMode(false)}>Back to sign in</Button>
           </div>
         ) : (
