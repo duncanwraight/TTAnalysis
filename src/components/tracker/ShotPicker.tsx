@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { isTypingTarget } from '../../lib/keys';
 import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT, Shot, ShotCategory } from '../../lib/shotsApi';
 import { shotLabel } from '../../lib/analysis';
 import type { ShotInfo } from '../../types/database.types';
@@ -14,6 +15,9 @@ type ShotPickerProps = {
   // Serve or Service fault can be picked.
   sideServed: boolean;
   disabled?: boolean;
+  // This picker takes the keyboard: left and right arrows change category, a
+  // row's number then F or B picks the shot. Only one picker has it at a time.
+  keyboard?: boolean;
 };
 
 const categoryLabel = (name: string) => {
@@ -25,11 +29,13 @@ const categoryLabel = (name: string) => {
 // points so a run of similar rallies doesn't need the tab picking again
 const lastCategoryIds: { [pickerId: string]: string } = {};
 
-const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = false }: ShotPickerProps) => {
+const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = false, keyboard = false }: ShotPickerProps) => {
   const [categories, setCategories] = useState<ShotCategory[]>([]);
   const [shots, setShots] = useState<Shot[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(lastCategoryIds[id] ?? null);
+  // The row whose number was typed, waiting for F or B
+  const [pendingRow, setPendingRow] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +54,31 @@ const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = fals
     };
   }, []);
 
+  // The key handler reads the latest render's values through this
+  const keyState = useRef<{ move: (step: number) => void; typeRow: (row: number) => void; pickHand: (hand: Hand) => boolean } | null>(null);
+  const listening = keyboard && !disabled;
+  useEffect(() => {
+    if (!listening) {
+      setPendingRow(null);
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
+      const handlers = keyState.current;
+      if (!handlers) return;
+      const key = e.key.toLowerCase();
+      if (key === 'arrowleft') handlers.move(-1);
+      else if (key === 'arrowright') handlers.move(1);
+      else if (/^[1-9]$/.test(key)) handlers.typeRow(Number(key) - 1);
+      else if (key === 'f' || key === 'b') {
+        if (!handlers.pickHand(key === 'f' ? 'fh' : 'bh')) return;
+      } else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [listening]);
+
   if (error) return <div className="notice error" role="alert">{error}</div>;
   if (categories.length === 0) return <div className="shot-picker-loading" role="status">Loading shots...</div>;
 
@@ -60,11 +91,31 @@ const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = fals
 
   const pickCategory = (categoryId: string) => {
     setActiveId(categoryId);
+    setPendingRow(null);
     lastCategoryIds[id] = categoryId;
   };
 
   const isUnavailable = (shot: Shot) =>
     (shot.name === 'serve' && !sideServed) || (shot.name === SERVICE_FAULT_SHOT && sideServed);
+
+  keyState.current = {
+    move: step => {
+      const index = categories.findIndex(c => c.id === active.id);
+      pickCategory(categories[(index + step + categories.length) % categories.length].id);
+    },
+    typeRow: row => {
+      const shot = categoryShots[row];
+      setPendingRow(shot && !isUnavailable(shot) ? row : null);
+    },
+    pickHand: hand => {
+      const shot = pendingRow === null ? undefined : categoryShots[pendingRow];
+      if (!shot) return false;
+      setPendingRow(null);
+      onSelect({ shotId: shot.id, hand });
+      return true;
+    },
+  };
+  const showKeys = keyboard && !disabled;
 
   const label = (shot: Shot) =>
     shotLabel({ ...shot, category: active.name, category_order: active.display_order });
@@ -87,11 +138,12 @@ const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = fals
       </div>
       <ul className="shot-rows">
         {categoryShots.length === 0 && <li className="faint shot-row-empty">No shots in this category.</li>}
-        {categoryShots.map(shot => {
+        {categoryShots.map((shot, index) => {
           const unavailable = isUnavailable(shot);
           const selectedHand: Hand | null = selected?.shotId === shot.id ? selected.hand : null;
           return (
-            <li key={shot.id} className={`shot-row${selectedHand ? ' is-selected' : ''}${unavailable ? ' is-unavailable' : ''}`}>
+            <li key={shot.id} className={`shot-row${selectedHand ? ' is-selected' : ''}${unavailable ? ' is-unavailable' : ''}${pendingRow === index ? ' is-pending' : ''}`}>
+              {showKeys && index < 9 && <kbd className="shot-row-key" aria-hidden="true">{index + 1}</kbd>}
               <span className="shot-row-label">{label(shot)}</span>
               {(['fh', 'bh'] as const).map(hand => (
                 <button

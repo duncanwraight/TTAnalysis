@@ -154,3 +154,16 @@
   .is-recording .tracker-tools { display: none; }
   .match-complete h1 { font-size: 26px; }
 }
+
+/* Keyboard shortcuts, shown on wider screens only */
+.tracker kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 5px;
+  border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px;
+  background: var(--surface); font: 600 12px/1 inherit; color: var(--ink-2);
+}
+.tracker-prompt .tracker-keys { display: block; margin-top: 6px; font-size: 13px; }
+.point-entry-note.tracker-keys { line-height: 1.9; }
+.shot-row-key { flex: none; }
+.shot-row.is-pending { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--ink); }
+.shot-row.is-pending .shot-hand:not(:disabled) { border-color: var(--ink); }

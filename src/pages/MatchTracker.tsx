@@ -10,6 +10,7 @@ import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT, ShotData } from '../lib/shotsApi';
 import { isSafeVideoUrl, playerLabel } from '../lib/matchDetails';
+import { isTypingTarget } from '../lib/keys';
 import { UNFORCED_ERROR_DEFINITION, shotLabel } from '../lib/analysis';
 import '../styles/components/Tracker.css';
 import {
@@ -448,6 +449,36 @@ const MatchTracker = () => {
       }
     });
 
+  // Keyboard, for entering on a laptop: 1 or 2 for who won, Z to undo, then in
+  // a point U and L for the flags, Backspace to change the winning shot and
+  // Escape to cancel. The shot pickers handle their own keys.
+  const keyActions = useRef<(key: string) => boolean>(() => false);
+  keyActions.current = key => {
+    const inPoint = selectedWinner !== null;
+    if (!match || loading || matchState.isMatchComplete || isSaving) return false;
+    if (!inPoint) {
+      if (key === '1') handlePlayerSelect('player');
+      else if (key === '2') handlePlayerSelect('opponent');
+      else if (key === 'z' && canUndo) undoLastPoint();
+      else return false;
+      return true;
+    }
+    if (key === 'u') setIsUnforcedError(v => !v);
+    else if (key === 'l') setIsLuckyPoint(v => !v);
+    else if (key === 'escape') resetPointFlow();
+    else if (key === 'backspace' && winningShot) handleUndoWinningShot();
+    else return false;
+    return true;
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || isTypingTarget(e.target)) return;
+      if (keyActions.current(e.key.toLowerCase())) e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // "You" on your own matches, the player's name on someone else's
   const player = playerLabel(match?.player_name, displayName);
   const opponent = match?.opponent_name || 'Opponent';
@@ -571,7 +602,14 @@ const MatchTracker = () => {
         />
 
         {!pointInProgress ? (
-          <p className="tracker-prompt">Who won the point? Tap their side of the score.</p>
+          <p className="tracker-prompt">
+            Who won the point? Tap their side of the score.
+            {!isMobile && (
+              <span className="tracker-keys faint">
+                Or press <kbd>1</kbd> for {player === 'You' ? 'you' : player}, <kbd>2</kbd> for {opponent}{canUndo && <>, <kbd>Z</kbd> to undo</>}.
+              </span>
+            )}
+          </p>
         ) : (
           <section className="card point-entry" aria-label="Enter the point">
             <div className="point-entry-head">
@@ -604,6 +642,7 @@ const MatchTracker = () => {
                     onSelect={handleWinningShotSelect}
                     sideServed={winnerServed}
                     disabled={isSaving}
+                    keyboard={!isMobile && winningShot === null}
                   />
                 )}
               </div>
@@ -618,6 +657,7 @@ const MatchTracker = () => {
                     onSelect={handleOtherShotSelect}
                     sideServed={!winnerServed}
                     disabled={winningShot === null || isSaving}
+                    keyboard={!isMobile && winningShot !== null}
                   />
                 </div>
               )}
@@ -625,6 +665,12 @@ const MatchTracker = () => {
             <p className="point-entry-note faint">
               {winningShot === null ? 'Pick the winning shot first. ' : ''}The point saves as soon as you pick the losing shot.
             </p>
+            {!isMobile && (
+              <p className="point-entry-note faint tracker-keys">
+                Keys: <kbd>←</kbd> <kbd>→</kbd> change category, a shot's number then <kbd>F</kbd> or <kbd>B</kbd> picks it,
+                {' '}<kbd>U</kbd> unforced, <kbd>L</kbd> lucky, <kbd>Backspace</kbd> changes the winning shot, <kbd>Esc</kbd> cancels the point.
+              </p>
+            )}
           </section>
         )}
       </div>

@@ -101,7 +101,7 @@ The database uses PostgreSQL with Supabase for Auth and Row Level Security. The 
 
 ## Code Organization
 
-- `/src/components`: Reusable UI components. `Layout` renders the header, with a purple admin variant on `/admin` pages. `tracker/` holds the tracker's `Scoreboard` (each side is the "who won" button), `ShotPicker` and `MatchComplete`
+- `/src/components`: Reusable UI components. `Layout` renders the header, with a purple admin variant on `/admin` pages. `tracker/` holds the tracker's `Scoreboard` (each side is the "who won" button), `ShotPicker` and `MatchComplete`. On wider screens the tracker takes the keyboard: 1 or 2 for who won, Z to undo, then left and right arrows for the category, a shot's number then F or B, U and L for the flags, Backspace to change the winning shot and Escape to cancel. Only the picker waiting for a shot listens (`keyboard` prop), and `isTypingTarget` in `src/lib/keys.ts` keeps shortcuts out of text fields
 - `/src/pages`: Main application pages/screens. `Home` shows `HomeBrochure` (the marketing page, styles in `src/styles/home.css`, screenshots in `src/assets/home/`) to signed-out visitors and sends signed-in users to `/matches`. Its facts are constants at the top of `HomeBrochure.tsx`; a `null` one stays hidden. The build prerenders it into `dist/index.html` (`src/prerender.tsx`, `scripts/prerender.mjs`), served only for `/`; every other route is rewritten to `dist/app.html`
 - `/src/lib`: Utilities and external clients (Supabase). `password.ts` holds the minimum password length (8), which must match Supabase's own setting
 - `/src/types`: TypeScript definitions for database entities

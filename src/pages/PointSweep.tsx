@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { isTypingTarget } from '../lib/keys';
 import { Link, useNavigate, useParams } from 'react-router';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
@@ -130,9 +131,7 @@ const Sweep = () => {
   keys.current = { answer, back };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
       const key = e.key.toLowerCase();
       if (key === 'y') keys.current.answer(true);
       else if (key === 'n' || key === ' ') keys.current.answer(false);
