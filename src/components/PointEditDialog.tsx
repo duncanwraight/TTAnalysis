@@ -163,6 +163,7 @@ const PointEditDialog = ({
                 selected={losing}
                 onSelect={setLosing}
                 sideServed={winner !== server}
+                losing
                 disabled={saving}
                 rememberCategory={false}
               />

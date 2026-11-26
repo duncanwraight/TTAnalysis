@@ -190,7 +190,7 @@ The 0-3 match against Lee Tinkler (2025-09-16) was the user's own, entered on a 
 
 Still to do:
 
-- The losing shot picker lets the receiver pick "Service fault" as their losing shot, which can't happen (a service fault is the receiver's winning shot). It's the tracker's own rule (`isUnavailable` in `ShotPicker`), and the points editor's dialog has the same picker. Found on 2026-11-26 and left alone.
+- Fixed on 2026-11-26: the losing shot picker no longer offers "Service fault" (a service fault is only ever the receiver's winning shot). `ShotPicker` takes a `losing` prop, used by the tracker and the points editor, and `checkPointEdits` refuses an edited point with a service fault as its losing shot.
 
 ## 5. Tests for the scoring rules (done)
 

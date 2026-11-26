@@ -132,6 +132,9 @@ export const checkPointEdits = ({ initialServer, bestOf, isComplete, sets, point
       if (check && winning === SERVICE_FAULT && p.winner === server) {
         problems.push(`${where}: a service fault wins the point for the receiver, but ${sideName(server)} served it.`);
       }
+      if (byId.has(p.id) && losing === SERVICE_FAULT) {
+        problems.push(`${where}: a service fault can only be the receiver's winning shot, not a losing shot.`);
+      }
       if (p.winner === 'player') running.playerScore += 1;
       else running.opponentScore += 1;
       if (i < after.length - 1 && isSetOver(running)) {

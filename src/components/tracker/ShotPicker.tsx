@@ -14,6 +14,9 @@ type ShotPickerProps = {
   // Whether the player this picker is for served the point. Decides whether
   // Serve or Service fault can be picked.
   sideServed: boolean;
+  // Picks the losing shot. A service fault is only ever the receiver's winning
+  // shot, so it can't be picked here.
+  losing?: boolean;
   disabled?: boolean;
   // This picker takes the keyboard: left and right arrows change category, a
   // row's number then F or B picks the shot. Only one picker has it at a time.
@@ -32,7 +35,7 @@ const categoryLabel = (name: string) => {
 // points so a run of similar rallies doesn't need the tab picking again
 const lastCategoryIds: { [pickerId: string]: string } = {};
 
-const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = false, keyboard = false, rememberCategory = true }: ShotPickerProps) => {
+const ShotPicker = ({ id, title, selected, onSelect, sideServed, losing = false, disabled = false, keyboard = false, rememberCategory = true }: ShotPickerProps) => {
   const [categories, setCategories] = useState<ShotCategory[]>([]);
   const [shots, setShots] = useState<Shot[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +102,7 @@ const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = fals
   };
 
   const isUnavailable = (shot: Shot) =>
-    (shot.name === 'serve' && !sideServed) || (shot.name === SERVICE_FAULT_SHOT && sideServed);
+    (shot.name === 'serve' && !sideServed) || (shot.name === SERVICE_FAULT_SHOT && (sideServed || losing));
 
   keyState.current = {
     move: step => {

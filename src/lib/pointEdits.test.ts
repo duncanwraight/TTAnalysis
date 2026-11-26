@@ -133,6 +133,16 @@ describe('checkPointEdits', () => {
     if (!bad.ok) expect(bad.problems[0]).toMatch(/point 3: a service fault/);
   });
 
+  it('refuses a service fault as the losing shot', () => {
+    const { pts, set } = elevenFive();
+    const result = checkPointEdits({
+      initialServer: 'player', bestOf: 5, isComplete: false, sets: [set], points: pts, shots,
+      edits: [{ ...editFromPoint(pts[0]), other_shot_id: 'fault' }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.problems[0]).toMatch(/not a losing shot/);
+  });
+
   it('completes the match when the last set now finishes', () => {
     const a = buildSet('s1', 'ppppppppppp');
     const b = buildSet('s2', 'ppppppppppp');

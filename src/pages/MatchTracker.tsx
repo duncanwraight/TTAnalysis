@@ -656,6 +656,7 @@ const MatchTracker = () => {
                     selected={otherShot}
                     onSelect={handleOtherShotSelect}
                     sideServed={!winnerServed}
+                    losing
                     disabled={winningShot === null || isSaving}
                     keyboard={!isMobile && winningShot !== null}
                   />
