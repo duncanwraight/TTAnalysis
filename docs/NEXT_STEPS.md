@@ -263,11 +263,11 @@ Shipped in `65587b3`, with the changes below in `75b15bd` and `2c2a2ab`. A coach
 
 Changed on 2026-11-26, after the first real use: attacked first is split by who served, and the third-ball sweep became **attacked straight away** (`early_attack`, `points.is_early_attack`, migration `20261126120000_early_attack.sql`). It covers points past the receive on either serve: on the player's serve it's a third-ball attack, on the opponent's it's attacking the serve, and the Yes button says which. Receives that won or lost the point count from the entered shots without a tick, in both `earlyAttack.onReceive` and attacked first. The migration kept the 7 third-ball ticks on production, dropped `third_ball` from `confirmed_tags` (it never covered their serves) and cleared the one unfinished third-ball position. `SUMMARY_VERSION` went to 8. Also fixed: moving from one sweep's end screen to the next kept the old sweep's state (`75b15bd`). A UX pass the same day: the `/admin/shots` edit dialog is now wide, in sections (the shot, role, then Tactical and Technical side by side) with short explanations and Save always in view, and the shot tables share column widths; the analysis page's new bars match the stage bars, and the 8-all figures say so when no set reached 8-all.
 
-Still open on sweeps:
+Small fixes on 2026-11-26 (nothing is left open on sweeps):
 
-- Opponent's third-ball attacks aren't tagged. Their receive attacks on the player's serve already show from the entered shots when the receive decided the point.
-- The "Edit points" link at the bottom of the analysis page doesn't say that sweeps live on the points editor.
-- Shot balance shows a "Defence 0 (0%)" row when nobody defended.
+- Every "Edit points" link (analysis page footer, match list, end-of-match screen) now reads "Edit points and sweeps", so it's clear where the sweeps live.
+- Shot balance leaves a role out of both cards when neither side had a shot in it, so there's no "Defence 0 (0%)" row. The by-shot table already did this.
+- The opponent's third-ball attacks won't be tagged. The user decided against it. Their receive attacks on the player's serve still show from the entered shots when the receive decided the point.
 
 ## 8. Code quality (done)
 

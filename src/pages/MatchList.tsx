@@ -132,14 +132,14 @@ const MatchList = () => {
                     {match.is_complete ? (
                       <>
                         <Link to={`/matches/${match.id}/analysis`} className="btn primary small">Analysis</Link>
-                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points</Link>
+                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points and sweeps</Link>
                         <Link to={`/matches/${match.id}`} className="btn small">Tracker</Link>
                       </>
                     ) : (
                       <>
                         <Link to={`/matches/${match.id}`} className="btn primary small">Continue entering points</Link>
                         <Link to={`/matches/${match.id}/analysis`} className="btn small">Analysis</Link>
-                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points</Link>
+                        <Link to={`/matches/${match.id}/points`} className="btn small">Edit points and sweeps</Link>
                       </>
                     )}
                     <button

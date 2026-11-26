@@ -33,7 +33,7 @@ const MatchComplete = ({ matchId, playerName, opponentName, sets, canUndo, undoe
         </ul>
         <div className="form-actions">
           <Link to={`/matches/${matchId}/analysis`} className="btn primary">See the analysis</Link>
-          <Link to={`/matches/${matchId}/points`} className="btn">Edit points</Link>
+          <Link to={`/matches/${matchId}/points`} className="btn">Edit points and sweeps</Link>
           <Link to="/matches" className="btn quiet">Back to matches</Link>
         </div>
         {canUndo && (

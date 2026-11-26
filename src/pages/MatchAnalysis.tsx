@@ -767,7 +767,7 @@ const MatchAnalysis = () => {
         {isOwnerView && match.share_token && (
           <button type="button" className="btn" onClick={handleStopSharing}>Stop sharing</button>
         )}
-        {isOwnerView && <Link to={editorPath} className="btn quiet">Edit points</Link>}
+        {isOwnerView && <Link to={editorPath} className="btn quiet">Edit points and sweeps</Link>}
         {isSharedView
           ? <Link to="/" className="btn quiet">Go to home</Link>
           : <Link to="/matches" className="btn quiet">Back to matches</Link>}

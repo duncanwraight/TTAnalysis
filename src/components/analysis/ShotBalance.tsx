@@ -1,14 +1,14 @@
-import { ROLES, ROLE_LABEL, type Balance, type BalanceSide } from '../../lib/analysis';
+import { ROLES, ROLE_LABEL, type Balance, type BalanceSide, type Role } from '../../lib/analysis';
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((100 * n) / d) : 0);
 
-const RoleCard = ({ title, side, yours }: { title: string; side: BalanceSide; yours: boolean }) => (
+const RoleCard = ({ title, side, yours, shown }: { title: string; side: BalanceSide; yours: boolean; shown: Set<Role> }) => (
   <div className="card sb-side">
     <div className="sb-side-head">
       <h3>{title}</h3>
       <span className="ma-small muted">{side.total} winning and losing shots</span>
     </div>
-    {side.roles.map(r => {
+    {side.roles.filter(r => shown.has(r.role)).map(r => {
       const count = r.won + r.lost;
       const share = pct(count, side.total);
       return (
@@ -31,11 +31,14 @@ const RoleCard = ({ title, side, yours }: { title: string; side: BalanceSide; yo
 const ShotBalance = ({ balance }: { balance: Balance }) => {
   const max = Math.max(1, ...balance.shots.map(s => Math.max(s.player, s.opponent)));
   const width = (n: number) => (n === 0 ? '0' : `${Math.max(2, (100 * n) / max)}%`);
+  // A role neither side had (often defence) is left out of both cards, so they stay lined up
+  const shown = new Set(ROLES.filter((_, i) =>
+    [balance.player, balance.opponent].some(side => side.roles[i].won + side.roles[i].lost > 0)));
   return (
     <>
       <div className="ma-grid halves">
-        <RoleCard title="You" side={balance.player} yours />
-        <RoleCard title="Opponent" side={balance.opponent} yours={false} />
+        <RoleCard title="You" side={balance.player} yours shown={shown} />
+        <RoleCard title="Opponent" side={balance.opponent} yours={false} shown={shown} />
       </div>
 
       {balance.standouts.length > 0 && (
