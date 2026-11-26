@@ -9,6 +9,7 @@ import { invalidateShotData } from './shotsApi';
 import { FunctionsHttpError, PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { AnalysisPoint, AnalysisSet, AnalysisShot, Role } from './analysis';
 import type { StoredMatchSummary } from './aiSummary';
+import type { PointEdit, SetUpdate } from './pointEdits';
 import { hasKit, opponentKit, type Kit, type KitNote, type MatchKit, type Player, type PlayStyle, type StyleData, type StyleMatchup } from './styles';
 
 export type AnalysisMatch = MatchKit & Pick<Match, 'id' | 'opponent_name' | 'player_name' | 'player_id' | 'event' | 'video_url' | 'date' | 'best_of' | 'initial_server' | 'share_token' | 'confirmed_tags' | 'sweep_progress'>;
@@ -108,6 +109,13 @@ export const matchApi = {
     if (error) throw error;
     if (!data) throw new Error('Shared match not found');
     return matchApi.getAnalysis(data.id, client);
+  },
+
+  // Whether the match is marked complete, which the points editor needs to check edits
+  getIsComplete: async (id: string): Promise<boolean> => {
+    const { data, error } = await supabase.from('matches').select('is_complete').eq('id', id).single();
+    if (error) throw error;
+    return !!data.is_complete;
   },
 
   // Turn on sharing, returning the share token (reuses an existing one)
@@ -363,6 +371,19 @@ export const pointApi = {
       .update(changes)
       .eq('id', id);
 
+    if (error) throw error;
+  },
+
+  // Save points editor changes to winners and shots, with the set scores and
+  // match result they move, in one transaction
+  editPoints: async (matchId: string, edits: PointEdit[], sets: SetUpdate[], result: { match_score: string; is_complete: boolean }) => {
+    const { error } = await supabase.rpc('edit_points', {
+      target_match: matchId,
+      point_edits: edits,
+      set_scores: sets,
+      new_match_score: result.match_score,
+      new_is_complete: result.is_complete,
+    });
     if (error) throw error;
   },
 

@@ -18,6 +18,9 @@ type ShotPickerProps = {
   // This picker takes the keyboard: left and right arrows change category, a
   // row's number then F or B picks the shot. Only one picker has it at a time.
   keyboard?: boolean;
+  // Open on the last category used by this picker. Off when editing a point,
+  // which opens on the point's own shot.
+  rememberCategory?: boolean;
 };
 
 const categoryLabel = (name: string) => {
@@ -29,11 +32,11 @@ const categoryLabel = (name: string) => {
 // points so a run of similar rallies doesn't need the tab picking again
 const lastCategoryIds: { [pickerId: string]: string } = {};
 
-const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = false, keyboard = false }: ShotPickerProps) => {
+const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = false, keyboard = false, rememberCategory = true }: ShotPickerProps) => {
   const [categories, setCategories] = useState<ShotCategory[]>([]);
   const [shots, setShots] = useState<Shot[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(lastCategoryIds[id] ?? null);
+  const [activeId, setActiveId] = useState<string | null>(rememberCategory ? lastCategoryIds[id] ?? null : null);
   // The row whose number was typed, waiting for F or B
   const [pendingRow, setPendingRow] = useState<number | null>(null);
 
@@ -92,7 +95,7 @@ const ShotPicker = ({ id, title, selected, onSelect, sideServed, disabled = fals
   const pickCategory = (categoryId: string) => {
     setActiveId(categoryId);
     setPendingRow(null);
-    lastCategoryIds[id] = categoryId;
+    if (rememberCategory) lastCategoryIds[id] = categoryId;
   };
 
   const isUnavailable = (shot: Shot) =>

@@ -214,6 +214,19 @@
 .pe-check input:disabled { cursor: not-allowed; }
 .pe-count { min-width: 240px; display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; }
 .pe-details { display: flex; flex-direction: column; gap: 16px; }
+.pe-edit-cell { text-align: right; }
+.data-table tr.pe-row-pending > * { background: var(--surface-2); }
+.data-table tr.pe-row-pending > th { box-shadow: inset 3px 0 0 var(--ink); }
+.pe-pending { display: flex; flex-direction: column; gap: 8px; border-color: var(--ink); }
+.pe-pending h2 { font-size: 16px; }
+.pe-pending ul, .pe-edit .notice ul { margin: 0; padding-left: 20px; }
+.pe-pending-error { color: var(--danger); font-weight: 600; }
+.pe-edit { max-width: 980px; }
+.pe-edit .notice { display: flex; flex-direction: column; gap: 6px; scroll-margin-bottom: 96px; }
+.pe-edit-winner { display: flex; flex-direction: column; gap: 8px; border: 0; padding: 0; margin: 0; }
+.pe-edit-winner legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.pe-edit h3 { font-size: 15px; font-weight: 600; }
+.pe-edit-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; position: sticky; bottom: -20px; background: var(--surface); padding: 12px 0 20px; margin-bottom: -20px; border-top: 1px solid var(--line); }
 
 @media (max-width: 640px) {
   .ma-header h1 { font-size: 28px; }

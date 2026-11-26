@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
@@ -7,7 +7,9 @@ import { MAX_EVENT, MAX_VIDEO_URL, cleanText, validateDetails } from '../lib/mat
 import MatchStyles from '../components/MatchStyles';
 import { kitColumns, opponentKit, playerKit, type Kit, type Player, type PlayStyle } from '../lib/styles';
 import { UNFORCED_ERROR_DEFINITION, buildAnalysis, type PointRow } from '../lib/analysis';
-import { ATTACK_DEFINITION, SWEEPS, SWEEP_TAGS, answerChanges, isTicked, sweepPoints, sweepStatus, type SweepProgress, type SweepTag } from '../lib/sweeps';
+import { ATTACK_DEFINITION, SWEEPS, SWEEP_TAGS, answerChanges, isTicked, scoreBefore, sweepPoints, sweepStatus, type SweepProgress, type SweepTag } from '../lib/sweeps';
+import { checkPointEdits, editChanges, editFromPoint, normaliseEdit, type PointEdit } from '../lib/pointEdits';
+import PointEditDialog from '../components/PointEditDialog';
 import '../styles/components/MatchAnalysis.css';
 import '../styles/sweep.css';
 
@@ -27,9 +29,15 @@ const toForm = (m: AnalysisData['match']): DetailsForm => ({
   video_url: m.video_url ?? '',
 });
 
+// Replace edits for the same point, keeping the order they were made in
+const mergeEdits = (into: PointEdit[], edits: PointEdit[]) =>
+  [...into.filter(e => !edits.some(n => n.id === e.id)), ...edits];
+
 /**
  * Review a recorded match point by point and tick the lucky and unforced
- * flags. Each tick saves straight away.
+ * flags. Each tick saves straight away. A point's winner and shots are edited
+ * in a dialog; a change that leaves the match not adding up is held as pending
+ * until another one fixes it, and then they save together.
  */
 const PointsEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +52,13 @@ const PointsEditor = () => {
   const [details, setDetails] = useState<DetailsForm | null>(null);
   const [detailsStatus, setDetailsStatus] = useState<{ kind: 'idle' | 'saving' | 'saved' | 'error'; message?: string }>({ kind: 'idle' });
   const [players, setPlayers] = useState<Player[]>([]);
+  // Editing winners and shots
+  const [isComplete, setIsComplete] = useState<boolean | null>(null);
+  const [pending, setPending] = useState<PointEdit[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editProblems, setEditProblems] = useState<string[] | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [pendingError, setPendingError] = useState<string | null>(null);
   const styles: PlayStyle[] = data?.styles.styles ?? [];
 
   useEffect(() => {
@@ -51,6 +66,9 @@ const PointsEditor = () => {
     api.player.getPlayers()
       .then(setPlayers)
       .catch(err => console.error('Failed to load players:', err));
+    api.match.getIsComplete(id)
+      .then(setIsComplete)
+      .catch(err => console.error('Failed to load the match result:', err));
     api.match.getAnalysis(id)
       .then(loaded => {
         setData(loaded);
@@ -62,13 +80,123 @@ const PointsEditor = () => {
       });
   }, [id, api]);
 
-  const analysis = useMemo(() => data && buildAnalysis({
+  // The points with any pending edits applied, so the table shows them
+  const shownPoints = useMemo(() => {
+    if (!data) return null;
+    const byId = new Map(pending.map(e => [e.id, e]));
+    return data.points.map(p => {
+      const e = byId.get(p.id);
+      return e ? { ...p, ...e } : p;
+    });
+  }, [data, pending]);
+
+  const analysis = useMemo(() => data && shownPoints && buildAnalysis({
     initialServer: data.match.initial_server ?? 'player',
+    sets: data.sets,
+    points: shownPoints,
+    shots: data.shots,
+    confirmed: data.match.confirmed_tags ?? [],
+  }), [data, shownPoints]);
+
+  const checkEdits = useCallback((edits: PointEdit[]) => data && isComplete !== null ? checkPointEdits({
+    initialServer: data.match.initial_server ?? 'player',
+    bestOf: data.match.best_of,
+    isComplete,
     sets: data.sets,
     points: data.points,
     shots: data.shots,
-    confirmed: data.match.confirmed_tags ?? [],
-  }), [data]);
+    edits,
+  }) : null, [data, isComplete]);
+
+  const pendingCheck = useMemo(() => (pending.length ? checkEdits(pending) : null), [pending, checkEdits]);
+
+  // Make each edit's flags fit its shots, and drop "attacked straight away"
+  // from a point that no longer goes past the receive
+  const prepare = (edits: PointEdit[]): PointEdit[] => {
+    if (!data) return edits;
+    const name = (shotId: string) => data.shots.find(s => s.id === shotId)?.name;
+    let ready = edits.map(e => normaliseEdit(e, name));
+    const byId = new Map(ready.map(e => [e.id, e]));
+    const rows = buildAnalysis({
+      initialServer: data.match.initial_server ?? 'player',
+      sets: data.sets,
+      points: data.points.map(p => (byId.has(p.id) ? { ...p, ...byId.get(p.id) } : p)),
+      shots: data.shots,
+    }).rows;
+    const inScope = new Set(sweepPoints('early_attack', rows).map(r => r.id));
+    ready = ready.map(e => (e.is_early_attack && !inScope.has(e.id) ? { ...e, is_early_attack: false } : e));
+    // An edit that puts the point back as it was isn't a change
+    return ready.filter(e => {
+      const original = data.points.find(p => p.id === e.id);
+      return original && editChanges(original, e);
+    });
+  };
+
+  // Save edits with whatever is pending. Returns the problems if the match wouldn't add up.
+  const saveEdits = async (edits: PointEdit[]): Promise<string[] | null> => {
+    if (!data) return null;
+    const all = prepare(mergeEdits(pending, edits));
+    if (all.length === 0) {
+      setPending([]);
+      return null;
+    }
+    const check = checkEdits(all);
+    if (!check) return ['The match is still loading. Try again in a moment.'];
+    if (!check.ok) return check.problems;
+    await api.point.editPoints(data.match.id, all, check.sets, check.match);
+    setData(prev => prev && {
+      ...prev,
+      points: check.points,
+      sets: prev.sets.map(s => {
+        const u = check.sets.find(x => x.id === s.id);
+        return u ? { ...s, player_score: u.player_score, opponent_score: u.opponent_score } : s;
+      }),
+    });
+    setIsComplete(check.match.is_complete);
+    setPending([]);
+    return null;
+  };
+
+  const saveFromDialog = async (edit: PointEdit) => {
+    setEditSaving(true);
+    setEditProblems(null);
+    try {
+      const problems = await saveEdits([edit]);
+      if (problems) setEditProblems(problems);
+      else setEditingId(null);
+    } catch (err) {
+      console.error('Failed to save the point:', err);
+      setEditProblems(['The change did not save. Check your connection and try again.']);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const keepFromDialog = (edit: PointEdit) => {
+    setPending(prev => mergeEdits(prev, prepare([edit])));
+    setEditingId(null);
+    setEditProblems(null);
+  };
+
+  const savePending = async () => {
+    setEditSaving(true);
+    setPendingError(null);
+    try {
+      const problems = await saveEdits([]);
+      if (problems) setPendingError('The match still doesn\'t add up, so nothing was saved.');
+    } catch (err) {
+      console.error('Failed to save the changes:', err);
+      setPendingError('The changes did not save. Check your connection and try again.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const closeDialog = useCallback(() => {
+    setEditingId(null);
+    setEditProblems(null);
+  }, []);
+  const clearProblems = useCallback(() => setEditProblems(null), []);
 
   const toggle = async (row: PointRow, tag: SweepTag) => {
     if (!data) return;
@@ -182,6 +310,11 @@ const PointsEditor = () => {
   const rows = analysis.rows.filter(r =>
     (setFilter === 0 || r.setNumber === setFilter) && (!onlyLost || r.winner === 'opponent'));
   const result = `${analysis.setsWon.won > analysis.setsWon.lost ? 'Won' : analysis.setsWon.won < analysis.setsWon.lost ? 'Lost' : 'Level'} ${analysis.setsWon.won}–${analysis.setsWon.lost}`;
+  const playerName = cleanText(match.player_name) ?? 'You';
+  const pendingIds = new Set(pending.map(e => e.id));
+  const locked = pending.length > 0;
+  const editingRow = editingId ? analysis.rows.find(r => r.id === editingId) : undefined;
+  const editingPoint = editingId ? shownPoints?.find(p => p.id === editingId) : undefined;
   const date = new Date(`${match.date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
@@ -299,6 +432,32 @@ const PointsEditor = () => {
           You can also tick any point by hand, which doesn't mark a sweep as done. Tick <strong>Unforced</strong> when the losing shot was an unforced error. {UNFORCED_ERROR_DEFINITION} It applies to whoever lost the point, but only your own count towards the analysis. A service fault always counts as unforced. Tick <strong>Attacked first</strong> when you played the first attacking shot. {ATTACK_DEFINITION} Tick <strong>Straight away</strong> when you attacked at your first chance: the third ball on your serve, or their serve itself. It only applies to points that went past the receive, and ticks Attacked first too.
         </p>
 
+        {pending.length > 0 && (
+          <section className="notice pe-pending" aria-labelledby="pe-pending-h" role="status">
+            <h2 id="pe-pending-h">
+              {pending.length === 1 ? '1 change' : `${pending.length} changes`} not saved yet
+            </h2>
+            {pendingCheck && !pendingCheck.ok ? (
+              <>
+                <p>The match doesn't add up yet:</p>
+                <ul>{pendingCheck.problems.map(p => <li key={p}>{p}</li>)}</ul>
+                <p>Edit another point to fix it, or discard the changes. The table shows them as if they were saved.</p>
+              </>
+            ) : (
+              <p>The match adds up now. Save to keep the changes.</p>
+            )}
+            {pendingError && <p className="pe-pending-error">{pendingError}</p>}
+            <div className="form-actions">
+              <button type="button" className="btn primary" onClick={savePending} disabled={editSaving || !pendingCheck?.ok}>
+                {editSaving ? 'Saving...' : 'Save changes'}
+              </button>
+              <button type="button" className="btn" onClick={() => { setPending([]); setPendingError(null); }} disabled={editSaving}>
+                Discard
+              </button>
+            </div>
+          </section>
+        )}
+
         <div className="pe-toolbar" role="toolbar" aria-label="Filter points">
           <div className="segmented compact">
             {[0, ...setNumbers].map(n => (
@@ -330,13 +489,14 @@ const PointsEditor = () => {
                 <th scope="col" className="pe-check">Attacked first</th>
                 <th scope="col" className="pe-check">Straight away</th>
                 <th scope="col" className="pe-check">Lucky</th>
+                <th scope="col"><span className="sr-only">Edit</span></th>
               </tr>
             </thead>
             <tbody>
               {rows.map(r => {
                 const desc = `set ${r.setNumber} point ${r.number}`;
                 return (
-                  <tr key={r.id}>
+                  <tr key={r.id} className={pendingIds.has(r.id) ? 'pe-row-pending' : undefined}>
                     <th scope="row" className="muted">{setFilter === 0 ? `Set ${r.setNumber} · ${r.number}` : r.number}</th>
                     <td className="strong">{r.playerScore}-{r.opponentScore}</td>
                     <td className="muted">{r.server === 'player' ? 'You' : 'Opp'}</td>
@@ -347,7 +507,7 @@ const PointsEditor = () => {
                       <input
                         type="checkbox"
                         checked={r.isUnforced}
-                        disabled={r.isServiceFault}
+                        disabled={r.isServiceFault || locked}
                         onChange={() => toggle(r, 'unforced')}
                         aria-label={`Unforced error, ${desc}`}
                         title={r.isServiceFault ? 'A service fault always counts as unforced' : 'The losing shot was unforced'}
@@ -357,7 +517,7 @@ const PointsEditor = () => {
                       <input
                         type="checkbox"
                         checked={r.isAttackedFirst}
-                        disabled={r.isServiceFault || r.isEarlyAttack}
+                        disabled={r.isServiceFault || r.isEarlyAttack || locked}
                         onChange={() => toggle(r, 'attacked_first')}
                         aria-label={`Attacked first, ${desc}`}
                         title={r.isEarlyAttack ? 'Attacking straight away is always an attack first' : 'You played the first attacking shot'}
@@ -367,7 +527,7 @@ const PointsEditor = () => {
                       <input
                         type="checkbox"
                         checked={r.isEarlyAttack}
-                        disabled={!earlyAttackIds.has(r.id)}
+                        disabled={!earlyAttackIds.has(r.id) || locked}
                         onChange={() => toggle(r, 'early_attack')}
                         aria-label={`Attacked straight away, ${desc}`}
                         title={!earlyAttackIds.has(r.id) ? 'Only points that went past the receive'
@@ -375,7 +535,18 @@ const PointsEditor = () => {
                       />
                     </td>
                     <td className="pe-check">
-                      <input type="checkbox" checked={r.isLucky} onChange={() => toggle(r, 'lucky')} aria-label={`Lucky, ${desc}`} />
+                      <input type="checkbox" checked={r.isLucky} disabled={locked} onChange={() => toggle(r, 'lucky')} aria-label={`Lucky, ${desc}`} />
+                    </td>
+                    <td className="pe-edit-cell">
+                      <button
+                        type="button"
+                        className="btn small"
+                        onClick={() => { setEditProblems(null); setEditingId(r.id); }}
+                        disabled={isComplete === null || editSaving}
+                        aria-label={`Edit ${desc}`}
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 );
@@ -385,6 +556,24 @@ const PointsEditor = () => {
           {rows.length === 0 && <p className="ma-table-note">No points match these filters.</p>}
         </div>
       </div>
+      {editingRow && editingPoint && (
+        <PointEditDialog
+          key={editingRow.id}
+          title={`Set ${editingRow.setNumber}, point ${editingRow.number}`}
+          scoreBefore={scoreBefore(editingRow).join('-')}
+          server={editingRow.server}
+          playerName={playerName}
+          opponentName={match.opponent_name || 'Opponent'}
+          edit={editFromPoint(editingPoint)}
+          shots={data.shots}
+          problems={editProblems}
+          saving={editSaving}
+          onSave={saveFromDialog}
+          onKeep={keepFromDialog}
+          onCancel={closeDialog}
+          onDirty={clearProblems}
+        />
+      )}
     </Layout>
   );
 };
