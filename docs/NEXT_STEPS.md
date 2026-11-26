@@ -44,7 +44,7 @@ The user has checked the admin panel, the `/debug` removal and the AI summaries 
 - The password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
 - A summary written with the sweep tags. Press "Update the summary" on a match with attacked first and attacked straight away ticked (about $0.10). Check it uses the counts sensibly, including the serve split, and that the banner goes away afterwards. If the banner stays, the page and the function are hashing different input (most likely `confirmed_tags` or the new point columns).
 
-## 0. Players, styles of play and notes (shipped, notes to write)
+## 0. Players, styles of play and notes (shipped)
 
 Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/GKWsSyv6txbLJ6aQs5p2vY. Built the same day. Shipped on 2026-11-26: migration applied to production, `match-summary` deployed, pushed to `main`.
 
@@ -58,7 +58,7 @@ Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/
 
 Still to do:
 
-- The user is sending brief notes for each style, hand and rubber, and any match-ups. Expand them into the "playing as" and "against" notes, written for the model, and add them in a migration (or on `/admin/styles` on production).
+- Style and rubber notes shipped on 2026-11-26 in `20261127130000_style_notes.sql`, which replaced the six starting styles with the user's ten (Chopper became Classical defender, Blocker became Inverted push-blocker, the other three were deleted). The "playing as" notes are the user's, tidied. The "against" notes were drafted from the user's shot notes on production (pushes are about length, placement and spin variation, never height; "the crossover", not "the middle") and reviewed by the user. Hybrid styles (Attacking retriever, Attacking pips or anti crab, Modern defender) all ask whether the player can bait weak attacks or exploit weak defence. Left-handed and medium pips notes are deliberately empty: the user doesn't want made-up tactics there. No match-ups yet.
 - Try a real summary on a match with styles and notes, and check the page's hash matches the function's.
 - Try a summary on a match with styles and notes set, and check the page's hash matches the function's (the banner should go away).
 
