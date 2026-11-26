@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useParams, useNavigate, useLocation } from 'react-router';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
@@ -235,7 +235,8 @@ const MatchAnalysis = () => {
     if (!contentRef.current || !data) return;
     setIsExporting(true);
     try {
-      const { default: html2pdf } = await import('html2pdf.js');
+      // The source build, so jspdf and html2canvas get chunks of their own (vite.config.ts)
+      const { default: html2pdf } = await import('html2pdf.js/src/index.js');
       const date = new Date(`${data.match.date}T00:00:00`).toLocaleDateString().replace(/\//g, '-');
       const options = {
         margin: 0.4,

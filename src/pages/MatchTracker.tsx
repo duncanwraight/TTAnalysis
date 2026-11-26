@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router';
 import Layout from '../components/Layout';
 import Scoreboard from '../components/tracker/Scoreboard';
 import ShotPicker from '../components/tracker/ShotPicker';

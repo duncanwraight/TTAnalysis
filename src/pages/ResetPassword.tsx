@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import Layout from '../components/Layout';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabase';

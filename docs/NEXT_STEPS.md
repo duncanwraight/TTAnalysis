@@ -196,7 +196,7 @@ Fixed in the frontend: `/debug` deleted; admin pages no longer bounce an admin o
 Still open:
 
 - **Supabase dashboard (by hand):** upgrade Postgres (the advisor reports security patches for 15.8.1.091), shorten the email OTP expiry to under an hour, and turn on leaked password protection if the plan includes it. Consider raising the minimum password length from 6.
-- **React Router:** two moderate advisories need v7. Neither can be reached in this app. Upgrade when convenient.
+- **React Router (done 2026-11-26):** upgraded to v7 (`react-router` 7.18, replacing `react-router-dom`). `npm audit` reports nothing. Every link is absolute and the only splat route is the catch-all, so v7's changes to relative paths don't apply.
 - **Logout on every deploy:** `src/lib/supabase.ts` clears the stored session whenever the deployed commit changes. It isn't needed for security. Decide whether to keep it.
 
 ## 7. Analysis page, unforced errors and points editor (done)
@@ -256,7 +256,7 @@ Still open on sweeps:
 
 - **`any` types (done 2026-11-26):** the last ones (the eval script and `User.preferences`) are typed, and `@typescript-eslint/no-explicit-any` is back on.
 - **Supabase CLI v4 warnings (done 2026-11-26):** `config.toml` uses `auth.email.enabled` and `auth.sms.enabled`, so `supabase status` no longer warns.
-- **Bundle size:** `html2pdf.js` loads on the Export to PDF click. Its own chunk is still over 500 kB, which the build warns about.
+- **Bundle size (done 2026-11-26):** every page except Home and Auth is loaded with `React.lazy` (`src/App.tsx`), which took the main chunk from 601 kB to 444 kB. PDF export imports html2pdf's source (`html2pdf.js/src/index.js`) rather than its prebuilt bundle, and `vite.config.ts` puts jspdf and html2canvas in chunks of their own: about 600 kB on the click instead of 985 kB, and no chunk over 500 kB. Vite's preload helper has its own chunk, because otherwise Rollup put it in the jspdf chunk and every page loaded jspdf. Export was checked on a production build against the local stack.
 - **Unused SQL views (done 2026-11-26):** `point_shots`, the six views on it and `match_summary` were dropped by `20261127140000_drop_analysis_views.sql`. Nothing in the app, the function or the scripts read them.
 
 ## Testing against a local stack

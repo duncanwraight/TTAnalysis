@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import '../styles/home.css';
 import analysisTop from '../assets/home/analysis-top.webp';
 import trackerPhone from '../assets/home/tracker-phone.webp';

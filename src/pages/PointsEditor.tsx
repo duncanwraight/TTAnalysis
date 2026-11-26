@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import type { AnalysisData, MatchDetails } from '../lib/api';

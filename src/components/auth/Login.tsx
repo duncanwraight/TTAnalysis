@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 interface LoginProps {
   onToggleView: () => void; // Toggle between login and signup views
