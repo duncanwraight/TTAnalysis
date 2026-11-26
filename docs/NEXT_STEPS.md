@@ -195,8 +195,8 @@ Fixed in the frontend: `/debug` deleted; admin pages no longer bounce an admin o
 
 Still open:
 
-- **Supabase dashboard (by hand):** upgrade Postgres (the advisor reports security patches for 15.8.1.091), shorten the email OTP expiry to under an hour, turn on leaked password protection if the plan includes it, and set the minimum password length to 8 (Authentication, then Policies) to match the app.
-- **Minimum password length (app side done 2026-11-26):** the sign-up and reset forms now ask for 8 characters (`MIN_PASSWORD_LENGTH` in `src/lib/password.ts`, shown as a hint under the field), and `config.toml` matches. Existing passwords still work: Supabase only checks the length when a password is set. Until the dashboard says 8 too, someone calling the API directly can still set a 6-character password.
+- **Supabase dashboard (done by the user 2026-11-26):** minimum password length set to 8, leaked password protection on, email OTP expiry under an hour, and a Postgres upgrade from 15.8.1.091 started. The project also moved from the Nano to the Micro compute size (a free upgrade). Once the upgrade finishes, check the app still signs in and loads matches.
+- **Minimum password length (done 2026-11-26):** the sign-up and reset forms now ask for 8 characters (`MIN_PASSWORD_LENGTH` in `src/lib/password.ts`, shown as a hint under the field), and `config.toml` matches. Existing passwords still work: Supabase only checks the length when a password is set. The dashboard now says 8 as well, so the API enforces it too.
 - **React Router (done 2026-11-26):** upgraded to v7 (`react-router` 7.18, replacing `react-router-dom`). `npm audit` reports nothing. Every link is absolute and the only splat route is the catch-all, so v7's changes to relative paths don't apply.
 - **Logout on every deploy (removed 2026-11-26):** `src/lib/supabase.ts` used to clear the stored session whenever the deployed commit changed, which signed everyone out on each push. It wasn't needed for security and was taken out at the user's go-ahead; the leftover `app_version` key is removed on load.
 
