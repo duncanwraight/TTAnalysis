@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router';
 import Layout from '../components/Layout';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabase';
-
-const MIN_PASSWORD_LENGTH = 6;
+import { MIN_PASSWORD_LENGTH } from '../lib/password';
 
 /**
  * Landing page for the password reset email. Supabase signs the user in from
@@ -72,7 +71,7 @@ const ResetPassword = () => {
             ) : hasSession === false ? (
               <div>
                 <div className="notice error" role="alert">
-                  This reset link is invalid or has expired. Request a new one from the login page.
+                  This reset link is invalid or has expired. Request a new one from the sign-in page.
                 </div>
                 <Button onClick={() => navigate('/auth')}>Back to sign in</Button>
               </div>
@@ -86,8 +85,11 @@ const ResetPassword = () => {
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    minLength={MIN_PASSWORD_LENGTH}
+                    aria-describedby="new-password-hint"
                     required
                   />
+                  <span id="new-password-hint" className="field-hint">At least {MIN_PASSWORD_LENGTH} characters</span>
                 </div>
                 <div className="field">
                   <label htmlFor="confirm-password">Confirm new password</label>

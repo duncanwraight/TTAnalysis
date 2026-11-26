@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
+import { MIN_PASSWORD_LENGTH } from '../../lib/password';
 
 interface SignupProps {
   onToggleView: () => void; // Toggle between login and signup views
@@ -27,8 +28,8 @@ const Signup = ({ onToggleView }: SignupProps) => {
     }
 
     // Validate password strength
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
       return;
     }
 
@@ -79,8 +80,11 @@ const Signup = ({ onToggleView }: SignupProps) => {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            minLength={MIN_PASSWORD_LENGTH}
+            aria-describedby="password-hint"
             required
           />
+          <span id="password-hint" className="field-hint">At least {MIN_PASSWORD_LENGTH} characters</span>
         </div>
         <div className="field">
           <label htmlFor="confirmPassword">Confirm password</label>
