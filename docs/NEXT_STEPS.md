@@ -43,6 +43,11 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 8. **Code quality** (section 8): the last `any` types, the CLI v4 config names, the old SQL views dropped, pages loaded on demand and a smaller PDF export, in `7d33a3b`, `20e320c` and `579ff5f`.
 9. **Stale tabs after a deploy** (section 8): reload once, then an error page instead of a blank screen, in `5d711ef`.
 10. **Security** (section 6): React Router 7, 8-character passwords, no more sign-out on every deploy, and the user's Supabase dashboard changes, including Postgres 17. In `c1557d1` and `7f2ac24`. The user signed in on production after the upgrade and everything worked.
+11. **"This is me" on the Players page** (section 0), in `450c7f2`. Migration `20261128120000_set_self_player.sql` applied.
+12. **Keyboard shortcuts in the tracker** (section 4), in `bad9350`.
+13. **Editing a point's winner and shots** (section 7), in `a123532` and `96bb7ce`. Migration `20261128130000_edit_points.sql` applied.
+
+Items 11 to 13 were checked on the local stack (REST and Chrome), not yet by a person on production.
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
@@ -81,7 +86,7 @@ The "You" bug, found on 2026-11-26:
 
 Still to do:
 
-- Other accounts may have the same problem (a friend's name as their self player). Only the user's account was checked. There's no way in the app to change who "You" is: the Players page can't move `is_self`, and renaming the self player would rename every match linked to it. Either add a "This is me" control on the Players dialog or fix accounts by hand.
+- Other accounts may have the same problem (a friend's name as their self player). Only the user's account was checked. Since 2026-11-26 an owner can fix it themselves: open their own player on `/players`, tick "This is me" and save. That calls `set_self_player`, which makes the old self player an ordinary one (keeping the matches entered under their name), moves matches with no player name to the new self player, and saves the name as `display_name`. Nobody has been told about it yet.
 - Watching the next summaries for any mention of player notes is parked until 2027-01-01 (section 2).
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
@@ -181,9 +186,11 @@ Shipped in `ad8a04f`.
 The 0-3 match against Lee Tinkler (2025-09-16) was the user's own, entered on a second account (dunc+ttanalysis@seriouslyfish.com). At the user's request it was moved to dunc@seriouslyfish.com and linked to the Duncan Wraight player the same day. The Tomas Jacko match was moved the same way, and the second account (by then owning nothing) was deleted. All 7 production matches are now on dunc@seriouslyfish.com. Nobody checked who owned the six test matches before they were deleted; they were most likely the user's own tests.
 - **Unforced errors.** One definition, `UNFORCED_ERROR_DEFINITION` in `analysis.ts`, used on the analysis page, the home page, the points editor and the tracker toggle's tooltip.
 
+- **Keyboard shortcuts (2026-11-26).** On screens wider than 768px: 1 or 2 for who won and Z to undo, then left and right arrows for the shot category, a shot's number then F or B for the hand, U and L for unforced and lucky, Backspace to change the winning shot and Escape to cancel the point. Only the picker waiting for a shot listens. The keys are shown under the prompt and in the point entry. Checked in Chrome on a local match.
+
 Still to do:
 
-- Keyboard shortcuts for recording on a laptop (e.g. 1/2 for who won) would speed things up.
+- The losing shot picker lets the receiver pick "Service fault" as their losing shot, which can't happen (a service fault is the receiver's winning shot). It's the tracker's own rule (`isUnavailable` in `ShotPicker`), and the points editor's dialog has the same picker. Found on 2026-11-26 and left alone.
 
 ## 5. Tests for the scoring rules (done)
 
@@ -233,9 +240,17 @@ Related features:
 - **Points editor:** `/matches/:id/points`. Tick lucky and unforced point by point, and edit the match details.
 - **Matches for friends:** `player_name`, `event` and `video_url` on `matches`. The user's own name lives in auth user metadata (`display_name`), because `profiles` is locked to admins. The analysis page always says "you" to the player being reviewed.
 
+Editing a point's winner and shots (2026-11-26):
+
+- Each row in the points editor has an Edit button that opens `PointEditDialog`: who won, both shots (the tracker's `ShotPicker`, opening on the point's own shots), lucky and unforced. Changing the winner clears the shots and the unforced tick, like the tracker. Picking a service fault fills in no shot and ticks unforced.
+- `checkPointEdits` (`src/lib/pointEdits.ts`, 11 tests) replays the match with the edits. It refuses a set that would finish before its last point, a finished set that would no longer be finished, end level, or go to the other player, a match decided before its last set, and a serve or service fault that doesn't belong to whoever served. Serve checks only run on edited points and points whose server moved, so an odd old point can't block an edit.
+- Changing one winner in a set that reached 11 never adds up on its own: the set would end a point early or not at all. So the dialog offers "Keep and edit another point", the change is held as pending (highlighted in the table, which shows the scores as if it were saved), and the ticks are locked until the pending changes are saved or discarded. The usual fix is two points entered the wrong way round.
+- Saving goes through `edit_points` (migration `20261128130000_edit_points.sql`), which writes the points, the set scores and `matches.match_score`/`is_complete` in one transaction. It runs as the caller and checks every point and set belongs to the match. Editing a point that no longer goes past the receive clears its "attacked straight away" tick. Coach's summaries for an edited match show as out of date.
+- A winner change in the set still being entered can finish that set, or the match. Changing who won a set is refused.
+
 Still open:
 
-- Editing a point's winner and shots in the points editor. The user wants this, as a separate piece of work.
+- Adding or deleting a single point in the middle of a match. A missed point can only be fixed now by undoing back to it in the tracker.
 
 ### Shot balance (done)
 
