@@ -34,7 +34,7 @@ const NewMatch = () => {
   });
   
   // Offered when the account has no player for itself yet
-  const [newIsSelf, setNewIsSelf] = useState(true);
+  const [newIsSelf, setNewIsSelf] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
