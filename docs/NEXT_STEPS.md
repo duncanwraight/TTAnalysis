@@ -43,16 +43,18 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 8. **Code quality** (section 8): the last `any` types, the CLI v4 config names, the old SQL views dropped, pages loaded on demand and a smaller PDF export, in `7d33a3b`, `20e320c` and `579ff5f`.
 9. **Stale tabs after a deploy** (section 8): reload once, then an error page instead of a blank screen, in `5d711ef`.
 10. **Security** (section 6): React Router 7, 8-character passwords, no more sign-out on every deploy, and the user's Supabase dashboard changes, including Postgres 17. In `c1557d1` and `7f2ac24`. The user signed in on production after the upgrade and everything worked.
-11. **"This is me" on the Players page** (section 0), in `450c7f2`. Migration `20261128120000_set_self_player.sql` applied.
+11. **"This is me" on the Players page** (section 0), in `450c7f2`. Migration `20261128120000_set_self_player.sql` applied to production on 2026-11-26.
 12. **Keyboard shortcuts in the tracker** (section 4), in `bad9350`.
-13. **Editing a point's winner and shots** (section 7), in `a123532` and `96bb7ce`. Migration `20261128130000_edit_points.sql` applied.
+13. **Editing a point's winner and shots** (section 7), in `a123532` and `96bb7ce`. Migration `20261128130000_edit_points.sql` applied to production on 2026-11-26.
+14. **No service fault as a losing shot** (section 4), in `ff29493`.
 
-Items 11 to 13 were checked on the local stack (REST and Chrome), not yet by a person on production.
+Items 11 to 13 were checked on the local stack (REST and Chrome), and item 14 by its tests. All four are live, but nobody has tried them on production yet.
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
 
+- The "This is me" box on the Players page, the tracker's keyboard shortcuts and the Edit button in the points editor (items 11 to 13).
 - The password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
 
 ## 0. Players, styles of play and notes (shipped)
@@ -188,9 +190,7 @@ The 0-3 match against Lee Tinkler (2025-09-16) was the user's own, entered on a 
 
 - **Keyboard shortcuts (2026-11-26).** On screens wider than 768px: 1 or 2 for who won and Z to undo, then left and right arrows for the shot category, a shot's number then F or B for the hand, U and L for unforced and lucky, Backspace to change the winning shot and Escape to cancel the point. Only the picker waiting for a shot listens. The keys are shown under the prompt and in the point entry. Checked in Chrome on a local match.
 
-Still to do:
-
-- Fixed on 2026-11-26: the losing shot picker no longer offers "Service fault" (a service fault is only ever the receiver's winning shot). `ShotPicker` takes a `losing` prop, used by the tracker and the points editor, and `checkPointEdits` refuses an edited point with a service fault as its losing shot.
+- **No service fault as a losing shot (2026-11-26).** The losing shot picker used to offer "Service fault", which can't happen: a service fault is only ever the receiver's winning shot. `ShotPicker` now takes a `losing` prop, used by the tracker and the points editor, and `checkPointEdits` refuses an edited point with a service fault as its losing shot. In `ff29493`. Old points saved that way on production haven't been looked for.
 
 ## 5. Tests for the scoring rules (done)
 
@@ -243,7 +243,7 @@ Related features:
 Editing a point's winner and shots (2026-11-26):
 
 - Each row in the points editor has an Edit button that opens `PointEditDialog`: who won, both shots (the tracker's `ShotPicker`, opening on the point's own shots), lucky and unforced. Changing the winner clears the shots and the unforced tick, like the tracker. Picking a service fault fills in no shot and ticks unforced.
-- `checkPointEdits` (`src/lib/pointEdits.ts`, 11 tests) replays the match with the edits. It refuses a set that would finish before its last point, a finished set that would no longer be finished, end level, or go to the other player, a match decided before its last set, and a serve or service fault that doesn't belong to whoever served. Serve checks only run on edited points and points whose server moved, so an odd old point can't block an edit.
+- `checkPointEdits` (`src/lib/pointEdits.ts`, 12 tests) replays the match with the edits. It refuses a set that would finish before its last point, a finished set that would no longer be finished, end level, or go to the other player, a match decided before its last set, a serve or service fault that doesn't belong to whoever served, and a service fault as an edited point's losing shot. Serve checks only run on edited points and points whose server moved, so an odd old point can't block an edit.
 - Changing one winner in a set that reached 11 never adds up on its own: the set would end a point early or not at all. So the dialog offers "Keep and edit another point", the change is held as pending (highlighted in the table, which shows the scores as if it were saved), and the ticks are locked until the pending changes are saved or discarded. The usual fix is two points entered the wrong way round.
 - Saving goes through `edit_points` (migration `20261128130000_edit_points.sql`), which writes the points, the set scores and `matches.match_score`/`is_complete` in one transaction. It runs as the caller and checks every point and set belongs to the match. Editing a point that no longer goes past the receive clears its "attacked straight away" tick. Coach's summaries for an edited match show as out of date.
 - A winner change in the set still being entered can finish that set, or the match. Changing who won a set is refused.
