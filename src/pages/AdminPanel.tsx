@@ -117,6 +117,7 @@ const AdminPanel = () => {
           </div>
           <div className="page-head-actions">
             <Link to="/admin/shots" className="btn">Manage shots</Link>
+            <Link to="/admin/styles" className="btn">Manage styles</Link>
           </div>
         </div>
 

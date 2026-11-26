@@ -60,11 +60,13 @@ const Layout = ({ children, wide = false }: LayoutProps) => {
               <>
                 <NavLink to="/admin" end>Users</NavLink>
                 <NavLink to="/admin/shots">Shots</NavLink>
+                <NavLink to="/admin/styles">Styles</NavLink>
                 <Link to="/matches">Back to app</Link>
               </>
             ) : user ? (
               <>
                 <NavLink to="/matches" end>Matches</NavLink>
+                <NavLink to="/players">Players</NavLink>
                 <NavLink to="/matches/new" className="nav-optional">New match</NavLink>
                 {isAdmin && <NavLink to="/admin">Admin</NavLink>}
               </>

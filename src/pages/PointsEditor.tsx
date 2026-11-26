@@ -3,15 +3,23 @@ import { Link, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApi } from '../lib/useApi';
 import type { AnalysisData, MatchDetails } from '../lib/api';
-import { MAX_EVENT, MAX_PLAYER_NAME, MAX_VIDEO_URL, cleanText, validateDetails } from '../lib/matchDetails';
+import { MAX_EVENT, MAX_VIDEO_URL, cleanText, validateDetails } from '../lib/matchDetails';
+import MatchStyles from '../components/MatchStyles';
+import { kitColumns, opponentKit, playerKit, type Kit, type Player, type PlayStyle } from '../lib/styles';
 import { UNFORCED_ERROR_DEFINITION, buildAnalysis, type PointRow } from '../lib/analysis';
 import { ATTACK_DEFINITION, SWEEPS, SWEEP_TAGS, answerChanges, isTicked, sweepPoints, sweepStatus, type SweepProgress, type SweepTag } from '../lib/sweeps';
 import '../styles/components/MatchAnalysis.css';
 import '../styles/sweep.css';
 
-type DetailsForm = { player_name: string; opponent_name: string; date: string; event: string; video_url: string };
+type DetailsForm = {
+  player_id: string; player_name: string; opponent_name: string; date: string; event: string; video_url: string;
+  player: Kit; opponent: Kit;
+};
 
 const toForm = (m: AnalysisData['match']): DetailsForm => ({
+  player_id: m.player_id ?? '',
+  player: playerKit(m),
+  opponent: opponentKit(m),
   player_name: m.player_name ?? '',
   opponent_name: m.opponent_name,
   date: m.date,
@@ -35,9 +43,14 @@ const PointsEditor = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [details, setDetails] = useState<DetailsForm | null>(null);
   const [detailsStatus, setDetailsStatus] = useState<{ kind: 'idle' | 'saving' | 'saved' | 'error'; message?: string }>({ kind: 'idle' });
+  const [players, setPlayers] = useState<Player[]>([]);
+  const styles: PlayStyle[] = data?.styles.styles ?? [];
 
   useEffect(() => {
     if (!id) return;
+    api.player.getPlayers()
+      .then(setPlayers)
+      .catch(err => console.error('Failed to load players:', err));
     api.match.getAnalysis(id)
       .then(loaded => {
         setData(loaded);
@@ -102,9 +115,14 @@ const PointsEditor = () => {
     }
   };
 
-  const changeDetail = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const changeDetail = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setDetails(prev => prev && { ...prev, [name]: value });
+    setDetailsStatus({ kind: 'idle' });
+  };
+
+  const changeKit = (side: 'player' | 'opponent') => (kit: Kit) => {
+    setDetails(prev => prev && { ...prev, [side]: kit });
     setDetailsStatus({ kind: 'idle' });
   };
 
@@ -116,8 +134,13 @@ const PointsEditor = () => {
       setDetailsStatus({ kind: 'error', message: problem });
       return;
     }
+    const chosen = players.find(p => p.id === details.player_id);
     const changes: MatchDetails = {
-      player_name: cleanText(details.player_name),
+      // A match from before players keeps its name until a player is chosen
+      player_id: chosen?.id ?? data.match.player_id ?? null,
+      player_name: chosen?.name ?? cleanText(details.player_name),
+      ...kitColumns('player', details.player),
+      ...kitColumns('opponent', details.opponent),
       opponent_name: details.opponent_name.trim(),
       date: details.date,
       event: cleanText(details.event),
@@ -223,7 +246,13 @@ const PointsEditor = () => {
           <div className="fields">
             <label className="field">
               <span>Player</span>
-              <input name="player_name" value={details.player_name} onChange={changeDetail} maxLength={MAX_PLAYER_NAME} placeholder="Your name, or a friend's" autoComplete="off" />
+              <select name="player_id" value={details.player_id} onChange={changeDetail}>
+                {!players.some(p => p.id === details.player_id) && (
+                  <option value={details.player_id}>{cleanText(details.player_name) ?? 'You'}</option>
+                )}
+                {players.map(p => <option key={p.id} value={p.id}>{p.is_self ? `${p.name} (you)` : p.name}</option>)}
+              </select>
+              <span className="field-hint">Add someone new on the <Link to="/players">players page</Link>.</span>
             </label>
             <label className="field">
               <span>Opponent</span>
@@ -241,6 +270,19 @@ const PointsEditor = () => {
               <span>Video link</span>
               <input type="url" name="video_url" value={details.video_url} onChange={changeDetail} maxLength={MAX_VIDEO_URL} placeholder="https://" />
             </label>
+            <fieldset className="field wide match-styles-field">
+              <legend>Styles</legend>
+              <p className="field-hint">As they were for this match. Changing them here doesn't change the player page.</p>
+              <MatchStyles
+                playerName={players.find(p => p.id === details.player_id)?.name ?? (cleanText(details.player_name) || 'You')}
+                opponentName={cleanText(details.opponent_name) ?? 'Opponent'}
+                player={details.player}
+                opponent={details.opponent}
+                styles={styles}
+                onPlayer={changeKit('player')}
+                onOpponent={changeKit('opponent')}
+              />
+            </fieldset>
           </div>
           <div className="form-actions">
             <button type="submit" className="btn primary" disabled={detailsStatus.kind === 'saving'}>

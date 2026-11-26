@@ -1,9 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../lib/useApi';
-import { MAX_EVENT, MAX_PLAYER_NAME, MAX_VIDEO_URL, cleanText, playerLabel, validateDetails } from '../lib/matchDetails';
+import { MAX_EVENT, MAX_PLAYER_NAME, MAX_VIDEO_URL, cleanText, validateDetails } from '../lib/matchDetails';
+import MatchStyles from '../components/MatchStyles';
+import { EMPTY_KIT, kitColumns, type Kit, type Player, type PlayStyle } from '../lib/styles';
+
+const NEW_PLAYER = 'new';
+
+const kitOf = (p: Player): Kit => ({ style_id: p.style_id, hand: p.hand, forehand_rubber: p.forehand_rubber, backhand_rubber: p.backhand_rubber });
+
+const formatDay = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 
 /**
  * NewMatch component for creating a new table tennis match
@@ -24,15 +33,72 @@ const NewMatch = () => {
     notes: ''
   });
   
-  // Offered when the account has no name yet, so the next match prefills it
-  const [saveAsMyName, setSaveAsMyName] = useState(true);
+  // Offered when the account has no player for itself yet
+  const [newIsSelf, setNewIsSelf] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [players, setPlayers] = useState<Player[] | null>(null);
+  const [styles, setStyles] = useState<PlayStyle[]>([]);
+  // A player id, or NEW_PLAYER to add one with the typed name
+  const [choice, setChoice] = useState<string>(NEW_PLAYER);
+  const [playerKit, setPlayerKit] = useState<Kit>(EMPTY_KIT);
+  const [opponentKit, setOpponentKit] = useState<Kit>(EMPTY_KIT);
+  // Set once the opponent's style is changed by hand, so a lookup never overwrites it,
+  // even one that was already running
+  const opponentTouched = useRef(false);
+  const [opponentSource, setOpponentSource] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([api.player.getPlayers(), api.style.getStyleData()])
+      .then(([loaded, styleData]) => {
+        setPlayers(loaded);
+        setStyles(styleData.styles);
+        const self = loaded.find(p => p.is_self);
+        if (self) {
+          setChoice(self.id);
+          setPlayerKit(kitOf(self));
+        }
+      })
+      .catch(err => {
+        // Without players the form still works: the player is added from the typed name
+        console.error('Failed to load players:', err);
+        setPlayers([]);
+      });
+  }, [api]);
 
   // The name can arrive after the first render
   useEffect(() => {
     if (displayName) setFormData(prev => (prev.player_name ? prev : { ...prev, player_name: displayName }));
   }, [displayName]);
-  const [error, setError] = useState<string | null>(null);
+
+  const hasSelf = !!players?.some(p => p.is_self);
+  const chosen = players?.find(p => p.id === choice) ?? null;
+
+  const choosePlayer = (id: string) => {
+    setChoice(id);
+    const player = players?.find(p => p.id === id);
+    setPlayerKit(player ? kitOf(player) : EMPTY_KIT);
+  };
+
+  // Fill in the opponent's style from the last match against the same name
+  const lookUpOpponent = async () => {
+    if (opponentTouched.current) return;
+    try {
+      const found = await api.player.getLastOpponentKit(formData.opponent_name);
+      if (opponentTouched.current) return;
+      setOpponentKit(found?.kit ?? EMPTY_KIT);
+      setOpponentSource(found ? `As on ${formatDay(found.date)}` : null);
+    } catch (err) {
+      console.error('Failed to look up the opponent:', err);
+    }
+  };
+
+  const changeOpponentKit = (kit: Kit) => {
+    setOpponentKit(kit);
+    opponentTouched.current = true;
+    setOpponentSource(null);
+  };
   
   // Error handler for unhandled promise rejections
   useEffect(() => {
@@ -76,19 +142,29 @@ const NewMatch = () => {
         throw new Error('You need to be signed in to create a match');
       }
       
+      const typedName = cleanText(formData.player_name);
+      if (!chosen && !typedName) throw new Error('Enter the player\'s name');
       const problem = validateDetails(formData);
       if (problem) throw new Error(problem);
 
-      const playerName = cleanText(formData.player_name);
-      if (!displayName && saveAsMyName && playerName) {
-        // Not worth failing the match over
-        await saveDisplayName(playerName).catch(err => console.error('Failed to save your name:', err));
+      // A new name becomes a player, with the style entered here
+      let player = chosen;
+      if (!player) {
+        const isSelf = !hasSelf && newIsSelf;
+        player = await api.player.savePlayer({ name: typedName!, is_self: isSelf, notes: '', ...playerKit });
+        if (isSelf && !displayName) {
+          // Not worth failing the match over
+          await saveDisplayName(player.name).catch(err => console.error('Failed to save your name:', err));
+        }
       }
 
       // Create match data
       const matchData = {
         opponent_name: formData.opponent_name.trim(),
-        player_name: playerName,
+        player_name: player.name,
+        player_id: player.id,
+        ...kitColumns('player', playerKit),
+        ...kitColumns('opponent', opponentKit),
         event: cleanText(formData.event),
         video_url: cleanText(formData.video_url),
         date: formData.date,
@@ -131,7 +207,9 @@ const NewMatch = () => {
     }
   };
 
-  const serverButtonLabel = playerLabel(formData.player_name, displayName ?? (saveAsMyName ? formData.player_name : null));
+  const isMe = chosen ? chosen.is_self : !hasSelf && newIsSelf;
+  const playerDisplayName = chosen?.name ?? (cleanText(formData.player_name) || 'Player');
+  const serverButtonLabel = isMe ? 'You' : playerDisplayName;
 
   return (
     <Layout>
@@ -152,28 +230,40 @@ const NewMatch = () => {
         <form onSubmit={handleSubmit} className="card form">
           <div className="fields">
             <div className="field">
-              <label htmlFor="player_name">Player</label>
-              <input
-                type="text"
-                id="player_name"
-                name="player_name"
-                value={formData.player_name}
-                onChange={handleChange}
-                maxLength={MAX_PLAYER_NAME}
-                placeholder="Your name, or a friend's"
-                autoComplete="off"
-                disabled={isSubmitting}
-              />
-              {!displayName && (
-                <label className="check">
+              <label htmlFor={players && players.length > 0 ? 'player_choice' : 'player_name'}>Player</label>
+              {players && players.length > 0 && (
+                <select id="player_choice" value={choice} onChange={e => choosePlayer(e.target.value)} disabled={isSubmitting}>
+                  {players.map(p => <option key={p.id} value={p.id}>{p.is_self ? `${p.name} (you)` : p.name}</option>)}
+                  <option value={NEW_PLAYER}>Someone new…</option>
+                </select>
+              )}
+              {choice === NEW_PLAYER && (
+                <>
                   <input
-                    type="checkbox"
-                    checked={saveAsMyName}
-                    onChange={e => setSaveAsMyName(e.target.checked)}
-                    disabled={isSubmitting}
+                    type="text"
+                    id="player_name"
+                    name="player_name"
+                    aria-label={players && players.length > 0 ? 'New player\'s name' : undefined}
+                    value={formData.player_name}
+                    onChange={handleChange}
+                    maxLength={MAX_PLAYER_NAME}
+                    placeholder="Your name, or a friend's"
+                    autoComplete="off"
+                    disabled={isSubmitting || !players}
                   />
-                  This is me. Fill it in on new matches.
-                </label>
+                  {players && !hasSelf && (
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={newIsSelf}
+                        onChange={e => setNewIsSelf(e.target.checked)}
+                        disabled={isSubmitting}
+                      />
+                      This is me. Fill it in on new matches.
+                    </label>
+                  )}
+                  {players && (hasSelf || !newIsSelf) && <span className="field-hint">They'll be added to your players.</span>}
+                </>
               )}
             </div>
 
@@ -185,6 +275,7 @@ const NewMatch = () => {
                 name="opponent_name"
                 value={formData.opponent_name}
                 onChange={handleChange}
+                onBlur={lookUpOpponent}
                 required
                 autoComplete="off"
                 placeholder="Their name"
@@ -218,6 +309,25 @@ const NewMatch = () => {
                 disabled={isSubmitting}
               />
             </div>
+
+            <fieldset className="field wide match-styles-field">
+              <legend>Styles <span className="optional">(optional)</span></legend>
+              <p className="field-hint">The coach's summary uses these for tactics. Leave anything you don't know.</p>
+              <MatchStyles
+                key={choice}
+                playerName={playerDisplayName}
+                opponentName={cleanText(formData.opponent_name) ?? 'Opponent'}
+                player={playerKit}
+                opponent={opponentKit}
+                styles={styles}
+                onPlayer={setPlayerKit}
+                onOpponent={changeOpponentKit}
+                playerSource={chosen ? (chosen.is_self ? 'From your player page' : 'From their player page') : null}
+                opponentSource={opponentSource}
+                collapsePlayer={!!chosen}
+                disabled={isSubmitting}
+              />
+            </fieldset>
 
             <div className="field wide">
               <span id="best_of_label">Best of</span>

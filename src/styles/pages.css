@@ -83,3 +83,72 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
   .shot-dialog-grid, .shot-dialog-guide { grid-template-columns: 1fr; }
   .shot-dialog > h2, .shot-dialog-body, .shot-dialog-foot { padding-left: 16px; padding-right: 16px; }
 }
+
+/* Style fields: style, hand and rubbers, used on players, new match and the points editor */
+.style-fields { display: flex; flex-direction: column; gap: 14px; }
+.style-fields-rubbers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.btn.quiet.danger-text { color: var(--danger); }
+
+/* Players */
+.players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+.player-card { display: flex; flex-direction: column; gap: 12px; }
+.player-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.player-card-head h2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.player-card-count { font-size: 13px; }
+.player-card-style { display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
+.player-card-style .muted { font-size: 14px; }
+.player-card-notes { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.player-card-label { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.player-card-notes p { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+.player-foot { font-size: 13px; max-width: 760px; }
+.player-dialog { max-width: 720px; }
+.player-dialog-meta { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.player-dialog-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.player-dialog-foot > .field-hint { max-width: 360px; }
+
+/* Admin styles */
+.admin-styles-table th[scope=row] { font-weight: 600; white-space: nowrap; }
+.admin-written { color: var(--success); font-weight: 600; }
+.admin-actions { text-align: right; }
+.admin-notes-card { display: flex; flex-direction: column; gap: 14px; }
+.admin-notes-card p { font-size: 14px; max-width: 780px; margin-top: 4px; }
+.admin-notes-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.admin-note-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; }
+.admin-note-list li { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 12px 16px; }
+.admin-note-list li + li { border-top: 1px solid var(--line); }
+.admin-note-list li > span:nth-child(2) { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-note-list.matchups li { grid-template-columns: minmax(0, 340px) minmax(0, 1fr) auto; }
+.admin-matchup { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.admin-dialog-tip { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; margin-top: 8px; }
+.admin-foot { font-size: 13px; }
+@media (max-width: 640px) {
+  .admin-note-list li, .admin-note-list.matchups li { grid-template-columns: minmax(0, 1fr) auto; }
+  .admin-note-list li > span:nth-child(2) { grid-column: 1 / -1; grid-row: 2; white-space: normal; }
+  .style-fields-rubbers { grid-template-columns: 1fr; }
+}
+
+/* Match details card on the analysis page */
+.ma-details { display: flex; flex-direction: column; gap: 16px; }
+.ma-details dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px 24px; }
+.ma-details dt { font-size: 13px; color: var(--ink-3); }
+.ma-details dd { margin: 0; font-weight: 600; }
+.ma-details-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.ma-details-side { border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.ma-details-side.you { background: #eef5fd; }
+.ma-details-side.opp { background: #fdf1ea; }
+.ma-details-side.you > span:first-child { color: #1e4f8f; }
+.ma-details-side.opp > span:first-child { color: #9a3412; }
+.ma-details-side > span:first-child { font-size: 13px; font-weight: 600; }
+.ma-details-side > span:last-child { font-size: 14px; color: var(--ink-2); }
+
+/* Styles on the new match form and points editor */
+.match-styles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.match-style-side { border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.match-style-side-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.match-style-side-head strong.you { color: #1e4f8f; }
+.match-style-side-head strong.opp { color: #9a3412; }
+.match-style-summary { display: flex; flex-direction: column; gap: 2px; }
+.match-style-summary .muted { font-size: 14px; }
+.match-styles-field { border: 0; padding: 0; margin: 0; min-width: 0; gap: 8px; }
+.match-styles-field > legend { padding: 0; font-size: 14px; font-weight: 500; color: var(--ink-2); margin-bottom: 4px; }
+.match-style-change { align-self: flex-start; }

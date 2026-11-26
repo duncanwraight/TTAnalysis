@@ -209,3 +209,22 @@ describe('summary shape', () => {
     expect(isMatchSummary({ ...valid, mental: [{ title: 'Starts', detail: runOn }] })).toBe(false);
   });
 });
+
+describe('buildSummaryInput with styles', () => {
+  it('adds the styles section after the shot guide, and changes the hash', async () => {
+    const styles = {
+      styles: [{ id: 'chopper', name: 'Chopper', description: '', as_notes: '', against_notes: 'Be patient.', display_order: 1 }],
+      kitNotes: [],
+      matchups: [],
+    };
+    const plain = buildSummaryInput(MATCH, analysis, SHOTS);
+    expect(buildSummaryInput(MATCH, analysis, SHOTS, styles, null)).toBe(plain);
+    const withStyle = buildSummaryInput({ ...MATCH, opponent_style_id: 'chopper' }, analysis, SHOTS, styles, 'Working on the push.');
+    expect(withStyle.startsWith(plain)).toBe(true);
+    expect(withStyle.split('\n').slice(-2)).toEqual([
+      'Opponent\'s style: Chopper. Playing against this style: Be patient.',
+      'Notes on the player, written by whoever entered the match: Working on the push.',
+    ]);
+    expect(await hashInput(withStyle)).not.toBe(await hashInput(plain));
+  });
+});

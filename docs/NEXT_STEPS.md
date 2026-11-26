@@ -44,6 +44,24 @@ The user has checked the admin panel, the `/debug` removal and the AI summaries 
 - The password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
 - A summary written with the sweep tags. Press "Update the summary" on a match with attacked first and attacked straight away ticked (about $0.10). Check it uses the counts sensibly, including the serve split, and that the banner goes away afterwards. If the banner stays, the page and the function are hashing different input (most likely `confirmed_tags` or the new point columns).
 
+## 0. Players, styles of play and notes (shipped, notes to write)
+
+Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/GKWsSyv6txbLJ6aQs5p2vY. Built the same day. Shipped on 2026-11-26: migration applied to production, `match-summary` deployed, pushed to `main`.
+
+- **Players** (`/players`, `src/pages/Players.tsx`): the owner and the people whose matches they enter. Each has a style, hand, rubbers and free-text notes (owner only, 1,000 characters). Saving yourself also saves `display_name`. Renaming a player renames their matches (`players_sync_name` trigger), because share links read `matches.player_name` and can't read players.
+- **Styles** (`/admin/styles`, `src/pages/AdminStyles.tsx`): six starting styles seeded with names and one-line descriptions, but no notes. Each has "playing as" and "against" tactical notes. Hands and rubbers (`kit_notes`) carry "against" notes for left-handed, short, medium and long pips, and anti. Match-ups run one way (player's style, then opponent's). Admins see how many matches use each style through the `style_usage()` function.
+- **Matches**: `player_id` plus both sides' style, hand and rubbers, copied when the match is created so later changes to a player don't rewrite old matches. The new match form picks a player or adds one ("Someone new"). It fills in the opponent from the last match against the same name, ignoring case. The points editor edits both sides. A trigger rejects a `player_id` that isn't the owner's.
+- **Migration** `20261127120000_players_and_styles.sql` creates a self player for every account with matches or a saved name (named from `display_name`, or "Me"), a player for every other distinct `player_name`, and links every match. On the local stack every match was linked.
+- **Analysis page**: the analysis tab has a Match details card (result, date, event, format, video, both styles). The header's date line now only shows on the summary tab.
+- **Coach's summary**: `buildStyleSection` (`src/lib/styles.ts`) adds a section after the shot guide with both styles and their notes, the opponent's hand and rubber notes, any match-up and the player's notes. When there's nothing to add the input is unchanged, so `SUMMARY_VERSION` wasn't bumped and existing summaries only show as out of date once a style or note is set. The prompt's new section says to take styles as given but never as evidence, never to work against the player's own style, to check any shot the notes name against the counts either way, and never to quote the notes. The "never name a style" rule now only applies to styles that weren't given.
+- **Checked**: 155 tests, lint and build. RLS tested over REST on the local stack: anon reads styles but not players, another user can't see players, edit styles or kit notes, or point a match at someone else's player, and `style_usage()` returns nothing to non-admins. In Chrome on the local stack: players page and dialog, new match with an existing player, the opponent lookup, the points editor, the details card and the out-of-date dot, and the admin page with a match-up. Fixed on the way: the opponent lookup could overwrite a style chosen while it was loading. Not checked: phone width (Sway wouldn't resize the window), and a real summary call with styles (about $0.10).
+
+Still to do:
+
+- The user is sending brief notes for each style, hand and rubber, and any match-ups. Expand them into the "playing as" and "against" notes, written for the model, and add them in a migration (or on `/admin/styles` on production).
+- Try a real summary on a match with styles and notes, and check the page's hash matches the function's.
+- Try a summary on a match with styles and notes set, and check the page's hash matches the function's (the banner should go away).
+
 ## 1. Signed-out homepage brochure and wording sweep (done)
 
 Built and shipped on 2026-11-25 from this design canvas: https://claude.ai/artifact/QEw5JW86rf8BMaRDQSm79J. The user approved the design and the final copy on the canvas before it was built.

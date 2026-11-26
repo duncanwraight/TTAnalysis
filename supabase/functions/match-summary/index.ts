@@ -18,6 +18,7 @@ import { buildAnalysis, type AnalysisShot } from '../../../src/lib/analysis.ts';
 import {
   MAX_NOTES_LENGTH, SUMMARY_MODEL, SUMMARY_SCHEMA, buildSummaryInput, costUsd, enforceKinds, hashInput, isMatchSummary, notesMessage,
 } from '../../../src/lib/aiSummary.ts';
+import type { KitNote, PlayStyle, StyleMatchup } from '../../../src/lib/styles.ts';
 import { SYSTEM_PROMPT } from './prompt.ts';
 
 const CORS = {
@@ -79,21 +80,29 @@ Deno.serve(async (req) => {
 
     const { data: match, error: matchError } = await asUser
       .from('matches')
-      .select('id, user_id, player_name, opponent_name, event, date, best_of, initial_server, confirmed_tags')
+      .select(`id, user_id, player_name, opponent_name, event, date, best_of, initial_server, confirmed_tags, player_id,
+        player_style_id, player_hand, player_forehand_rubber, player_backhand_rubber,
+        opponent_style_id, opponent_hand, opponent_forehand_rubber, opponent_backhand_rubber`)
       .eq('id', matchId)
       .maybeSingle();
     if (matchError) throw matchError;
     if (!match || match.user_id !== user.id) return fail(404, 'Match not found.');
 
-    const [sets, points, shots] = await Promise.all([
+    const [sets, points, shots, styles, kitNotes, matchups, player] = await Promise.all([
       asUser.from('sets').select('id, set_number, player_score, opponent_score').eq('match_id', matchId),
       asUser.from('points')
         .select('id, set_id, winner, winning_shot_id, winning_hand, other_shot_id, other_hand, is_lucky_shot, is_unforced_error, is_attacked_first, is_early_attack')
         .eq('match_id', matchId)
         .order('created_at', { ascending: true }),
       asUser.from('shots').select('id, name, display_name, check_qualities, technical_notes, role, shot_categories(name, display_order)'),
+      asUser.from('play_styles').select('id, name, description, as_notes, against_notes, display_order'),
+      asUser.from('kit_notes').select('key, against_notes'),
+      asUser.from('style_matchups').select('id, player_style_id, opponent_style_id, notes'),
+      match.player_id
+        ? asUser.from('players').select('notes').eq('id', match.player_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
-    for (const result of [sets, points, shots]) if (result.error) throw result.error;
+    for (const result of [sets, points, shots, styles, kitNotes, matchups, player]) if (result.error) throw result.error;
     if (!points.data?.length) return fail(400, 'Enter some points before asking for a summary.');
 
     type ShotRow = {
@@ -118,7 +127,12 @@ Deno.serve(async (req) => {
       shots: shotList,
       confirmed: match.confirmed_tags ?? [],
     });
-    const input = buildSummaryInput(match, analysis, shotList);
+    const styleData = {
+      styles: (styles.data ?? []) as PlayStyle[],
+      kitNotes: (kitNotes.data ?? []) as KitNote[],
+      matchups: (matchups.data ?? []) as StyleMatchup[],
+    };
+    const input = buildSummaryInput(match, analysis, shotList, styleData, player.data?.notes ?? null);
     const inputHash = await hashInput(input);
 
     const [{ data: existing, error: existingError }, { data: saved, error: savedError }] = await Promise.all([

@@ -81,7 +81,7 @@ It answers one question: who got to attack first, and did that decide points?
 - A bigger share of attack means that side opened up and finished more points. A bigger share of control means more points ended with that side at the table, often against the other's attack. More defence means that side spent more points absorbing the other's attack.
 - If the player loses when controlling and wins when attacking, advise looking for the first chance to attack (the serve and the ball after it, and receive), and using the control shot's qualities to make it harder to attack.
 - If the player attacks plenty but the attack loses more than it wins, the problem is the attack or the choice of ball to attack. Never suggest attacking more.
-- Describe a different style of play in counts. Never name it ("chopper", "blocker"): one match's last shots can't establish that.
+- Describe a different style of play in counts. Never name a style ("chopper", "blocker") that isn't given under "Styles and the player's notes": one match's last shots can't establish it.
 
 Use the balance to support other problems, in a clause or two, not as a section. Only raise it when something in "standouts" applies, or a role was won or lost at least twice as often as the other way on 10 or more shots. It can be its own problem at most once, and only when it cost points no other problem covers. It reaches the headline only when a role standout decided the match.
 
@@ -108,6 +108,17 @@ What to make of them:
 - If the opponent attacked first far more on one serve than the other, say which: on the player's serve it points at the serve and third ball, on the opponent's at the receive.
 
 This is supporting evidence like shot balance, and the same limits apply: it reaches the headline only when it clearly decided the match, and it's its own problem at most once.
+
+## Styles and the player's notes
+
+The input can end with a section on styles and the player's notes. When it's missing, ignore this part. Everything in it was chosen or written by the person who entered the match, so take it as given and never argue with it. It decides what to look for and what to suggest. It is never evidence of what happened: only the counts are.
+
+- Player's style, and its "playing as this style" notes: what the player is trying to do. Read the counts against it. A chopper with a small share of attack, or a blocker with a lot of control, is playing their game, so don't treat that as the problem, and never give advice that goes against the style (telling a chopper to attack first) unless the counts show the style itself losing points.
+- Opponent's style, and its "playing against this style" notes, the notes on their hand and rubbers, and any match-up notes: tactical advice. Use them to choose which tactical points to make and to word them, tied to the counts. A note that the counts don't touch is left out.
+- The hand and rubbers on each side say what the player can do with each wing. Fit the advice to them: don't suggest looping off a short pips or long pips backhand as if it were inverted.
+- The player's notes, written by whoever entered the match (often their coach): what they're working on and what tends to go wrong. They're the first source of technical advice, ahead of a shot's technical notes where both cover the same shot. When the notes name a shot or a habit the counts can check, check it and give the answer either way, even if it isn't among the costliest problems: "you noted the backhand loop; it won 3 and lost 9", or "the backhand loop came up only twice, so there's nothing to judge". Never invent a problem to match a note. Never quote the notes back word for word, because the summary can be shared and the notes can't.
+
+Never give styles their own problem, heading or sentence of introduction ("As a chopper, ..."). Bring a style in only where it explains a problem or changes the advice, in a clause. A problem a note led to still has a kind like any other.
 
 ## The mental side
 

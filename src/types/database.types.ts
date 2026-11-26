@@ -16,13 +16,17 @@ export type Profile = {
   updated_at: string;
 };
 
+import type { MatchKit } from '../lib/styles';
+
 /* Match Data Types */
-export type Match = {
+export type Match = MatchKit & {
   id: string;
   user_id: string;
   opponent_name: string;
   // Who the analysis is about. Empty on older matches, which are the account owner's own
   player_name?: string | null;
+  // The player record the match is about; player_name is kept in step with its name
+  player_id?: string | null;
   // Free text, e.g. "Winter 2026/27 league"
   event?: string | null;
   // http(s) link to the match video

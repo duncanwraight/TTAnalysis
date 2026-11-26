@@ -10,6 +10,7 @@
 
 import { shotLabel, type Analysis, type AnalysisShot } from './analysis.ts';
 import { qualityLabel, sortQualities } from './shotGuide.ts';
+import { buildStyleSection, type MatchKit, type StyleData } from './styles.ts';
 
 export const SUMMARY_MODEL = 'claude-opus-5-5';
 
@@ -122,7 +123,7 @@ export const enforceKinds = (v: unknown): unknown => {
   };
 };
 
-export type SummaryMatch = {
+export type SummaryMatch = MatchKit & {
   player_name?: string | null;
   opponent_name: string;
   event?: string | null;
@@ -157,8 +158,17 @@ const buildShotGuide = (analysis: Analysis, shots: AnalysisShot[]): string[] => 
   return lines.sort();
 };
 
-/** The user message sent to the model: match details, computed analysis, every point, then the shot guide. */
-export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots: AnalysisShot[]): string => {
+/**
+ * The user message sent to the model: match details, computed analysis, every
+ * point, the shot guide, then styles and the player's notes when there are any.
+ */
+export const buildSummaryInput = (
+  match: SummaryMatch,
+  analysis: Analysis,
+  shots: AnalysisShot[],
+  styles: StyleData = { styles: [], kitNotes: [], matchups: [] },
+  playerNotes: string | null = null,
+): string => {
   // Ids, row keys and the page's own cards add tokens without adding information.
   // JSON.stringify leaves out the undefined fields.
   const { rows, ...rest } = analysis;
@@ -215,6 +225,7 @@ export const buildSummaryInput = (match: SummaryMatch, analysis: Analysis, shots
     '',
     'Shot guide. For each shot in this match: the qualities worth checking, then what a technical fault looks like.',
     ...guideOrNone(buildShotGuide(analysis, shots)),
+    ...buildStyleSection(match, styles, playerNotes),
   ].join('\n');
 };
 

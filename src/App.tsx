@@ -9,6 +9,8 @@ import PointSweep from './pages/PointSweep';
 import Auth from './pages/Auth';
 import AdminPanel from './pages/AdminPanel';
 import AdminShots from './pages/AdminShots';
+import AdminStyles from './pages/AdminStyles';
+import Players from './pages/Players';
 import ResetPassword from './pages/ResetPassword';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -106,6 +108,22 @@ function App() {
                 <AdminShots />
               </ProtectedRoute>
             } 
+          />
+          <Route
+            path="/admin/styles"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminStyles />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/players"
+            element={
+              <ProtectedRoute>
+                <Players />
+              </ProtectedRoute>
+            }
           />
           
           <Route path="*" element={<Navigate to="/" replace />} />

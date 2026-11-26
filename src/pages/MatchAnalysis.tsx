@@ -8,6 +8,7 @@ import { Analysis, Pattern, ServeStats, ShotCount, ShotRow, Tally, UNFORCED_ERRO
 import { ATTACK_DEFINITION, SWEEPS, unconfirmedTags, type SweepTag } from '../lib/sweeps';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
 import { buildSummaryInput, hashInput } from '../lib/aiSummary';
+import { describeHandAndRubbers, hasKit, opponentKit, playerKit, type Kit, type PlayStyle } from '../lib/styles';
 import CoachSummary from '../components/analysis/CoachSummary';
 import ShotBalance from '../components/analysis/ShotBalance';
 import '../styles/components/MatchAnalysis.css';
@@ -65,6 +66,19 @@ const PatternList = ({ title, patterns, yours }: { title: string; patterns: Patt
     ))}
   </div>
 );
+
+/** One side's style, hand and rubbers on the match details card. */
+const SideStyle = ({ name, kit, styles, side }: { name: string; kit: Kit; styles: PlayStyle[]; side: 'you' | 'opp' }) => {
+  const style = styles.find(s => s.id === kit.style_id);
+  const rest = describeHandAndRubbers(kit);
+  return (
+    <div className={`ma-details-side ${side}`}>
+      <span>{name}</span>
+      <strong>{style?.name ?? 'Style not given'}</strong>
+      {rest && <span>{rest}</span>}
+    </div>
+  );
+};
 
 const countList = (counts: ShotCount[]) => counts.map(c => `${c.shot.toLowerCase()} ${c.count}`).join(', ');
 
@@ -194,7 +208,7 @@ const MatchAnalysis = () => {
   useEffect(() => {
     if (!data || !analysis) return;
     let cancelled = false;
-    hashInput(buildSummaryInput(data.match, analysis, data.shots))
+    hashInput(buildSummaryInput(data.match, analysis, data.shots, data.styles, data.playerNotes))
       .then(hash => { if (!cancelled) setCurrentHash(hash); })
       .catch(() => { /* Without the hash the summary just never shows as out of date */ });
     return () => { cancelled = true; };
@@ -332,12 +346,15 @@ const MatchAnalysis = () => {
         <div>
           <p className="eyebrow">Match analysis</p>
           <h1>{cleanText(match.player_name) ? `${cleanText(match.player_name)} vs ${match.opponent_name}` : `vs ${match.opponent_name}`}</h1>
-          <p className="ma-meta">
-            {[formatDate(match.date), cleanText(match.event), `Best of ${match.best_of}`].filter(Boolean).join(' · ')}
-            {isSafeVideoUrl(match.video_url) && (
-              <> · <a href={match.video_url} target="_blank" rel="noopener noreferrer">Watch the video</a></>
-            )}
-          </p>
+          {/* The analysis tab has the details card instead */}
+          {view === 'summary' && (
+            <p className="ma-meta">
+              {[formatDate(match.date), cleanText(match.event), `Best of ${match.best_of}`].filter(Boolean).join(' · ')}
+              {isSafeVideoUrl(match.video_url) && (
+                <> · <a href={match.video_url} target="_blank" rel="noopener noreferrer">Watch the video</a></>
+              )}
+            </p>
+          )}
         </div>
         <div className="ma-result">
           <p className="ma-result-text">{setsResult} {a.setsWon.won}–{a.setsWon.lost}</p>
@@ -375,6 +392,25 @@ const MatchAnalysis = () => {
           onRewrite={generateSummary}
         />
       ) : (<>
+      <section className="card ma-details" aria-labelledby="ma-details-h">
+        <h2 id="ma-details-h">Match details</h2>
+        <dl>
+          <div><dt>Result</dt><dd>{setsResult} {a.setsWon.won}–{a.setsWon.lost}</dd></div>
+          <div><dt>Date</dt><dd>{formatDate(match.date)}</dd></div>
+          {cleanText(match.event) && <div><dt>Event</dt><dd>{cleanText(match.event)}</dd></div>}
+          <div><dt>Format</dt><dd>Best of {match.best_of}</dd></div>
+          {isSafeVideoUrl(match.video_url) && (
+            <div><dt>Video</dt><dd><a href={match.video_url} target="_blank" rel="noopener noreferrer">Watch the match</a></dd></div>
+          )}
+        </dl>
+        {(hasKit(playerKit(match)) || hasKit(opponentKit(match))) && (
+          <div className="ma-details-sides">
+            <SideStyle name={cleanText(match.player_name) ?? 'You'} kit={playerKit(match)} styles={data.styles.styles} side="you" />
+            <SideStyle name={match.opponent_name} kit={opponentKit(match)} styles={data.styles.styles} side="opp" />
+          </div>
+        )}
+      </section>
+
       <aside className="ma-note" aria-label="How points are entered">
         <strong>How to read this page.</strong> Each point has two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Rally shots aren't entered, so the numbers only cover the last two shots of each point.
       </aside>
