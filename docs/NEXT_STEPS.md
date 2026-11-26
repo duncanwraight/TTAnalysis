@@ -206,7 +206,7 @@ Designed with the user on this canvas: https://claude.ai/artifact/3J5Lt6syww186X
 How the data works:
 
 - Each point records two shots: the winner's **winning shot** and the loser's **losing shot**. The losing shot is either the one that set up the winner or the one that missed. Rally shots aren't recorded, so the page never talks about shots "played".
-- `src/lib/analysis.ts` builds the whole page from the raw match, sets, points and shots, and `src/lib/analysis.test.ts` covers it. The SQL analysis views (`point_shots` and the views on it) are no longer used and can be dropped.
+- `src/lib/analysis.ts` builds the whole page from the raw match, sets, points and shots, and `src/lib/analysis.test.ts` covers it. The old SQL analysis views were dropped on 2026-11-26.
 - A service fault is recorded as the receiver's winning shot with `no_shot` for the server. The analysis charges it to the server as an unforced losing shot.
 - Who served each point is worked out from the scoring rules (`getServer`), not stored.
 
@@ -257,7 +257,7 @@ Still open on sweeps:
 - **`any` types (done 2026-11-26):** the last ones (the eval script and `User.preferences`) are typed, and `@typescript-eslint/no-explicit-any` is back on.
 - **Supabase CLI v4 warnings (done 2026-11-26):** `config.toml` uses `auth.email.enabled` and `auth.sms.enabled`, so `supabase status` no longer warns.
 - **Bundle size:** `html2pdf.js` loads on the Export to PDF click. Its own chunk is still over 500 kB, which the build warns about.
-- **Unused SQL views:** see section 7.
+- **Unused SQL views (done 2026-11-26):** `point_shots`, the six views on it and `match_summary` were dropped by `20261127140000_drop_analysis_views.sql`. Nothing in the app, the function or the scripts read them.
 
 ## Testing against a local stack
 
