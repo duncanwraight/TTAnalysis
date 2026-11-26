@@ -40,6 +40,9 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 5. **The coach's ten styles and the rubber notes** (section 0), in `0436147`. Migration applied.
 6. **"This is me" unticked by default** on the new match form, in `ae30fd2`, and the user's own account fixed by hand (section 0).
 7. **Player notes kept out of the summary's wording** (section 0), in `6a3ee03`. Function deployed.
+8. **Code quality** (section 8): the last `any` types, the CLI v4 config names, the old SQL views dropped, pages loaded on demand and a smaller PDF export, in `7d33a3b`, `20e320c` and `579ff5f`.
+9. **Stale tabs after a deploy** (section 8): reload once, then an error page instead of a blank screen, in `5d711ef`.
+10. **Security** (section 6): React Router 7, 8-character passwords, no more sign-out on every deploy, and the user's Supabase dashboard changes, including Postgres 17. In `c1557d1` and `7f2ac24`. The user signed in on production after the upgrade and everything worked.
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
@@ -171,7 +174,7 @@ Still to do:
 
 ## 5. Tests for the scoring rules (done)
 
-`npm test` runs Vitest: 123 tests across `scoring.test.ts`, `analysis.test.ts`, `aiSummary.test.ts` and `matchDetails.test.ts`. `src/lib/scoring.test.ts` covers every function in `src/lib/scoring.ts`, including `buildMatchState`, the reload logic.
+`npm test` runs Vitest: 155 tests across `scoring.test.ts`, `analysis.test.ts`, `aiSummary.test.ts`, `matchDetails.test.ts`, `styles.test.ts` and `sweeps.test.ts` in `src/lib`. `src/lib/scoring.test.ts` covers every function in `src/lib/scoring.ts`, including `buildMatchState`, the reload logic.
 
 Decided while writing the tests:
 
@@ -193,7 +196,7 @@ The AI tables were checked the same way on a local stack: a share link reads the
 
 Fixed in the frontend: `/debug` deleted; admin pages no longer bounce an admin on a direct load; `npm audit fix` and `html2pdf.js` 0.14; `promote-admin.js` reads `SUPABASE_SERVICE_ROLE_KEY`.
 
-Still open:
+Follow-up on 2026-11-26 (nothing is left open in this section):
 
 - **Supabase dashboard (done by the user 2026-11-26):** minimum password length set to 8, leaked password protection on, email OTP expiry under an hour, and Postgres upgraded from 15.8.1.091 to 17.12. The project also moved from the Nano to the Micro compute size (a free upgrade). Checked after the upgrade: auth is healthy, the database linter is clean, shots read anonymously, matches don't, and production has 13 matches, 488 points and 3 summaries.
 - **Minimum password length (done 2026-11-26):** the sign-up and reset forms now ask for 8 characters (`MIN_PASSWORD_LENGTH` in `src/lib/password.ts`, shown as a hint under the field), and `config.toml` matches. Existing passwords still work: Supabase only checks the length when a password is set. The dashboard now says 8 as well, so the API enforces it too.
@@ -253,7 +256,10 @@ Still open on sweeps:
 - The "Edit points" link at the bottom of the analysis page doesn't say that sweeps live on the points editor.
 - Shot balance shows a "Defence 0 (0%)" row when nobody defended.
 
-## 8. Code quality
+## 8. Code quality (done)
+
+Cleared on 2026-11-26. Nothing is left open in this section. `tsc` only checks `src`, so `scripts/summary-eval.ts` is typed but only lint checks it.
+
 
 - **`any` types (done 2026-11-26):** the last ones (the eval script and `User.preferences`) are typed, and `@typescript-eslint/no-explicit-any` is back on.
 - **Supabase CLI v4 warnings (done 2026-11-26):** `config.toml` uses `auth.email.enabled` and `auth.sms.enabled`, so `supabase status` no longer warns.
