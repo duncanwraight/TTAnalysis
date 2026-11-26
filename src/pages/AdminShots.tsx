@@ -3,6 +3,7 @@ import { ShotCategory, Shot } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import Button from '../components/ui/Button';
 import Layout from '../components/Layout';
+import { useConfirm } from '../components/ui/useConfirm';
 import { ROLES, ROLE_LABEL, type Role } from '../lib/analysis';
 import { MAX_TECHNICAL_NOTES, QUALITIES, qualityLabel, sortQualities } from '../lib/shotGuide';
 
@@ -34,6 +35,7 @@ const AdminShots: React.FC = () => {
   const [shots, setShots] = useState<Shot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   // Category editing state
   const [editingCategory, setEditingCategory] = useState<EditingCategory | null>(null);
@@ -91,7 +93,8 @@ const AdminShots: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Delete this category and every shot in it?')) return;
+    const name = categories.find(c => c.id === id)?.name;
+    if (!(await confirm({ title: `Delete ${name ? `the ${name} category` : 'this category'}?`, message: 'Every shot in it goes too.', confirmLabel: 'Delete category', danger: true }))) return;
 
     try {
       await api.shot.deleteCategory(id);
@@ -151,7 +154,8 @@ const AdminShots: React.FC = () => {
   };
 
   const handleDeleteShot = async (id: string) => {
-    if (!confirm('Delete this shot?')) return;
+    const name = shots.find(s => s.id === id)?.display_name;
+    if (!(await confirm({ title: `Delete ${name || 'this shot'}?`, confirmLabel: 'Delete shot', danger: true }))) return;
 
     try {
       await api.shot.deleteShot(id);
@@ -459,6 +463,7 @@ const AdminShots: React.FC = () => {
           </div>
         );
       })()}
+      {dialog}
     </Layout>
   );
 };

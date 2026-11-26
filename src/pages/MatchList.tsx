@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router';
 import Layout from '../components/Layout';
+import ErrorNotice from '../components/ui/ErrorNotice';
+import { useConfirm } from '../components/ui/useConfirm';
 import { cleanText } from '../lib/matchDetails';
 import type { Match } from '../types/database.types';
 import { useApi } from '../lib/useApi';
@@ -24,6 +26,8 @@ const MatchList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   const { user } = useAuth();
   const userId = user?.id;
@@ -48,14 +52,21 @@ const MatchList = () => {
     event.preventDefault();
     event.stopPropagation();
     
-    if (window.confirm('Delete this match and all its points? This can\'t be undone.')) {
+    const ok = await confirm({
+      title: 'Delete this match?',
+      message: 'All its points go with it. This can\'t be undone.',
+      confirmLabel: 'Delete match',
+      danger: true,
+    });
+    if (ok) {
       try {
         setIsDeleting(true);
+        setDeleteError(null);
         await api.match.deleteMatch(id);
         // Refresh the match list after deletion
         fetchMatches();
       } catch (err) {
-        alert('The match could not be deleted. Please try again.');
+        setDeleteError('The match was not deleted. Check your connection and try again.');
       } finally {
         setIsDeleting(false);
       }
@@ -80,6 +91,8 @@ const MatchList = () => {
             <Link to="/matches/new" className="btn primary">New match</Link>
           </div>
         </div>
+
+        {deleteError && <ErrorNotice message={deleteError} onDismiss={() => setDeleteError(null)} />}
 
         {loading ? (
           <div className="state" role="status"><p>Loading your matches...</p></div>
@@ -144,6 +157,7 @@ const MatchList = () => {
           </ul>
         )}
       </div>
+      {dialog}
     </Layout>
   );
 };

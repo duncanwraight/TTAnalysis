@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import StyleFields from '../components/StyleFields';
+import { useConfirm } from '../components/ui/useConfirm';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import { EMPTY_KIT, MAX_PLAYER_NOTES, describeHandAndRubbers, type Player, type PlayStyle } from '../lib/styles';
@@ -25,6 +26,7 @@ const Players = () => {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [saving, setSaving] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   useEffect(() => {
     Promise.all([api.player.getPlayers(), api.style.getStyleData(), api.player.getMatchCounts()])
@@ -79,9 +81,11 @@ const Players = () => {
     if (!editing?.id || editing.is_self) return;
     const matches = counts[editing.id] ?? 0;
     const message = matches
-      ? `Delete ${editing.name}? Their ${matches} ${matches === 1 ? 'match stays' : 'matches stay'}, but lose the link to this player and their notes.`
-      : `Delete ${editing.name}?`;
-    if (!window.confirm(message)) return;
+      ? matches === 1
+        ? 'Their match stays, but loses the link to this player and their notes.'
+        : `Their ${matches} matches stay, but lose the link to this player and their notes.`
+      : undefined;
+    if (!(await confirm({ title: `Delete ${editing.name}?`, message, confirmLabel: 'Delete player', danger: true }))) return;
     setSaving(true);
     try {
       await api.player.deletePlayer(editing.id);
@@ -227,6 +231,7 @@ const Players = () => {
           </form>
         </div>
       )}
+      {confirmDialog}
     </Layout>
   );
 };

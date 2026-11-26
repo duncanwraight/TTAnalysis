@@ -165,11 +165,11 @@ Shipped in `ad8a04f`.
 - **Shared styles.** `src/index.css` holds the tokens and shared pieces: `.card`, `.btn` (plain white; `.primary` is ink, `.danger`, `.quiet`, `.small`), `.field`/`.fields`, `.segmented`, `.check` (a checkbox row, so don't use it as a general class name), `.data-table`, `.chip`, `.notice`, `.state` for loading/empty/error, `.page`/`.page-head`. `MatchAnalysis.css` holds the analysis page and the coach's summary. `src/styles/pages.css` has small bits for home, auth, match list and admin.
 - **Header.** White bar with the brand and nav. On `/admin` pages it turns dark purple with an "Admin" tag and its own nav.
 - **Tracker.** Split into `components/tracker/` (`Scoreboard`, `ShotPicker`, `MatchComplete`). Each side of the score is the "who won" button. Category tabs wrap, and each picker remembers its own last category. On a phone the scoreboard shrinks while a point is being recorded. Undo and End Set sit at the top and are disabled mid-point.
+- **No browser popups (2026-11-26).** Nothing calls `alert()` or `confirm()` any more. Errors show as an inline `ErrorNotice` (`src/components/ui/ErrorNotice.tsx`, a `.notice.error` with a Dismiss button): the tracker shows its save, undo and End Set errors above the scoreboard, and on the match complete screen. Confirmations use `useConfirm` (`src/components/ui/useConfirm.tsx`): `await confirm({ title, message, confirmLabel, danger })` returns true or false, and the page renders the hook's `dialog`. It focuses Cancel, closes on Escape or a backdrop click, and opens above other dialogs. Used for deleting matches, players, shots, categories, styles and match-ups.
 - **Unforced errors.** One definition, `UNFORCED_ERROR_DEFINITION` in `analysis.ts`, used on the analysis page, the home page, the points editor and the tracker toggle's tooltip.
 
 Still to do:
 
-- Errors in the tracker still use `alert()`. They could become an inline `.notice`.
 - Keyboard shortcuts for recording on a laptop (e.g. 1/2 for who won) would speed things up.
 
 ## 5. Tests for the scoring rules (done)

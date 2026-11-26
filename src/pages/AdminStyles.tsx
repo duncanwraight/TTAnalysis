@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Layout from '../components/Layout';
+import { useConfirm } from '../components/ui/useConfirm';
 import { useApi } from '../lib/useApi';
 import {
   KIT_KEYS, KIT_LABEL, MAX_STYLE_DESCRIPTION, MAX_STYLE_NOTES,
@@ -55,6 +56,7 @@ const AdminStyles = () => {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [saving, setSaving] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const load = useCallback(async () => {
     try {
@@ -115,18 +117,18 @@ const AdminStyles = () => {
     }
   };
 
-  const remove = () => {
+  const remove = async () => {
     if (!dialog || dialog.kind === 'kit' || !dialog.value.id) return;
     const id = dialog.value.id;
     if (dialog.kind === 'style') {
       const used = usage[id] ?? 0;
       const message = used
-        ? `Delete ${dialog.value.name}? ${used} ${used === 1 ? 'match uses' : 'matches use'} it and will show no style, and its match-ups go too.`
-        : `Delete ${dialog.value.name}? Its match-ups go too.`;
-      if (!window.confirm(message)) return;
+        ? `${used} ${used === 1 ? 'match uses' : 'matches use'} it and will show no style, and its match-ups go too.`
+        : 'Its match-ups go too.';
+      if (!(await confirm({ title: `Delete ${dialog.value.name}?`, message, confirmLabel: 'Delete style', danger: true }))) return;
       run(() => api.style.deleteStyle(id));
     } else {
-      if (!window.confirm('Delete this match-up?')) return;
+      if (!(await confirm({ title: 'Delete this match-up?', confirmLabel: 'Delete match-up', danger: true }))) return;
       run(() => api.style.deleteMatchup(id));
     }
   };
@@ -371,6 +373,7 @@ const AdminStyles = () => {
           </form>
         </div>
       )}
+      {confirmDialog}
     </Layout>
   );
 };

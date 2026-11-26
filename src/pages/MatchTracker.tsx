@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import Scoreboard from '../components/tracker/Scoreboard';
 import ShotPicker from '../components/tracker/ShotPicker';
 import MatchComplete from '../components/tracker/MatchComplete';
+import ErrorNotice from '../components/ui/ErrorNotice';
 import { Match, MatchSet, ShotInfo } from '../types/database.types';
 import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
@@ -47,6 +48,8 @@ const MatchTracker = () => {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // A save, undo or End Set that failed, shown above the scoreboard
+  const [notice, setNotice] = useState<string | null>(null);
   const [matchState, setMatchState] = useState<MatchState>({
     currentSet: 1,
     sets: [{ ...EMPTY_SET }],
@@ -142,6 +145,7 @@ const MatchTracker = () => {
     if (savingRef.current) return;
     savingRef.current = true;
     setIsSaving(true);
+    setNotice(null);
     try {
       await operation();
     } finally {
@@ -201,7 +205,7 @@ const MatchTracker = () => {
 
       const noShotId = shots.find(s => s.name === NO_SHOT)?.id;
       if (!noShotId) {
-        alert('The "no shot" entry is missing from the shot list, so this service fault can\'t be entered automatically. Pick the losing shot yourself.');
+        setNotice('The "no shot" entry is missing from the shot list, so this service fault can\'t be entered automatically. Pick the losing shot yourself.');
         return;
       }
 
@@ -310,7 +314,7 @@ const MatchTracker = () => {
           setMatchState({ ...matchState, sets, points, dbSets, currentSetId: updatedSetRow.id });
         }
       } catch (error) {
-        alert(`Couldn't save the point: ${errorMessage(error)}`);
+        setNotice(`Couldn't save the point: ${errorMessage(error)}`);
       } finally {
         resetPointFlow();
       }
@@ -336,7 +340,7 @@ const MatchTracker = () => {
           await syncMatchResult(newState.sets, false, false);
           setMatchState(newState);
         } catch (error) {
-          alert(`Failed to undo End Set: ${errorMessage(error)}. Refresh the page to see the saved state.`);
+          setNotice(`Couldn't undo End Set: ${errorMessage(error)}. Refresh the page to see the saved state.`);
         }
         return;
       }
@@ -345,7 +349,7 @@ const MatchTracker = () => {
       const lastPoint = matchState.points[matchState.points.length - 1];
       const setRow = matchState.dbSets.find(s => s.id === lastPoint.set_id);
       if (!setRow) {
-        alert('Could not find the set for the last point. Please refresh and try again.');
+        setNotice("Couldn't find the set for the last point. Refresh the page and try again.");
         return;
       }
 
@@ -378,7 +382,7 @@ const MatchTracker = () => {
         await syncMatchResult(newState.sets, false, false);
         setMatchState(newState);
       } catch (error) {
-        alert(`Failed to undo the last point: ${errorMessage(error)}. Refresh the page to see the saved state.`);
+        setNotice(`Couldn't undo the last point: ${errorMessage(error)}. Refresh the page to see the saved state.`);
       }
     });
 
@@ -393,7 +397,7 @@ const MatchTracker = () => {
       const current = matchState.sets[setIndex];
 
       if (setLeader(current) === null) {
-        alert('Cannot end set - scores are tied!');
+        setNotice("The scores are level, so the set can't be ended. Enter another point first.");
         return;
       }
 
@@ -425,7 +429,7 @@ const MatchTracker = () => {
           currentSetId: nextSet.id,
         });
       } catch (error) {
-        alert(`Failed to end set: ${errorMessage(error)}`);
+        setNotice(`Couldn't end the set: ${errorMessage(error)}`);
       }
     });
 
@@ -468,9 +472,12 @@ const MatchTracker = () => {
     );
   }
 
+  const noticeBanner = notice && <ErrorNotice message={notice} onDismiss={() => setNotice(null)} />;
+
   if (matchState.isMatchComplete) {
     return (
       <Layout>
+        {noticeBanner}
         <MatchComplete
           matchId={match.id}
           playerName={player}
@@ -531,6 +538,8 @@ const MatchTracker = () => {
             </button>
           </div>
         </div>
+
+        {noticeBanner}
 
         <Scoreboard
           playerName={player}

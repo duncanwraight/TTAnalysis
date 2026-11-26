@@ -206,6 +206,9 @@ button { cursor: pointer; }
 .notice { padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface-2); font-size: 14px; line-height: 1.5; }
 .notice.error { background: var(--danger-soft); border-color: var(--danger-line); color: var(--danger); }
 .notice.success { background: var(--success-soft); border-color: var(--success-line); color: var(--success); }
+/* A notice with a close button, used in place of alert() */
+.notice.dismissible { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.notice-close { flex: none; border: 0; background: none; color: inherit; font-size: 14px; font-weight: 600; cursor: pointer; padding: 0 2px; text-decoration: underline; }
 .status { font-size: 13px; color: var(--ink-3); min-height: 1.2em; }
 .status.error { color: var(--danger); }
 
@@ -246,6 +249,10 @@ button { cursor: pointer; }
 }
 .dialog { width: 100%; max-width: 480px; max-height: calc(100vh - 32px); overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 .dialog h2 { font-size: 20px; }
+/* Confirm dialogs can open over another dialog */
+.confirm-backdrop { z-index: 60; }
+.confirm-dialog { max-width: 420px; }
+.confirm-dialog p { line-height: 1.5; }
 
 @media (max-width: 640px) {
   .app-header-inner { padding: 0 12px; gap: 8px; }
