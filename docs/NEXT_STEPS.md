@@ -49,7 +49,6 @@ The user has done real sweeps on production and checked the sweep page, the poin
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. Not yet checked on production by a person:
 
 - The password reset email. Test it from ttanalysis.app: the link should land on ttanalysis.app/reset-password.
-- A summary written with the sweep tags. Press "Update the summary" on a match with attacked first and attacked straight away ticked (about $0.10). Check it uses the counts sensibly, including the serve split, and that the banner goes away afterwards. If the banner stays, the page and the function are hashing different input (most likely `confirmed_tags` or the new point columns).
 
 ## 0. Players, styles of play and notes (shipped)
 
@@ -83,8 +82,7 @@ The "You" bug, found on 2026-11-26:
 Still to do:
 
 - Other accounts may have the same problem (a friend's name as their self player). Only the user's account was checked. There's no way in the app to change who "You" is: the Players page can't move `is_self`, and renaming the self player would rename every match linked to it. Either add a "This is me" control on the Players dialog or fix accounts by hand.
-- Watch the next summaries written with player notes for any mention of the notes ("you noted", "your coach says"). See *Player notes in the summary's wording* below.
-- Match-ups, and notes for left-handers and medium pips, are empty until the user writes them.
+- Watching the next summaries for any mention of player notes is parked until 2027-01-01 (section 2).
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
 
@@ -103,52 +101,65 @@ Built and shipped on 2026-11-25 from this design canvas: https://claude.ai/artif
 
 Still open: a contact link, if one is wanted.
 
-## 2. AI coach's summary (done)
+## 2. AI coach's summary
 
-Built and shipped on 2026-11-24 in `c8c989c`, `56b9c09`, `44e0cbb` and `d2c03d7`. CLAUDE.md has the short version. This section has the decisions and the things worth knowing before changing it.
+First shipped on 2026-11-24 in `c8c989c`, `56b9c09`, `44e0cbb` and `d2c03d7`, and extended most days since (see *Changes since launch*). CLAUDE.md has the short version. This section has the decisions and the things worth knowing before changing it.
 
 How it works:
 
 - **Access.** `profiles.ai_summaries_enabled` is off for everyone. Admins switch it on per user from `/admin`, which also shows this month's spend against the budget, per user and in total.
-- **The function.** `supabase/functions/match-summary` checks the flag and that the caller owns the match. It loads the match as the caller, so RLS applies, and rebuilds the analysis with `buildAnalysis`. Then it sends the analysis, every point and the shot guide to `claude-opus-5-5` (effort `medium`, structured output). The service role is only used for the flag, the budget, and writing the summary and usage rows.
-- **Shared code.** `src/lib/aiSummary.ts` (input builder, hash, cost sum, output schema, validator) and `src/lib/shotGuide.ts` (the quality list and what each means to the model) are used by both the page and the function. That's why `src/lib` imports carry `.ts` extensions. The prompt is `supabase/functions/match-summary/prompt.ts`.
+- **The function.** `supabase/functions/match-summary` checks the flag and that the caller owns the match. It loads the match as the caller, so RLS applies, and rebuilds the analysis with `buildAnalysis`. Then it sends the analysis, every point, the shot guide and any styles and player notes to `claude-opus-5-5` (effort `medium`, `max_tokens` 16000, structured output). The service role is only used for the flag, the budget, and writing the summary and usage rows.
+- **Shared code.** `src/lib/aiSummary.ts` (input builder, hash, cost sum, output schema, `enforceKinds`, validator), `src/lib/shotGuide.ts` (the quality list, what each means to the model, the tactical and technical definitions and `RECEIVE_GUIDANCE`) and `src/lib/styles.ts` (`buildStyleSection`) are used by both the page and the function. That's why `src/lib` imports carry `.ts` extensions. The prompt is `supabase/functions/match-summary/prompt.ts`.
 - **Storage.** `match_summaries` holds the latest summary per match, readable by the owner and by share-token requests. `match_summary_notes` holds the owner's correction notes, owner-only, so a share link never shows them. `ai_usage` logs every call's tokens and cost, and is kept when a match is deleted. `ai_settings` holds the monthly budget, $20.
-- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 6. The page computes the same hash, and shows the owner an "Update the summary" banner and a dot on the tab when they differ. Share links never see either, and the banner is left out of PDF exports (`data-html2canvas-ignore`), because only the owner can act on it. Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a shot's guide also changes the hash for matches that use that shot.
+- **Out of date.** The input is hashed together with the model and `SUMMARY_VERSION`, now 8. The page computes the same hash, and shows the owner an "Update the summary" banner and a dot on the tab when they differ. Share links never see either, and the banner is left out of PDF exports (`data-html2canvas-ignore`). Bump `SUMMARY_VERSION` after a prompt change that should prompt everyone to regenerate. Editing a used shot's guide, or setting a style or player note, also changes the hash for the matches it touches. Anything the function loads that feeds the input (as `shots.role` and the sweep columns do) must be loaded by the page too, or the two hashes never match.
+- **Problems.** Three or four, each with a `kind` (`shot`, `unforced`, `receive`, `serve`, `situation`) and separate `tactical` and `technical` advice, shown as the "Tactical" and "Technical" panels. The kind decides the advice: unforced errors get technical advice only and are never put down to misreading spin, receive problems always use `RECEIVE_GUIDANCE` rather than the receiving stroke's notes, and a situation gets no technical advice. `enforceKinds` applies those rules before validation. The validator accepts either part empty, but not both.
+- **Shot guide.** Each shot has `check_qualities` (tickboxes on `/admin/shots`, labelled tactical) and free-text `technical_notes`. The Serve notes are for serving only. The input lists the guide for shots used in the match.
 - **Notes.** "Correct this summary" sends the owner's notes with the previous summary. Corrections of fact are treated as true. Saved notes are reapplied on every rewrite.
-- **Shot guide.** Each shot has `check_qualities` (tickboxes on `/admin/shots`) and free-text `technical_notes`. The output splits each problem into `tactical` and `technical`, shown as the "Tactical" and "Technical" panels. The technical part is empty when the shot has no notes, or the problem isn't about one shot. The tactical part is empty for unforced errors. The validator accepts either part empty, but not both. Serve is always in the guide, and its notes cover receiving as well as serving.
 - **The tab.** The summary lives at `/matches/:id/summary` and `/shared/:token/summary` (`src/components/analysis/CoachSummary.tsx`). Share links only show the tab when a summary exists. PDF export prints whichever tab is open.
 
 Cost and limits:
 
-- A summary costs about $0.10 to $0.12 on Opus 5.5 since shot balance was added (it was $0.07 to $0.09 before): roughly 9,000 to 11,000 input tokens and 2,500 to 3,500 output tokens, including thinking. Regenerating an unchanged summary costs nothing, because the stored one is returned.
+- A summary costs about $0.10 to $0.13 on Opus 5.5: roughly 10,000 to 14,000 input tokens and 2,800 to 3,900 output tokens, including thinking. The match with sweep tags, styles and a player note (James Moore v Howard McCain) came to 13,735 in and 3,247 out, $0.12. Regenerating an unchanged summary costs nothing, because the stored one is returned. By 2026-11-26 there had been 18 calls in all, $1.71 of them this month.
 - The function refuses new calls once this month's logged spend reaches `ai_settings.monthly_budget_usd`. The hard stop is the spend limit on the "TT Analysis" workspace in the Claude Console, which the user set to $20 a month. Keep the two in step.
 - The Anthropic API key is the `ANTHROPIC_API_KEY` function secret, set on production and in `supabase/functions/.env` locally (gitignored). It's named TTAnalysisSummaries, lives in the TT Analysis workspace and **expires on 1 December 2027**. Summaries stop working on that date unless it's renewed.
+- Fields over 140 words (`MAX_FIELD_WORDS`) are rejected, because an early run degenerated into a list of fragments. The prompt asks for under 60 words a field and under 550 for the whole summary.
 
 Decisions worth keeping:
 
-- The prompt never lets the model guess causes the data can't show: placement, spin, which serve, timeouts. It names what to check on the video instead, and leaves "tactical or technical" to the player.
+- Only the counts are stated as fact. The prompt never lets the model guess causes the data can't show (placement, spin, which serve, timeouts). It names what to check on the video instead, and leaves "tactical or technical" to the player.
+- **Tactical** is something a player can change during a match (placement, variation, shot choice). **Technical** is something in the stroke or in reading spin that they work on in practice. The definitions are `TACTICAL_DEFINITION` and `TECHNICAL_DEFINITION` in `shotGuide.ts`, used on `/admin/shots`, in the summary's "Work on" panel and in the prompt.
 - Advice on a shot only uses the qualities ticked for it. An A/B test on two matches showed the shot guide made the advice clearly more specific.
-- Fields over 140 words are rejected, because an early run degenerated into a list of fragments. The prompt asks for under 70 words a field.
+- Nerves are only mentioned when `unforced.bunchedLate` is true: 3 or more unforced errors from 8-all, at least twice as often per point as in the rest of the match. The note suggests committing to the shot.
+- Shot balance is supporting evidence, not a section. It only comes up when something is in `standouts`, or a role was won or lost 2 to 1 on 10+ shots, gets a problem of its own at most once, and only reaches the headline when a role standout decided the match. If the attack itself loses, the advice is never to attack more. A style that wasn't given is described in counts, never named.
+- Who attacked first, when the sweep tags are there, is used over shot balance. Unconfirmed tags count as "in the points you marked", and unclear points are never the opponent's.
+- Styles are taken as given but never as evidence, and the advice never works against the player's own style. Player notes only shape what to check, and the summary never mentions that notes exist or who wrote them: a note comes through as a neutral observation, followed by what the match showed.
 - No server-side fallback to another model on refusal. A refusal is very unlikely on table tennis data, and a fallback would complicate the cost tracking.
 - It uses the API, not a Claude subscription. A subscription can't power a server function used by other people.
 
-Tactical and technical, added 2026-11-25: **tactical** is something a player can change during a match to influence it (placement, variation, shot choice). **Technical** is something in the stroke or in reading spin that they work on in practice. The definitions are `TACTICAL_DEFINITION` and `TECHNICAL_DEFINITION` in `src/lib/shotGuide.ts`. `/admin/shots` labels the qualities as tactical and the notes as technical, and the summary's problem panels read "Tactical" and "Technical" (they used to say "Check" and "If it's technical"), with both definitions under "Work on". The prompt uses the same definitions. `SUMMARY_VERSION` was not bumped, so existing summaries aren't marked out of date.
+Changes since launch, newest first (`SUMMARY_VERSION` in brackets where it was bumped):
 
-Unforced errors, changed 2026-11-25: a problem about unforced errors gets technical advice only, because a change of tactics doesn't stop a player missing a shot nobody forced. Where a problem mixes unforced errors with shots the opponent beat, the tactical part only covers the points the opponent won. Service faults count as unforced. The mental-side checks now look for unforced errors bunched late in sets (once either player reaches 8) or in close sets (won by 3 points or fewer): 3 or more, and more than in the rest of the match. That gets a note putting it down to nerves (holding back, shortening the stroke, steering the ball) and suggesting the player commit to the shot. `SUMMARY_VERSION` went from 3 to 4, so every stored summary shows as out of date until it's regenerated.
+- 2026-11-26: player notes kept out of the wording, `6a3ee03` (section 0).
+- 2026-11-26: styles of play, hand, rubbers and player notes, `7cb22be` (section 0).
+- 2026-11-25: attacked straight away and attacked first split by server, `2c2a2ab` (8); sweeps with attacked first, `65587b3` (7) (section 7, *Sweeps*).
+- 2026-11-25: serve and receive, close finishes from 8-all, problem kinds, `RECEIVE_GUIDANCE` and the eval script, `dfa8788` (6). The details are in `docs/ANALYSIS_REVIEW.md`.
+- 2026-11-25: shot balance in the input, `76c4035` (5). Tested on the two local sample matches first: the first run put role counts in the headline of a match with no role standout, which is why the headline rule exists.
+- 2026-11-25: unforced errors get technical advice only, and the mental-side checks for late unforced errors (4).
+- 2026-11-25: tactical and technical named and defined, `b644843`.
 
-Shot balance, added 2026-11-25: the input now includes `balance` (role tallies for each side, the standouts, and each shot's role and counts, without row keys), and `categories` was dropped from the analysis altogether. The prompt reads the balance as who got to attack first: a bigger attack share means that side opened up and finished points, and won and lost within a role says whether that way of playing paid. If the player loses when controlling and wins when attacking, the advice is to look for the first chance to attack and make the control shot harder to attack. If the attack itself loses, the advice is never to attack more. A different style is described in counts, never named ("chopper"), because one match's last shots can't establish it. The balance is supporting evidence, not a section: it only comes up when something is in `standouts`, or a role was won or lost 2 to 1 on 10+ shots, and then mostly inside another problem. It gets a problem of its own at most once, and only reaches the headline when a role standout decided the match. Tested on the two local sample matches before shipping (about $0.10 each): the first run put role counts in the headline of a match with no role standout, which is why that last rule exists. Neither local match has a role standout (one is a copy of the other), so a match where the styles clearly differ hasn't been tried yet. The Edge Function now loads `shots.role`. Without it, the function's hash would never match the page's. `SUMMARY_VERSION` went from 4 to 5.
+Checked on production: four matches have a summary. The James Moore v Howard McCain summary (2026-11-14, regenerated 2026-11-26 on version 8) used the sweep tags (45 attacked first, 33 attacked straight away, both confirmed), styles and a player note, and the user was happy with it apart from the mention of the note, which was edited by hand (section 0). No summary has been written with player notes since the fix.
+
+Closed on 2026-11-26: the shots without technical notes (serve, sideswipe, pips block, pips chop block, lob), the empty left-handed and medium pips notes, and the missing match-ups. The user has nothing to write for them. The summary already handles each one being empty, so leave them unless the user adds notes.
+
+Parked until 2027-01-01 (the user has no new matches to review before then):
+
+- **Watch the next summary written with player notes** for any mention of the notes ("you noted", "your coach says"). The fix in `6a3ee03` hasn't met a real match yet: the only summary since (Lee Tinkler, 2025-09-16) is for a player with no notes. A quick check of every stored summary: `supabase db query --remote --read-only "select match_id from match_summaries where summary::text ilike any (array['%you noted%', '%your coach%', '%your notes%'])"`.
+- **A match where the styles clearly differ.** Shot balance's role standouts haven't been seen in a real summary, because no production or local match has one.
+- **The eval checks rules, not counts.** `scripts/summary-eval.ts` checks rules by pattern, not whether a claim like "won 5, lost 12" matches the analysis. Revisit with the new matches, or sooner if a wrong count turns up.
 
 Still open:
 
-- **Player and match-up insights (needs a design).** Let the coach's summary use what's known about the player and the kind of opponent, as well as the one match. Examples: things a player is working on or tends to fail with, and things to look for against particular styles of play, each split into tactical and technical. Questions for the design:
-  - Where the knowledge lives: per player (the user and the friends whose matches they enter), per opponent, per style of play, or a mix. Who writes it: the user, the coach's summary across past matches, or both.
-  - How a style of play is described: a fixed list (chopper, pips blocker, two-winged looper, penhold and so on), free text, or both, and whether it's set on the match or on the opponent.
-  - How it reaches the prompt without the model treating it as evidence. The rule that only the counts are stated as fact has to hold, so player and style notes can only shape what to check.
-  - Privacy on share links: notes about a player's weaknesses probably shouldn't be visible, like the correction notes today.
-  - Effect on the input hash, cost and the token budget.
-- The technical notes are the user's to write and refine. They were rewritten into one pattern on 2026-11-25 (*Shot notes* in `docs/ANALYSIS_REVIEW.md`), and new ones should follow it. Serve, sideswipe, pips block, pips chop block and lob have none.
-- The eval (`scripts/summary-eval.ts`) checks rules by pattern, not the truth of each count. Claims like "won 5, lost 12" could be checked against the analysis if a wrong count ever turns up.
-- Possibly let the user choose Sonnet 5.5 for half the cost, if quality holds on a side-by-side.
+- **Learning across matches.** The summary only sees one match, plus whatever the user writes in a player's notes. Drafting or suggesting player notes from past matches would need a design: what counts as a pattern across matches, and whether the user approves each note before it's used.
+- **Sonnet 5.5** for about half the cost, if quality holds on a side-by-side. The eval script can run both on the production matches for about $1.50.
 
 ## 3. Deploying and testing the Edge Function
 
@@ -245,10 +256,10 @@ Designed with the user on 2026-11-26 on this canvas: https://claude.ai/artifact/
 - **Unticked isn't "no" until confirmed.** A tag counts once it has a tick or is in `matches.confirmed_tags`. Finishing a sweep confirms it, and so does "That's all of them" on the points editor or on the owner's analysis-page warning. The migration confirmed unforced errors on every match with at least one of the player's own ticked, so old matches don't all ask. Lucky shots never ask.
 - **The sweep page** (`PointSweep`, `/matches/:id/sweep/:tag`): score before the point (what the video shows when the rally starts), the two shots, a list of the set's points to stay in step with the video, keys Y, N or Space and Backspace. Each answer writes the point only when it changes, plus the position in `sweep_progress`, queued so the last answer is the last write. On a phone the instructions fold away and the buttons stick to the bottom.
 - **Analysis page.** A "Who attacked first" section before Shot balance, "Attacking after your serve" under Serve and receive, and a "Getting in first paid off" card (5+ points each way and a 25-point gap in win rate).
-- **Coach's summary.** The input now carries `attackFirst`, `thirdBall`, `unforced.confirmed` and "attacked first" and "third ball" point flags. The prompt has a "Who attacked first" section: use it over shot balance when present, treat unconfirmed counts as "in the points you marked", and never count unclear points as the opponent's. Not yet tried on a real model call.
+- **Coach's summary.** The input now carries `attackFirst`, `thirdBall`, `unforced.confirmed` and "attacked first" and "third ball" point flags. The prompt has a "Who attacked first" section: use it over shot balance when present, treat unconfirmed counts as "in the points you marked", and never count unclear points as the opponent's. First used on James Moore v Howard McCain on 2026-11-26 (section 2).
 - **Checked** locally in Chrome on the Sam Carter sample match: a sweep by keyboard, Back, finishing, the end screen, the warning and its button, both new sections, and the sweep at 390px wide. The local test user's password was set to `sweep-test-2026` for this.
 
-Shipped in `65587b3`, with the changes below in `75b15bd` and `2c2a2ab`. Not yet tried: a coach's summary on a match with these tags (see *Where things stand*).
+Shipped in `65587b3`, with the changes below in `75b15bd` and `2c2a2ab`. A coach's summary with these tags was written on production on 2026-11-26 (section 2).
 
 Changed on 2026-11-26, after the first real use: attacked first is split by who served, and the third-ball sweep became **attacked straight away** (`early_attack`, `points.is_early_attack`, migration `20261126120000_early_attack.sql`). It covers points past the receive on either serve: on the player's serve it's a third-ball attack, on the opponent's it's attacking the serve, and the Yes button says which. Receives that won or lost the point count from the entered shots without a tick, in both `earlyAttack.onReceive` and attacked first. The migration kept the 7 third-ball ticks on production, dropped `third_ball` from `confirmed_tags` (it never covered their serves) and cleared the one unfinished third-ball position. `SUMMARY_VERSION` went to 8. Also fixed: moving from one sweep's end screen to the next kept the old sweep's state (`75b15bd`). A UX pass the same day: the `/admin/shots` edit dialog is now wide, in sections (the shot, role, then Tactical and Technical side by side) with short explanations and Save always in view, and the shot tables share column widths; the analysis page's new bars match the stage bars, and the 8-all figures say so when no set reached 8-all.
 

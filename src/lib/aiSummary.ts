@@ -84,7 +84,7 @@ export const SUMMARY_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-// The prompt asks for under 70 words a field. Well past that, the output has
+// The prompt asks for under 60 words a field. Well past that, the output has
 // usually fallen apart into a run of fragments, so it's rejected rather than stored.
 export const MAX_FIELD_WORDS = 140;
 
