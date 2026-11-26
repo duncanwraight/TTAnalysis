@@ -48,6 +48,7 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 13. **Editing a point's winner and shots** (section 7), in `a123532` and `96bb7ce`. Migration `20261128130000_edit_points.sql` applied to production on 2026-11-26.
 14. **No service fault as a losing shot** (section 4), in `ff29493`.
 15. **Production checks:** no old points with a service fault as the losing shot, and no other account with a friend as its self player (sections 0 and 4). Adding or deleting a point mid-match was dropped: editing a point covers every mistake that keeps the point count right, and the tracker's score shows a missed point while it's being entered.
+16. **Aesthetic sweep** (section 4), in `059a531`.
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
@@ -185,6 +186,15 @@ The 0-3 match against Lee Tinkler (2025-09-16) was the user's own, entered on a 
 - **Unforced errors.** One definition, `UNFORCED_ERROR_DEFINITION` in `analysis.ts`, used on the analysis page, the home page, the points editor and the tracker toggle's tooltip.
 
 - **Keyboard shortcuts (2026-11-26).** On screens wider than 768px: 1 or 2 for who won and Z to undo, then left and right arrows for the shot category, a shot's number then F or B for the hand, U and L for unforced and lucky, Backspace to change the winning shot and Escape to cancel the point. Only the picker waiting for a shot listens. The keys are shown under the prompt and in the point entry. Checked in Chrome on a local match.
+
+- **Aesthetic sweep (2026-11-26).** The user reported a cramped reset notice and misaligned buttons on the match list. Every page was then screenshotted at 1440px and 390px wide against the local stack (headless Chromium driven by `playwright-core` from a scratch directory, signed in as `summary-test@example.test`), and the problems of that kind were fixed in `059a531`:
+  - A notice followed by a button now sits in `.notice-with-action` (`index.css`), with the button below the notice rather than inside it. Used on the reset-link-sent message, and on the reset page's success and expired-link states.
+  - Match cards put the main actions on one row and "Edit points and sweeps" with Delete on the next, so every card's buttons line up.
+  - Five pages (points editor, all three admin pages) scrolled sideways on a phone. The cause was the `sr-only` "Actions" headings: they're absolutely positioned, so they escaped the table's scroll box. `.table-card` is now `position: relative`.
+  - The points editor's Sweeps list uses one grid (subgrid rows), so the status column lines up whatever buttons a row has. On a phone the main button comes first.
+  - Admin: the user table's buttons have one width so the rows line up, the extra gap above the table is gone and dates don't wrap. The styles table's headers don't wrap and its descriptions keep 240px on a phone. The admin header drops its "Admin" tag on a phone and nav links never wrap, so "Back to app" fits on one line.
+  - Smaller: room under the tactical and technical definitions in the coach's summary, a wider point list on the sweep page so shots aren't cut off, and "No style set yet" shown the same way on every player card.
+  - Left alone: the tracker is wider than the header on desktop, which is deliberate (`.app-main.wide`, for courtside use). Hyphens in Inter look widely spaced in headless Chromium screenshots, which is down to the font rendering there, not the text.
 
 - **No service fault as a losing shot (2026-11-26).** The losing shot picker used to offer "Service fault", which can't happen: a service fault is only ever the receiver's winning shot. `ShotPicker` now takes a `losing` prop, used by the tracker and the points editor, and `checkPointEdits` refuses an edited point with a service fault as its losing shot. In `ff29493`. Production was checked the same day and has no points with a service fault as the losing shot.
 
