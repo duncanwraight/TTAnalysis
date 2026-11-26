@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-26
 
-Handover notes for picking this work up in a fresh session. Section 1 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
+Handover notes for picking this work up in a fresh session. Section 0 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
 
 ## Where things stand
 
@@ -36,6 +36,9 @@ Done on 2026-11-26, all shipped (see *Sweeps* in section 7):
 1. **Sweeps** with attacked first and a third-ball tag, in `65587b3`.
 2. **Sweep-to-sweep fix**: the end screen's links kept the finished sweep's state, fixed in `75b15bd`.
 3. **Attacked straight away** in place of third ball, attacked first split by server, and a UX pass on `/admin/shots` and the analysis page, in `2c2a2ab`. `SUMMARY_VERSION` is now 8, so every stored summary shows as out of date.
+4. **Players, styles of play and player notes** (section 0), in `7cb22be`. Migration applied and `match-summary` deployed.
+5. **The coach's ten styles and the rubber notes** (section 0), in `0436147`. Migration applied.
+6. **"This is me" unticked by default** on the new match form, in `ae30fd2`, and the user's own account fixed by hand (section 0).
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
@@ -49,18 +52,29 @@ The user has checked the admin panel, the `/debug` removal and the AI summaries 
 Designed with the user on 2026-11-25 on this canvas: https://claude.ai/artifact/GKWsSyv6txbLJ6aQs5p2vY. Built the same day. Shipped on 2026-11-26: migration applied to production, `match-summary` deployed, pushed to `main`.
 
 - **Players** (`/players`, `src/pages/Players.tsx`): the owner and the people whose matches they enter. Each has a style, hand, rubbers and free-text notes (owner only, 1,000 characters). Saving yourself also saves `display_name`. Renaming a player renames their matches (`players_sync_name` trigger), because share links read `matches.player_name` and can't read players.
-- **Styles** (`/admin/styles`, `src/pages/AdminStyles.tsx`): six starting styles seeded with names and one-line descriptions, but no notes. Each has "playing as" and "against" tactical notes. Hands and rubbers (`kit_notes`) carry "against" notes for left-handed, short, medium and long pips, and anti. Match-ups run one way (player's style, then opponent's). Admins see how many matches use each style through the `style_usage()` function.
+- **Styles** (`/admin/styles`, `src/pages/AdminStyles.tsx`): the coach's ten styles (see *Style notes* below). Each has "playing as" and "against" tactical notes. Hands and rubbers (`kit_notes`) carry "against" notes for left-handed, short, medium and long pips, and anti. Match-ups run one way (player's style, then opponent's). Admins see how many matches use each style through the `style_usage()` function.
 - **Matches**: `player_id` plus both sides' style, hand and rubbers, copied when the match is created so later changes to a player don't rewrite old matches. The new match form picks a player or adds one ("Someone new"). It fills in the opponent from the last match against the same name, ignoring case. The points editor edits both sides. A trigger rejects a `player_id` that isn't the owner's.
 - **Migration** `20261127120000_players_and_styles.sql` creates a self player for every account with matches or a saved name (named from `display_name`, or "Me"), a player for every other distinct `player_name`, and links every match. On the local stack every match was linked.
 - **Analysis page**: the analysis tab has a Match details card (result, date, event, format, video, both styles). The header's date line now only shows on the summary tab.
 - **Coach's summary**: `buildStyleSection` (`src/lib/styles.ts`) adds a section after the shot guide with both styles and their notes, the opponent's hand and rubber notes, any match-up and the player's notes. When there's nothing to add the input is unchanged, so `SUMMARY_VERSION` wasn't bumped and existing summaries only show as out of date once a style or note is set. The prompt's new section says to take styles as given but never as evidence, never to work against the player's own style, to check any shot the notes name against the counts either way, and never to quote the notes. The "never name a style" rule now only applies to styles that weren't given.
 - **Checked**: 155 tests, lint and build. RLS tested over REST on the local stack: anon reads styles but not players, another user can't see players, edit styles or kit notes, or point a match at someone else's player, and `style_usage()` returns nothing to non-admins. In Chrome on the local stack: players page and dialog, new match with an existing player, the opponent lookup, the points editor, the details card and the out-of-date dot, and the admin page with a match-up. Fixed on the way: the opponent lookup could overwrite a style chosen while it was loading. Not checked: phone width (Sway wouldn't resize the window), and a real summary call with styles (about $0.10).
 
+Style notes:
+
+- Shipped on 2026-11-26 in `20261127130000_style_notes.sql`, which replaced the six starting styles with the user's ten (Chopper became Classical defender, Blocker became Inverted push-blocker, the other three were deleted). The "playing as" notes are the user's, tidied. The "against" notes were drafted from the user's shot notes on production (pushes are about length, placement and spin variation, never height; "the crossover", not "the middle") and reviewed by the user. Hybrid styles (Attacking retriever, Attacking pips or anti crab, Modern defender) all ask whether the player can bait weak attacks or exploit weak defence. Left-handed and medium pips notes are deliberately empty: the user doesn't want made-up tactics there. No match-ups yet.
+- The starting migration seeded six placeholder styles; `20261127130000_style_notes.sql` replaced them, so any fresh database ends up with the ten.
+
+The "You" bug, found on 2026-11-26:
+
+- The old new match form had "This is me. Fill it in on new matches." ticked by default, so entering a friend's match on an account with no saved name saved the friend's name as `display_name`. The players migration trusted `display_name`, so the user's account (dunc@seriouslyfish.com) got James Moore as its self player, with two old blank-name matches (Lee Dorning 2025-02-09, Pit 2025-05-25) linked to him.
+- Fixed by hand on production: James Moore is no longer self, the existing Duncan Wraight player is, those two matches moved to Duncan Wraight with `player_name` set, and `display_name` is now Duncan Wraight. Checked by reading it back.
+- The new form had copied the same default; `ae30fd2` leaves the box unticked.
+
 Still to do:
 
-- Style and rubber notes shipped on 2026-11-26 in `20261127130000_style_notes.sql`, which replaced the six starting styles with the user's ten (Chopper became Classical defender, Blocker became Inverted push-blocker, the other three were deleted). The "playing as" notes are the user's, tidied. The "against" notes were drafted from the user's shot notes on production (pushes are about length, placement and spin variation, never height; "the crossover", not "the middle") and reviewed by the user. Hybrid styles (Attacking retriever, Attacking pips or anti crab, Modern defender) all ask whether the player can bait weak attacks or exploit weak defence. Left-handed and medium pips notes are deliberately empty: the user doesn't want made-up tactics there. No match-ups yet.
-- Try a real summary on a match with styles and notes, and check the page's hash matches the function's.
-- Try a summary on a match with styles and notes set, and check the page's hash matches the function's (the banner should go away).
+- Other accounts may have the same problem (a friend's name as their self player). Only the user's account was checked. There's no way in the app to change who "You" is: the Players page can't move `is_self`, and renaming the self player would rename every match linked to it. Either add a "This is me" control on the Players dialog or fix accounts by hand.
+- Try a real summary on a match with styles and notes set (James Moore v Howard McCain, 2026-11-14, is the one the user plans to use). Styles have to be set on the match in the points editor first, because old matches have none. Check the summary uses them sensibly and that the out-of-date banner goes away afterwards, which shows the page's hash matches the function's.
+- Match-ups, and notes for left-handers and medium pips, are empty until the user writes them.
 
 ## 1. Signed-out homepage brochure and wording sweep (done)
 
