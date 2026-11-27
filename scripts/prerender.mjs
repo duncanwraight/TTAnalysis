@@ -8,16 +8,31 @@
 // prerendered HTML. A small inline script marks browsers holding a session:
 // the brochure hides itself from them, since they're redirected to /matches,
 // and a help page hides its signed-out header links.
-import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { readFile, readdir, writeFile, mkdir, rm } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const dist = path.resolve('dist');
 const ssrEntry = path.resolve('dist-ssr/prerender.js');
 
-const template = await readFile(path.join(dist, 'index.html'), 'utf8');
+const built = await readFile(path.join(dist, 'index.html'), 'utf8');
 const EMPTY_ROOT = '<div id="root"></div>';
-if (!template.includes(EMPTY_ROOT)) throw new Error('dist/index.html has no empty #root to fill');
+if (!built.includes(EMPTY_ROOT)) throw new Error('dist/index.html has no empty #root to fill');
+
+// The fonts the first screen needs, fetched alongside the CSS rather than
+// after it. Without this, text first paints in the fallback font and moves
+// when Inter arrives (a layout shift Lighthouse counted on the help pages).
+// Vite hashes the file names, so they're found in the build.
+const assets = await readdir(path.join(dist, 'assets'));
+const preloadFont = (name) => {
+  const file = assets.find(f => f.startsWith(`${name}-normal-`) && f.endsWith('.woff2'));
+  if (!file) throw new Error(`No ${name} font in dist/assets: check the @fontsource imports in main.tsx`);
+  return `<link rel="preload" href="/assets/${file}" as="font" type="font/woff2" crossorigin />`;
+};
+// Body text and headings, on every page
+const template = built.replace('</head>', `  ${preloadFont('inter-latin-400')}\n    ${preloadFont('inter-latin-700')}\n  </head>`);
+// The homepage's headline
+const brochureFonts = preloadFont('inter-tight-latin-800');
 
 const { render, renderHelp, helpRoutes } = await import(pathToFileURL(ssrEntry).href);
 
@@ -73,7 +88,7 @@ await writeFile(
 await writeFile(
   path.join(dist, 'index.html'),
   swap(template, /<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${SITE}/" />\n    <link rel="canonical" href="${SITE}/" />`)
-    .replace('</head>', `  ${jsonLd}\n    ${markSession('#root')}\n  </head>`)
+    .replace('</head>', `  ${brochureFonts}\n    ${jsonLd}\n    ${markSession('#root')}\n  </head>`)
     .replace(EMPTY_ROOT, `<div id="root">${brochure}</div>`),
 );
 console.log(`Prerendered / (${brochure.length} characters of HTML)`);

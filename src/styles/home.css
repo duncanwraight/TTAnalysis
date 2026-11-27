@@ -100,7 +100,7 @@
   box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 .bro-phone img { border-radius: 20px; }
-.bro-caption { position: relative; padding-top: 24px; padding-bottom: 56px; font-size: 13px; color: var(--bro-muted); text-align: right; }
+.bro-caption { position: relative; padding-top: 24px; padding-bottom: 56px; font-size: 13px; color: var(--bro-on-dark-3); text-align: right; }
 
 /* How it works */
 .bro-how { padding-top: 128px; }
@@ -113,11 +113,11 @@
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;
 }
 .bro-steps li { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
-.bro-steps .num { font-family: var(--bro-display); font-weight: 800; font-size: 15px; color: var(--bro-on-dark-3); }
+.bro-steps .num { font-family: var(--bro-display); font-weight: 800; font-size: 15px; color: var(--bro-muted); }
 .bro-steps h3 { margin: 14px 0 8px; font-size: 21px; color: var(--bro-ink); }
 .bro-steps p { color: var(--bro-body); }
 .bro-steps li.dark { background: var(--bro-ink); border-color: var(--bro-ink); }
-.bro-steps li.dark .num { color: var(--bro-muted); }
+.bro-steps li.dark .num { color: var(--bro-on-dark-3); }
 .bro-steps li.dark h3 { color: #fff; }
 .bro-steps li.dark p { color: var(--bro-on-dark-2); }
 
@@ -178,7 +178,7 @@
 .bro-coach dl div { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 18px; }
 .bro-coach dt { font-weight: 700; color: #fff; }
 .bro-coach dd { margin-top: 4px; color: var(--bro-on-dark-3); }
-.bro-coach-copy > p.fine { margin-top: 28px; font-size: 14px; color: var(--bro-muted); }
+.bro-coach-copy > p.fine { margin-top: 28px; font-size: 14px; color: var(--bro-on-dark-3); }
 .bro-coach-shot {
   flex: 1.4 1 560px; min-width: 0; border-radius: 12px; overflow: hidden;
   box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);

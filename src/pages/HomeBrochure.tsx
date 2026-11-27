@@ -9,6 +9,22 @@ import scouting from '../assets/home/scouting.webp';
 import patterns from '../assets/home/patterns.webp';
 import summaryTop from '../assets/home/summary-top.webp';
 import analysisPhone from '../assets/home/analysis-phone.webp';
+import analysisTop800 from '../assets/home/analysis-top-800.webp';
+import trackerDesktop800 from '../assets/home/tracker-desktop-800.webp';
+import decided800 from '../assets/home/decided-800.webp';
+import progression800 from '../assets/home/progression-800.webp';
+import scouting800 from '../assets/home/scouting-800.webp';
+import patterns800 from '../assets/home/patterns-800.webp';
+import summaryTop800 from '../assets/home/summary-top-800.webp';
+
+// The large screenshots also come 800px wide for phones and tablets, which
+// show them at 340 to 700 CSS pixels. Desktops show them at up to about 940.
+const SHOT_SIZES = '(max-width: 1100px) 90vw, 760px';
+const shot = (small: string, full: string, fullWidth: number) => ({
+  src: full,
+  srcSet: `${small} 800w, ${full} ${fullWidth}w`,
+  sizes: SHOT_SIZES,
+});
 
 /*
  * The signed-out homepage. The screenshots come from a sample match with
@@ -104,7 +120,7 @@ const HomeBrochure = () => (
             </div>
             {/* The largest thing in the first screen, so it's fetched first. React 18
                 doesn't know fetchPriority, but passes the lowercase attribute through */}
-            <img className="bro-shot" src={analysisTop} width={1600} height={867} {...{ fetchpriority: 'high' }}
+            <img className="bro-shot" {...shot(analysisTop800, analysisTop, 1600)} width={1600} height={867} {...{ fetchpriority: 'high' }}
               alt="Analysis page for a sample match. Sam Carter lost 2-3 to Alex Morgan, winning 39 of 85 points. Under the headline numbers are the What decided it cards." />
           </div>
           <div className="bro-phone">
@@ -146,7 +162,7 @@ const HomeBrochure = () => (
 
         <div className="bro-how-demo">
           <div className="bro-how-shot">
-            <img className="bro-shot" src={trackerDesktop} width={1600} height={907} loading="lazy"
+            <img className="bro-shot" {...shot(trackerDesktop800, trackerDesktop, 1600)} width={1600} height={907} loading="lazy"
               alt="The tracker on a laptop: a scoreboard where you click either player's side to say who won the point, and a shot picker for the winning shot and the losing shot." />
           </div>
           <div className="bro-point">
@@ -179,7 +195,7 @@ const HomeBrochure = () => (
               <p>The shots and moments that settled the match, each with the count behind it. 5 of Sam's 9 losing forehand loops were unforced.</p>
             </figcaption>
             <div className="bro-card-shot">
-              <img className="bro-shot" src={decided} width={1600} height={493} loading="lazy"
+              <img className="bro-shot" {...shot(decided800, decided, 1600)} width={1600} height={493} loading="lazy"
                 alt="The What decided it section: three cards on how the sets were won and lost, and three on shots. One shot card shows Sam's backhand loop winning 5 points and losing 12." />
             </div>
           </figure>
@@ -189,7 +205,7 @@ const HomeBrochure = () => (
               <p>Who was ahead after every point, set by set. Sam led 3-1 in the second and lost six in a row. Alex's runs of 6, 5 and 8 won three sets.</p>
             </figcaption>
             <div className="bro-card-shot capped">
-              <img className="bro-shot" src={progression} width={1200} height={783} loading="lazy"
+              <img className="bro-shot" {...shot(progression800, progression, 1200)} width={1200} height={783} loading="lazy"
                 alt="How each set went: five small charts, one per set, showing the score difference after every point. Sam won sets 1 and 4, 11-7 and 11-6, and lost the other three 6-11, 6-11 and 5-11." />
             </div>
           </figure>
@@ -199,7 +215,7 @@ const HomeBrochure = () => (
               <p>Their winning and losing shots, forehand against backhand, and what their serve did. Alex won 11 of 46 points with the backhand block. Worth reading before the return fixture.</p>
             </figcaption>
             <div className="bro-card-shot capped">
-              <img className="bro-shot" src={scouting} width={1200} height={528} loading="lazy"
+              <img className="bro-shot" {...shot(scouting800, scouting, 1200)} width={1200} height={528} loading="lazy"
                 alt="Scouting the opponent: Alex's winning and losing shots, forehand against backhand, and what Alex's serve did. Alex's backhand block won 11 points and lost 8." />
             </div>
           </figure>
@@ -209,7 +225,7 @@ const HomeBrochure = () => (
               <p>The same winning shot against the same losing shot, three times or more, for both players. Alex's backhand block beat Sam's backhand loop 5 times, so it wasn't a one-off.</p>
             </figcaption>
             <div className="bro-card-shot">
-              <img className="bro-shot" src={patterns} width={1600} height={490} loading="lazy"
+              <img className="bro-shot" {...shot(patterns800, patterns, 1600)} width={1600} height={490} loading="lazy"
                 alt="Patterns: winning and losing shot pairs that happened three times or more, with counts, for Sam and for Alex. One shows Alex's backhand block beating Sam's backhand loop 5 times." />
             </div>
           </figure>
@@ -245,7 +261,7 @@ const HomeBrochure = () => (
             </p>
           </div>
           <div className="bro-coach-shot">
-            <img className="bro-shot" src={summaryTop} width={1600} height={1043} loading="lazy"
+            <img className="bro-shot" {...shot(summaryTop800, summaryTop, 1600)} width={1600} height={1043} loading="lazy"
               alt="The coach's summary for the sample match. Under the headline, the first problem is Sam's backhand loop, which won 5 and lost 12, with Check and If it's technical advice below it." />
           </div>
         </div>
