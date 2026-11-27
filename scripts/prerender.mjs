@@ -15,13 +15,15 @@ import path from 'node:path';
 const dist = path.resolve('dist');
 const ssrEntry = path.resolve('dist-ssr/prerender.js');
 
-const built = await readFile(path.join(dist, 'index.html'), 'utf8');
+const template = await readFile(path.join(dist, 'index.html'), 'utf8');
 const EMPTY_ROOT = '<div id="root"></div>';
-if (!built.includes(EMPTY_ROOT)) throw new Error('dist/index.html has no empty #root to fill');
+if (!template.includes(EMPTY_ROOT)) throw new Error('dist/index.html has no empty #root to fill');
 
-// The fonts the first screen needs, fetched alongside the CSS rather than
-// after it. Without this, text first paints in the fallback font and moves
-// when Inter arrives (a layout shift Lighthouse counted on the help pages).
+// Help pages fetch their body and heading fonts alongside the CSS rather than
+// after it. Without this, long paragraphs first paint in the fallback font and
+// rewrap when Inter arrives (Lighthouse measured a 0.116 layout shift on the
+// glossary). The homepage doesn't shift, and there preloading only held back
+// its first paint by half a second on mobile, so it's left out.
 // Vite hashes the file names, so they're found in the build.
 const assets = await readdir(path.join(dist, 'assets'));
 const preloadFont = (name) => {
@@ -29,10 +31,7 @@ const preloadFont = (name) => {
   if (!file) throw new Error(`No ${name} font in dist/assets: check the @fontsource imports in main.tsx`);
   return `<link rel="preload" href="/assets/${file}" as="font" type="font/woff2" crossorigin />`;
 };
-// Body text and headings, on every page
-const template = built.replace('</head>', `  ${preloadFont('inter-latin-400')}\n    ${preloadFont('inter-latin-700')}\n  </head>`);
-// The homepage's headline
-const brochureFonts = preloadFont('inter-tight-latin-800');
+const helpFonts = `${preloadFont('inter-latin-400')}\n    ${preloadFont('inter-latin-700')}`;
 
 const { render, renderHelp, helpRoutes } = await import(pathToFileURL(ssrEntry).href);
 
@@ -88,7 +87,7 @@ await writeFile(
 await writeFile(
   path.join(dist, 'index.html'),
   swap(template, /<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${SITE}/" />\n    <link rel="canonical" href="${SITE}/" />`)
-    .replace('</head>', `  ${brochureFonts}\n    ${jsonLd}\n    ${markSession('#root')}\n  </head>`)
+    .replace('</head>', `  ${jsonLd}\n    ${markSession('#root')}\n  </head>`)
     .replace(EMPTY_ROOT, `<div id="root">${brochure}</div>`),
 );
 console.log(`Prerendered / (${brochure.length} characters of HTML)`);
@@ -115,7 +114,7 @@ for (const route of helpRoutes) {
   page = swap(page, /<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${escape(description)}" />`);
   page = swap(page, /<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${url}" />\n    <link rel="canonical" href="${url}" />`);
   page = page
-    .replace('</head>', `  ${markSession('.app-nav')}\n  </head>`)
+    .replace('</head>', `  ${helpFonts}\n    ${markSession('.app-nav')}\n  </head>`)
     .replace(EMPTY_ROOT, `<div id="root">${html}</div>`);
   await writeFile(path.join(dist, helpFile(route)), page);
 }
