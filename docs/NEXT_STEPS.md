@@ -1,6 +1,6 @@
 # Next steps
 
-Last updated: 2026-11-26
+Last updated: 2026-11-27
 
 Handover notes for picking this work up in a fresh session. Section 0 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
 
@@ -57,6 +57,39 @@ Shipped on 2026-11-26 (see *Player history* below):
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. On 2026-11-26 they also confirmed on production the "This is me" box on the Players page, the tracker's keyboard shortcuts, the Edit button in the points editor and the password reset email (the link lands on ttanalysis.app/reset-password). The player history is the only shipped work waiting on a check by a person.
+
+## Help pages (to do)
+
+Proposed on 2026-11-27 after some research. The approach and the list of pages are agreed (below); the words aren't written yet. Design canvas, which the user liked: https://claude.ai/artifact/WHZXaJ33A66AAgq9V4Fbev
+
+- **Inside the app, public.** A `/help` section in the React app, readable without signing in, so people weighing up the brochure and coaches opening a share link can read it too. A separate docs site (Starlight, Docusaurus, GitBook) or a hosted help centre (Intercom, Help Scout) would mean a second deploy and look, or a monthly fee, for 10 to 15 pages.
+- **Written in MDX.** `@mdx-js/rollup` in `vite.config.ts`, with `enforce: 'pre'` so it runs before `@vitejs/plugin-react`. Pages are `.mdx` files edited as prose. They import the definitions the app already uses (`UNFORCED_ERROR_DEFINITION`, `TACTICAL_DEFINITION`, `TECHNICAL_DEFINITION`, the sweep scopes) so help can't drift from the tooltips. Loaded with `React.lazy` like other pages.
+- **Prerendered.** Extend `scripts/prerender.mjs` to `/help/*` and add a rewrite per help route in `vercel.json`, so the pages read before JavaScript loads and can be indexed.
+- **Organised by what the reader is doing** (a light version of Diátaxis): one getting started walkthrough (film, create the match, enter points, read the analysis); how-to pages (sweeps, fixing a point, sharing a match or history, players); reference (a glossary of winning and losing shot, unforced error, attacked first, close finishes and shot roles, plus the keyboard shortcuts); explanation (why only two shots a point, how the coach's summary works).
+- **Help where the question comes up.** A small "How this works" link on the tracker, the sweep page and each analysis section, opening the matching heading. A Help link in the header and footer.
+- **No guided tours.** Completion drops sharply past 3 or 4 steps (Chameleon: 72% at 3 steps, 16% at 7 or more), and a popover gets in the way courtside.
+- **No search at first.** One contents page is enough under about 20 pages.
+- **Few screenshots.** They go out of date with every UI change. Use them only where words can't do the job (the scoreboard, the shot picker), from the sample match on the local stack.
+
+- **Less help text around the site.** The user likes this most: tooltips, instructions and explanations in the app shrink to a line and link to the glossary entry or the guide instead.
+
+Pages agreed with the user on 2026-11-27 (content still to write):
+
+- **Getting started: Your first match, from video to analysis.** Filming (any phone, playback at 1.25x or 1.5x), creating the match, the first few points, a quick tour of the analysis. Links out rather than repeating the detailed pages.
+- **How to: Enter points in the tracker.** Who won, the winning and losing shots, hand, the unforced and lucky ticks, Undo, End Set, and what to do when the video and the score drift apart.
+- **How to: Mark unforced errors and attacks.** The sweeps page. The title avoids "sweep", which means nothing to a new user; the page introduces the word. The four sweeps, running one, and when a tag starts counting.
+- **How to: Fix a point entered wrongly.** Ticks in the points editor, Edit, why a winner change in a finished set needs a second change, and what can't be changed.
+- **How to: Enter a match for someone else.** Open with why you'd do it (you coach, or you're helping a friend). Players, what "you" means on the analysis page, styles, hand and rubbers, and that notes are private.
+- **How to: Share a match or a player's history.** What the person opening the link sees and never sees, and Stop sharing.
+- **Look it up: Glossary.** Every term, including sweep and style of play. The app links here instead of explaining in place.
+- **Look it up: Keyboard shortcuts.** Tracker and sweep page keys, screens wider than 768px only.
+- **Look it up: The analysis page, section by section.** Each section's "How this works" link lands on its heading here.
+- **Look it up: Player history.** The three tabs, how trends compare, sets v points, greyed-out groups, sharing.
+- **How it works: Why you only enter two shots a point.** What the data can and can't tell you.
+- **How it works: How the coach's summary is written.** Public, even though the summary is by invitation. Includes tactical and technical advice (examples, and why unforced errors only get technical advice); the glossary holds the two definitions.
+- **Common questions** on the contents page, including: who served and how the app knows (only the first server is picked; a wrong one skews the serve and receive figures), and exporting a PDF (it prints whichever tab is open).
+
+Dropped: a separate PDF export page and a separate tactical and technical page. The admin pages get no help.
 
 ## Player history (shipped)
 
@@ -344,7 +377,7 @@ Set up on 2026-11-25.
 
 ## Shipping changes
 
-1. `npm run lint`, `npm test` and `npm run build`.
+1. `npm run lint`, `npm test` and `npm run build`. Once the help pages exist, check the change is reflected in them (CLAUDE.md, *Help pages*).
 2. If there is a new migration: `supabase db push --remote --dry-run` to confirm only the expected file is pending, then `supabase db push --remote --yes`.
 3. If `supabase/functions/match-summary` or anything it imports from `src/lib` changed: `supabase functions deploy match-summary --use-api --yes`.
 4. Commit, then push `main`. Vercel deploys from it in about 30 seconds.
