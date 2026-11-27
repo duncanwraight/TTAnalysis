@@ -54,13 +54,17 @@ Shipped on 2026-11-26 (see *Player history* below):
 
 1. **Player history** at `/players/:id/history`, with sharing by link, in `5188481`. Migration `20261129120000_player_history_sharing.sql` applied to production the same day. Not yet checked by the user on production.
 
+Shipped on 2026-11-27 (see *Help pages* below):
+
+1. **Help pages** at `/help`, public and prerendered, with "How this works" links from the app and shorter help text on its pages, in `7feaf7a`. No migration or function change. The user is reviewing the words on production.
+
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. On 2026-11-26 they also confirmed on production the "This is me" box on the Players page, the tracker's keyboard shortcuts, the Edit button in the points editor and the password reset email (the link lands on ttanalysis.app/reset-password). The player history is the only shipped work waiting on a check by a person. The help pages shipped on 2026-11-27 and the user is reviewing the words (see *Help pages*).
 
 ## Help pages (shipped)
 
-Built on 2026-11-27 from the plan below and the design canvas the user liked: https://claude.ai/artifact/WHZXaJ33A66AAgq9V4Fbev. Shipped on 2026-11-27. The user is reviewing the words on production.
+Built on 2026-11-27 from the plan below and the design canvas the user liked: https://claude.ai/artifact/WHZXaJ33A66AAgq9V4Fbev. Shipped on 2026-11-27 in `7feaf7a`. Checked on production straight after the deploy: `/help` and each page tried come back with their own title and the page's HTML in the response, an unknown `/help/...` gets the app (which sends it to `/help`), and `/matches` is unchanged. The user is reviewing the words on production.
 
 - **Where:** `src/help/pages.ts` (the list: slug, section, title, description), `src/help/content/*.mdx` (one file a page, plus `contents.mdx` for the common questions), `src/help/HelpView.tsx` (contents page and article layout, shared with the prerender), `src/pages/Help.tsx` (the route), `src/styles/help.css`, and `src/components/HelpLink.tsx` (the "How this works" link). MDX is `@mdx-js/rollup` with `remark-gfm` for tables, `enforce: 'pre'` in `vite.config.ts`.
 - **Pages:** the twelve agreed below, at `/help/<slug>`: `first-match`, `tracker`, `unforced-errors-and-attacks`, `fix-a-point`, `someone-else`, `sharing`, `glossary`, `keyboard-shortcuts`, `analysis-page`, `player-history`, `two-shots`, `coach-summary`. The glossary, the sweeps page and the analysis page import `UNFORCED_ERROR_DEFINITION`, `TACTICAL_DEFINITION`, `TECHNICAL_DEFINITION`, `ATTACK_DEFINITION` and `SWEEPS` rather than copying them.
@@ -353,7 +357,7 @@ Cleared on 2026-11-26. Nothing is left open in this section. `tsc` only checks `
 
 - **`any` types (done 2026-11-26):** the last ones (the eval script and `User.preferences`) are typed, and `@typescript-eslint/no-explicit-any` is back on.
 - **Supabase CLI v4 warnings (done 2026-11-26):** `config.toml` uses `auth.email.enabled` and `auth.sms.enabled`, so `supabase status` no longer warns.
-- **Bundle size (done 2026-11-26):** every page except Home and Auth is loaded with `React.lazy` (`src/App.tsx`), which took the main chunk from 601 kB to 444 kB. PDF export imports html2pdf's source (`html2pdf.js/src/index.js`) rather than its prebuilt bundle, and `vite.config.ts` puts jspdf and html2canvas in chunks of their own: about 600 kB on the click instead of 985 kB, and no chunk over 500 kB. Vite's preload helper has its own chunk, because otherwise Rollup put it in the jspdf chunk and every page loaded jspdf. Export was checked on a production build against the local stack.
+- **Bundle size (done 2026-11-26):** every page except Home and Auth is loaded with `React.lazy` (`src/App.tsx`), which took the main chunk from 601 kB to 444 kB. Help joined them in the main bundle on 2026-11-27 (455 kB), so prerendered help pages aren't swapped for a loading state. PDF export imports html2pdf's source (`html2pdf.js/src/index.js`) rather than its prebuilt bundle, and `vite.config.ts` puts jspdf and html2canvas in chunks of their own: about 600 kB on the click instead of 985 kB, and no chunk over 500 kB. Vite's preload helper has its own chunk, because otherwise Rollup put it in the jspdf chunk and every page loaded jspdf. Export was checked on a production build against the local stack.
 - **Stale tabs after a deploy (done 2026-11-26):** with pages loaded on demand, a tab opened before a deploy asks for chunks that no longer exist. `main.tsx` reloads once on `vite:preloadError` (a timestamp in session storage stops a loop), `vercel.json` no longer rewrites `/assets/` to `app.html` so a missing chunk is a 404 rather than HTML, and `PageErrorBoundary` shows "This page didn't load" with Reload and Your matches buttons instead of a blank screen. It resets when the path changes rather than by key, so the analysis page's tabs don't remount. Tested by deleting a chunk from a preview build. Vercel's Skew Protection would also cover this, but it's a paid feature.
 - **Unused SQL views (done 2026-11-26):** `point_shots`, the six views on it and `match_summary` were dropped by `20261127140000_drop_analysis_views.sql`, applied to production the same day. Nothing in the app, the function or the scripts read them.
 
@@ -371,6 +375,8 @@ For an isolated stack instead, copy `supabase/` to a scratch directory, change t
 
 Screenshots of every page, for a visual check: install `playwright-core` in a scratch directory (not the repo), launch it with `executablePath: '/usr/local/bin/chromium'`, sign in through `/auth` as `summary-test@example.test` (password `sweep-test-2026`, an admin with AI summaries on and the three sample matches), and screenshot each route at 1440x900 and 390x844. Full-page shots of long pages shrink too far to read, so clip them into screen-height tiles. Compare `document.documentElement.scrollWidth` with the window width on each page to catch sideways scrolling. This is how the aesthetic sweep in section 4 was done. Chrome through the extension can't do phone widths here, because Sway won't resize the window.
 
+To check prerendered pages (the homepage and help), build against the local stack (`VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_ANON_KEY=... npm run build`) and serve `dist` with a small Node server in a scratch directory that applies `vercel.json`: serve a file if it exists, otherwise the first matching rewrite. `vite preview` doesn't apply the rewrites, so it serves the wrong file for `/help/...`. Load each route once with JavaScript off and once on, and compare the text of `main`. This is how the help pages were checked.
+
 The production shot list has been edited through the admin page, so it no longer matches the migrations. On production, `around_the_net` is `short_game`, `defence` is `defence / blocks`, and there are extra `block` shots (defence and pips) and a pips `chop_block`. Shots are publicly readable, so the production list and its guide can be read with the public anon key. Read anything else on production with `supabase db query --remote --read-only`.
 
 ## Domain and hosting
@@ -387,7 +393,7 @@ Set up on 2026-11-25.
 
 ## Shipping changes
 
-1. `npm run lint`, `npm test` and `npm run build`. Once the help pages exist, check the change is reflected in them (CLAUDE.md, *Help pages*).
+1. `npm run lint`, `npm test` and `npm run build`. Check the change is reflected in the help pages, the glossary or the common questions (CLAUDE.md, *Help pages*). A new help page also needs its rewrite in `vercel.json`, or the build fails.
 2. If there is a new migration: `supabase db push --remote --dry-run` to confirm only the expected file is pending, then `supabase db push --remote --yes`.
 3. If `supabase/functions/match-summary` or anything it imports from `src/lib` changed: `supabase functions deploy match-summary --use-api --yes`.
 4. Commit, then push `main`. Vercel deploys from it in about 30 seconds.
