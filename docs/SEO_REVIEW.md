@@ -54,7 +54,7 @@ The homepage's FAQ could carry `FAQPage` markup, but Google stopped showing FAQ 
 
 ### Performance
 
-Lighthouse couldn't be run this session (the permission classifier blocked launching headless Chromium), so these are from measured sizes rather than a score:
+Written before Lighthouse could be run, so these are from measured sizes. Lighthouse was run later the same day; the scores and what was fixed from them are under *SEO* in NEXT_STEPS.md.
 
 - The homepage loads 136 kB of JavaScript (brotli), 8 kB of CSS and two hero screenshots (73 kB and 35 kB). That's light. The JavaScript is the whole app's main bundle, but since the page is prerendered, it doesn't hold back the first paint.
 - The Google Fonts stylesheet (two families, five weights) blocks rendering and adds two third-party connections. Self-hosting Inter from `/assets/` with `font-display: swap` removes both.

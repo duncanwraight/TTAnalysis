@@ -74,6 +74,23 @@ Built and shipped on 2026-11-27 (all ten below). Checked on a local build served
 - The invitation on shared pages lives in `AppFrame`, shown to signed-out visitors on any `/shared/` path, and is left out of PDF exports. The sharing help page says so, and that shared pages ask search engines not to list them.
 - The shared match page's requests for the owner's notes come back 401 for visitors. That was already so before this work, and it's RLS doing its job; nothing leaks.
 
+Lighthouse 12.8, run on production on 2026-11-27 after the first deploy (scores are performance, accessibility, best practices and SEO):
+
+| Page | Before | After |
+| --- | --- | --- |
+| Homepage, mobile | 98/95/100/100 | 94 to 97/100/100/100 |
+| Homepage, desktop | 100/95/100/100 | 100/100/100/100 |
+| Glossary, mobile | 99/100/100/100 | 98/100/100/100 |
+| Glossary, desktop | 96/100/100/100 | 100/100/100/100 |
+
+Fixed from it, in `1d5b222` and `3a05a16`:
+
+- **Contrast:** five bits of small grey text on the homepage used the grey meant for the other background (the sample match caption, the step numbers, the coach section's fine print). Swapped.
+- **Screenshots:** the seven large ones have 800px versions (`*-800.webp`) chosen through `srcset` on phones, tablets and 1x screens. The homepage went from 736 KiB to 515 on desktop and 712 to 491 on mobile.
+- **Layout shift on help pages:** long paragraphs rewrapped when Inter arrived (0.116 on the glossary at desktop width). Help pages now preload Inter 400 and 700, and the shift is 0. Preloading on the homepage was tried and taken out: it doesn't shift, so there was nothing to gain.
+
+Mobile performance on the homepage varies by 2 to 4 points between runs, because Lighthouse simulates a slow connection from the real one. Three runs before taking out the homepage preloads scored 94 to 96, and three after scored 94 to 97, so treat anything in the mid 90s as the same. What's still flagged and left alone: the analytics script's short cache (Vercel's, not ours), about 82 KiB of the main bundle unused on the homepage (it's the whole app, and the page is prerendered so it doesn't hold back the first paint), and the two phone screenshots, which are already close to the size they're shown at.
+
 The list:
 
 1. **robots.txt and sitemap.xml**, written by `scripts/prerender.mjs` from `HELP_ROUTES` plus `/`.
@@ -89,7 +106,6 @@ The list:
 
 For the user (need their accounts):
 
-- **Lighthouse:** not run, because the permission classifier blocked launching headless Chromium for it. Run it on mobile against production when allowed.
 - **Google Search Console:** add ttanalysis.app as a domain property, then add its TXT record in Cloudflare (or hand it over to be added with the token), submit `https://ttanalysis.app/sitemap.xml` and request indexing for `/` and `/help`.
 - **Bing Webmaster Tools:** import from Search Console.
 - **Vercel Web Analytics:** switch it on for `tt-analysis` in the Vercel dashboard if the code change alone doesn't.
