@@ -1,101 +1,57 @@
-# TTAnalysis Application Architecture
+# Architecture
 
-This document provides an overview of the TTAnalysis application architecture and key design decisions.
+Last updated: 2026-11-27
 
-## Component Structure
+An overview of how TTAnalysis fits together. `CLAUDE.md` in the repo root has the detail: the schema, the analysis rules and the site's wording.
 
-### Core UI Components
+## Hosting
 
-#### `Button`
-A reusable button component with multiple variants:
-- Primary (filled with primary color)
-- Secondary (filled with secondary color)
-- Outline (border only)
+- **Frontend:** a Vite build of a React and TypeScript single-page app, deployed by Vercel from `main` to https://ttanalysis.app.
+- **Backend:** Supabase. Postgres with row-level security for all data, Supabase Auth for accounts, and one Edge Function (`match-summary`) for the coach's summary.
+- There is no server of our own. The browser talks to Supabase directly through `supabase-js`, and RLS decides what each request can read and write.
 
-Properties include:
-- variant
-- onClick handler
-- disabled state
-- custom classes
+The build prerenders the signed-out homepage into `dist/index.html`, served only for `/`. Every other route is rewritten to `dist/app.html`.
 
-#### `Card`
-A container component for consistent styling:
-- Standardized border radius
-- Box shadow
-- Padding
+## Routes and pages
 
-#### `PlayerPanel`
-Player representation component for match tracking:
-- Displays player avatar and name
-- Different styling for player vs opponent
-- Click handler for selection
+Every page except Home and Auth is lazy-loaded in `App.tsx` inside `PageErrorBoundary`. Owner pages sit behind `ProtectedRoute`.
 
-#### `Layout`
-Common application layout:
-- Header with navigation
-- Main content area
-- Footer
+| Route | Page | What it does |
+| --- | --- | --- |
+| `/matches` | `MatchList` | The owner's matches |
+| `/matches/new` | `NewMatch` | Pick a player and opponent, copy their styles onto the match |
+| `/matches/:id` | `MatchTracker` | Enter points |
+| `/matches/:id/analysis`, `/summary` | `MatchAnalysis` | The analysis and the coach's summary |
+| `/matches/:id/points` | `PointsEditor` | Edit points after the match |
+| `/matches/:id/sweep/:tag` | `PointSweep` | Tick one tag point by point |
+| `/players` | `Players` | Players, their styles and notes |
+| `/players/:id/history` (`/shots`, `/opponents`) | `PlayerHistory` | Every match for one player |
+| `/admin`, `/admin/shots`, `/admin/styles` | Admin pages | Users, budget, shots and their guide, styles of play |
+| `/shared/:token` | `MatchAnalysis` | A shared match |
+| `/shared/history/:token` | `PlayerHistory` | A shared player history, with each match under `/matches/:id` |
 
-### Specialized Components
+## Data access
 
-#### `ShotSelector`
-A complex component for selecting shot types, split into smaller parts:
-- `ShotCategory.tsx` - Category tabs
-- `ShotItem.tsx` - Individual shot options with FH/BH variants
-- `ShotList.tsx` - List of available shots
-- `types.ts` - TypeScript types and constants
+- `src/lib/supabase.ts` creates the signed-in client, and `createSharedClient(token)` creates one that sends the `x-share-token` header.
+- `src/lib/api.ts` holds every query, grouped by area (`match`, `history` and so on). Pages get it through `useApi`.
+- PostgREST returns at most 1,000 rows per request, so the player history fetches points in pages.
 
-#### `ScoreBoard`
-Displays match score and current server.
+## Sharing
 
-#### `PointHistory`
-Visual representation of point sequence.
+Sharing sets a random UUID on the row being shared: `matches.share_token` for a match, `players.share_token` for a player's history. RLS policies let anon and signed-in requests read a row only when the request sends the matching token in `x-share-token`, which `request_share_token()` reads.
 
-## State Management
+A shared history can read that player's matches, sets, points and summaries. Players aren't readable by anon, so `shared_history_player_id()` and `shared_history_player()` are security definer functions. The second returns the player's name and style but never their notes. Owner-only tables such as `match_summary_notes` stay closed on every share link. Clearing the token kills the link.
 
-### `MatchContext`
-Centralized state for match tracking:
-- Current score
-- Set history
-- Point sequence
-- Server tracking
-- Point recording flow
+## Analysis
 
-Key functionality:
-- `handlePlayerSelect` - When a player wins a point
-- `handleShotSelect` - For recording shot types
-- `recordPoint` - Finalizes point recording
-- `undoLastPoint` - Removes the last recorded point
+The analysis is computed in the browser, not in SQL.
 
-## Data Flow
+- `buildAnalysis` in `src/lib/analysis.ts` turns one match's sets, points and shots into everything the analysis page shows.
+- `buildHistory` in `src/lib/history.ts` takes one analysis per match and adds them up for the player history. Totals add points together rather than averaging percentages.
+- The `match-summary` Edge Function imports the same `analysis.ts` and `aiSummary.ts`, so the page and the coach's summary work from the same numbers. That's why `src/lib` imports use `.ts` extensions.
 
-1. User creates a new match via `NewMatch` form
-2. User records points in `MatchTracker` page:
-   - Select point winner (player/opponent)
-   - Select winning shot type
-   - Select other shot type
-3. Points are recorded and visualized
-4. Match analysis is shown in `MatchAnalysis` page
+The logic in `src/lib` is covered by Vitest tests next to each file.
 
-## CSS Organization
+## Styling
 
-- Global variables in `:root` (colors, spacing, etc.)
-- Component-specific CSS files in `/styles/components/`
-- Responsive design using media queries
-- Common patterns extracted to shared styles
-
-## Key Design Decisions
-
-1. **Component Composition**: Breaking down complex UI into smaller, focused components
-2. **Context for State**: Using React Context for complex state management
-3. **CSS Organization**: Component-specific CSS files for better maintainability
-4. **TypeScript Types**: Shared types for consistent data handling
-5. **Mobile-First Design**: Optimized for courtside usage on mobile devices
-
-## Future Architecture Improvements
-
-1. **Custom Hooks**: Extract common logic into reusable hooks
-2. **Error Handling**: Comprehensive error boundaries and error states
-3. **Testing Strategy**: Component and integration tests
-4. **Performance Optimization**: Memoization and lazy loading
-5. **Admin Interface**: Shot and category management features
+Custom CSS with no UI library. Tokens and shared pieces (cards, buttons, fields, `.segmented`, `.data-table`, `.notice`) live in `src/index.css`. Page styles are in `src/styles`. Blue `--you` is always the player and orange `--opp` the opponent. The design is mobile first, because the tracker is used courtside.

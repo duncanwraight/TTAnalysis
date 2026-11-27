@@ -1,79 +1,45 @@
-# Table Tennis Analysis Web App
+# TTAnalysis
 
-A web application for tracking and analyzing table tennis matches, built with React, TypeScript, and Supabase.
+A table tennis match analysis app, live at https://ttanalysis.app. You film a match, enter its points in the tracker (who won, the winning shot and the losing shot), and the app works out where points were won and lost. Built with React, TypeScript and Supabase, hosted on Vercel.
 
 ## Features
 
-- Record match details including opponent, date, and score
-- Track individual points with shot analysis
-- Visualize performance statistics
-- Review match history
+- **Tracker:** point-by-point entry built for courtside use on a phone, with keyboard shortcuts on wider screens. Serves, set scores and the match result are worked out from the points.
+- **Analysis:** each match's analysis page covers winning and losing shots, serve and receive, close finishes from 8-all, shot balance by role, unforced errors, who attacked first and repeated patterns.
+- **Coach's summary:** an AI write-up of a match with tactical and technical advice, switched on per user by an admin, with a monthly budget.
+- **Points editor and sweeps:** fix a point's winner or shots after the match, and go back through a match one point at a time to tick unforced errors, attacked first, attacked straight away and lucky shots.
+- **Players and styles:** the owner's players, each with a style of play, hand, rubbers and notes. Admins manage the styles and the notes that go with them.
+- **Player history:** every match for one player added up, with trends over time, shots across matches and results against different kinds of opponent.
+- **Sharing:** a match or a player's history can be shared by link. Stopping sharing kills the link.
+- **PDF export** of the analysis page.
 
-## Quick Start
+## Quick start
 
 ```bash
-# Install dependencies
 npm install
 
-# Start Supabase and frontend development server
+# Start the local Supabase stack, create a test user and start the dev server
 ./start-dev.sh
 
-# Alternative: Start frontend only (requires Supabase to be running)
+# Or the dev server only, with Supabase already running
 npm run dev
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+npm test          # Vitest
+npm run lint      # ESLint, no warnings allowed
+npm run build     # type check, build and prerender the homepage
 ```
 
-**IMPORTANT**: The Supabase local development environment must be running for the application to work correctly. The `start-dev.sh` script handles this for you.
+The app needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Apply new migrations with `supabase db push`, and never run `supabase db reset` against the linked project.
 
-## Project Structure
+## Project structure
 
-- `/src` - All application code
-  - `/components` - Reusable UI components
-    - `/ui` - Common UI components (Button, Card)
-    - `/ShotSelector` - Shot selection components
-  - `/pages` - Application pages
-  - `/context` - React context providers
-  - `/lib` - Utilities and Supabase client
-  - `/types` - TypeScript definitions
-  - `/styles` - CSS stylesheets
-    - `/components` - Component-specific CSS
-- `/docs` - Project documentation
-- `/supabase` - Supabase configuration and migrations
+- `src/pages`: one file per route, loaded on demand from `App.tsx`
+- `src/components`: shared pieces (`Layout`, dialogs) and folders for the tracker, the analysis page, the player history and auth
+- `src/lib`: the Supabase client and API, and the logic behind the pages: `analysis.ts`, `history.ts`, `scoring.ts`, `sweeps.ts`, `pointEdits.ts`, `aiSummary.ts`, each with tests
+- `src/styles`: page stylesheets; tokens and shared styles live in `src/index.css`
+- `supabase/migrations`: the schema and row-level security policies
+- `supabase/functions/match-summary`: the Edge Function behind the coach's summary
+- `scripts`: the homepage prerender, admin promotion and the summary eval
+- `docs`: architecture notes and the handover notes in `NEXT_STEPS.md`
 
-## Component Architecture
-
-### UI Components
-- **Button**: Reusable button with primary, secondary, and outline variants
-- **Card**: Container component with consistent styling
-- **Layout**: Common application layout with header, main content, and footer
-- **PlayerPanel**: Player representation for selection
-- **ShotSelector**: Shot type selection with categories
-
-### Pages
-- **Home**: Application landing page
-- **MatchList**: Overview of recorded matches
-- **NewMatch**: Match creation form
-- **MatchTracker**: Point-by-point match recording
-- **MatchAnalysis**: Statistics and performance analysis
-
-### State Management
-- **MatchContext**: Centralized state for match tracking
-
-## Technology Stack
-
-- **Frontend**: React with TypeScript
-- **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **Styling**: Custom CSS
-- **Build Tool**: Vite
-
-## Development Notes
-
-- Mobile-first design for courtside usage
-- Modular components for reusability
-- Context-based state management for complex workflows
-- CSS organization by component
+`CLAUDE.md` has the full detail on the schema, the analysis rules and the wording used on the site.

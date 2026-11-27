@@ -56,7 +56,7 @@ Shipped on 2026-11-26 (see *Player history* below):
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
-The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. On 2026-11-26 they also confirmed on production the "This is me" box on the Players page, the tracker's keyboard shortcuts, the Edit button in the points editor and the password reset email (the link lands on ttanalysis.app/reset-password). Nothing shipped is waiting on a check by a person.
+The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. On 2026-11-26 they also confirmed on production the "This is me" box on the Players page, the tracker's keyboard shortcuts, the Edit button in the points editor and the password reset email (the link lands on ttanalysis.app/reset-password). The player history is the only shipped work waiting on a check by a person.
 
 ## Player history (shipped)
 
