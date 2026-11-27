@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { formatRatio, pct, ratioValue, type History, type HistoryRow, type Trend } from '../../lib/history';
 import type { Tally } from '../../lib/analysis';
 import { longDate } from './format';
+import HelpLink from '../HelpLink';
 
 const total = (t: Tally) => t.won + t.lost;
 const shortDate = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -157,7 +158,8 @@ const HistoryOverview = ({ history, styleName, matchPath, tabPath }: Props) => {
       <section className="ph-section">
         <h2>Over time</h2>
         <p className="ph-section-note">
-          One dot per match, oldest on the left. The lines are the last 5 matches and the 5 before them (half and half with fewer than 10), with their points counted together rather than averaged. A match that wasn't tagged or confirmed shows as a grey dot on the bottom line.
+          One dot per match, oldest on the left. The lines compare the last 5 matches with the 5 before them.{' '}
+          <HelpLink page="player-history" heading="Over time" />
         </p>
         <div className="ph-trends">
           {history.trends.map(t => <TrendTile key={t.key} trend={t} rows={rows} />)}

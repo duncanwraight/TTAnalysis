@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { StoredSummary } from '../../lib/api';
 import { MAX_NOTES_LENGTH } from '../../lib/aiSummary';
 import { TACTICAL_DEFINITION, TECHNICAL_DEFINITION } from '../../lib/shotGuide';
+import HelpLink from '../HelpLink';
 
 type Props = {
   stored: StoredSummary | null;
@@ -207,6 +208,7 @@ const CoachSummary = ({
         <p className="cs-small muted cs-disclaimer">
           Written by AI from the points entered for this match. It only knows the last two shots of each point, so check what it suggests against the video.
         </p>
+        <HelpLink page="coach-summary" />
       </aside>
     </div>
   );

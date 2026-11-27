@@ -4,6 +4,7 @@ import { pct, type GroupBy, type History, type HistoryRow, type OpponentGroup, t
 import type { Tally } from '../../lib/analysis';
 import { ResultLabel } from './HistoryOverview';
 import { longDate } from './format';
+import HelpLink from '../HelpLink';
 
 const total = (t: Tally) => t.won + t.lost;
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
@@ -63,10 +64,8 @@ const HistoryOpponents = ({ history, playerName, styleName, matchPath }: Props) 
     <section className="ph-section">
       <h2>Against different opponents</h2>
       <p className="ph-section-note">
-        The opponent's style, hand and rubbers as they were set on each match. Sets come first, because sets win matches. The small number after each figure is the difference from {playerName === 'You' ? 'your' : `${playerName}'s`} figure across all matches. Groups of fewer than 3 matches are greyed out: too few to read anything into.
-      </p>
-      <p className="ph-section-note">
-        Sets v points is the share of sets won minus the share of points won. Well below zero means {you} won plenty of points but not the sets, so something goes at the end of sets: a stroke under pressure, or nerves. Close finishes and the end of sets on the video are the place to look. Well above zero is the opposite: {you} won the sets that mattered.
+        Sets come first, because sets win matches. The small number is the difference from {playerName === 'You' ? 'your' : `${playerName}'s`} figure across all matches. Sets v points well below zero means {you} won points but not sets.{' '}
+        <HelpLink page="player-history" heading="Opponents" />
       </p>
       <div className="segmented compact" role="group" aria-label="Group by">
         {GROUP_BY.map(g => (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { shotWithHand } from '../../lib/analysis';
 import { MIN_SHOT_USES, type History, type HistoryRow, type HistoryShot } from '../../lib/history';
 import { longDate } from './format';
+import HelpLink from '../HelpLink';
 
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
 
@@ -75,7 +76,8 @@ const HistoryShots = ({ history, playerName }: { history: History; playerName: s
     <section className="ph-section">
       <h2>Shots across every match</h2>
       <p className="ph-section-note">
-        Each point has a winning shot and a losing shot. Won counts the points {theirs ? 'opponents' : playerName} won with the shot, and lost the points {theirs ? 'they' : playerName} lost with it, whether it missed or set up the winner. The strip shows the net in each match, so a shot that loses every time stands apart from one bad match.
+        Won and lost count the points {theirs ? 'opponents' : playerName} won and lost with each shot. The strip shows the net in each match.{' '}
+        <HelpLink page="player-history" heading="Shots" />
       </p>
       <div className="segmented compact" role="group" aria-label="Whose shots">
         <button type="button" aria-pressed={!theirs} onClick={() => setTheirs(false)}>{playerName === 'You' ? 'Your shots' : `${playerName}'s shots`}</button>

@@ -1,0 +1,105 @@
+import { UNFORCED_ERROR_DEFINITION } from '../../lib/analysis';
+import { TACTICAL_DEFINITION, TECHNICAL_DEFINITION } from '../../lib/shotGuide';
+import { ATTACK_DEFINITION } from '../../lib/sweeps';
+
+export const unlabelled = text => text.replace(/^\w+: s/, 'S');
+
+These are the definitions the app uses wherever the term appears. Links from the tracker and the analysis page land on the entry here.
+
+## Attacked first
+
+The player played the first attacking shot of the point. {ATTACK_DEFINITION} It's ticked for the player only. When a point isn't ticked, the app looks at its last two shots: an attacking shot there means the opponent attacked first, and no attacking shot means the point is [unclear](#unclear). Ticked in the [attacked first sweep](/help/unforced-errors-and-attacks) or the points editor, and shown in [Who attacked first](/help/analysis-page#who-attacked-first).
+
+## Attacked straight away
+
+The player attacked at their first chance: the third ball on their own serve (a third-ball attack), or the receive on the opponent's serve (attacking the serve). It always counts as attacking first too. It only applies to points that went past the receive. A receive that won or lost the point already shows whether it was an attack, so it counts without a tick. Shown under [Serve and receive](/help/analysis-page#serve-and-receive).
+
+## Close finishes
+
+Points played with both players on 8 or more, from 8-all onwards. The analysis page, the player history and the coach's summary all use this when they talk about the end of sets.
+
+## Coach's summary
+
+A written review of one match by an AI coach: the problems that cost points, what to check on the video, and the mental side when it shows. By invitation. See [How the coach's summary is written](/help/coach-summary).
+
+## Confirmed
+
+A tag, such as unforced errors, is confirmed for a match when every point has been looked at: its sweep was finished, or you chose **That's all of them**. Until then, an unticked point could mean "no" or "not looked at yet". See [When a tag starts counting](/help/unforced-errors-and-attacks#when-a-tag-starts-counting).
+
+## Enter
+
+Going through the video and putting each point into the tracker: who won, the winning shot and the losing shot.
+
+## Film
+
+Making the video of a match. Any phone will do.
+
+## Forced
+
+A point the player lost that wasn't an unforced error: the opponent made it hard to play the shot, with spin, placement or speed, or simply won it.
+
+## Losing shot
+
+The last shot of the player who lost the point. Either the shot that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). A service fault is never a losing shot.
+
+## Lucky shot
+
+A winning shot that hit the net or the edge. The analysis counts them for each player under Match progression. The point still counts like any other.
+
+## Rubbers
+
+What's on each side of the bat: inverted (smooth, the most common), short pips, medium pips, long pips or anti. Set for each side of a match, and used by the coach's summary and to group a player's history by the opponent's rubbers.
+
+## Service fault
+
+A serve that missed or was illegal. It's entered as the receiver's winning shot, with no losing shot, and saves the point straight away. The analysis counts it against the server as an unforced error.
+
+## Sets v points
+
+In a player's history: the share of sets won minus the share of points won. Well below zero means the player won plenty of points but not the sets, so something goes at the end of sets. See [Sets v points](/help/player-history#sets-v-points).
+
+## Shot roles
+
+Every shot has a role, which decides how it's counted in [Shot balance](/help/analysis-page#shot-balance) and whether it's an attack.
+
+- **Attack:** such as loops, counter-loops, flicks, flat hits and smashes.
+- **Control:** keeping the ball in play at the table, such as pushes, blocks and bumps.
+- **Defence:** with backspin or from distance, such as chops, chop blocks, fishes and lobs.
+
+Serves have no role. Shots played with pips or anti take the same role as the inverted shot of the same kind.
+
+## Style of play
+
+How a player sets out to win points, such as Two-winged looper or Classical defender, picked from a list kept by the app. Optional. The coach's summary uses the styles for tactics, and takes them as given but never as evidence. See [Styles, hand and rubbers](/help/someone-else#styles-hand-and-rubbers).
+
+## Sweep
+
+A pass back through a match, one point at a time, that asks one question about each point, such as "was this an unforced error?". Next means no, so only the points that count need an answer. See [Mark unforced errors and attacks](/help/unforced-errors-and-attacks).
+
+## Tactical
+
+{unlabelled(TACTICAL_DEFINITION)} One of the two kinds of advice in the coach's summary.
+
+## Technical
+
+{unlabelled(TECHNICAL_DEFINITION)} The other kind of advice in the coach's summary.
+
+## Third-ball attack
+
+Attacking the ball after the opponent's receive, on your own serve. One half of [attacked straight away](#attacked-straight-away).
+
+## Unclear
+
+A point where the player didn't attack first and neither of the last two shots was an attack. Nobody attacked, or someone attacked earlier in the rally and it ended with a push or a block. Unclear points are shown on their own and never counted as the opponent's.
+
+## Unforced error
+
+{UNFORCED_ERROR_DEFINITION} If the other player made it hard to play the shot with spin, placement or speed, it's not an unforced error. It's ticked on the losing shot, in the tracker, a [sweep](/help/unforced-errors-and-attacks) or the points editor, and only the player's own count in the analysis. A service fault always counts as one.
+
+## Winning shot
+
+The last shot of the player who won the point. On a service fault, the receiver's winning shot is "Service fault".
+
+## You
+
+On the analysis page and in the coach's summary, "you" is always the player the match is about, even when someone else entered it. See [Enter a match for someone else](/help/someone-else).

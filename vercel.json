@@ -28,6 +28,58 @@
   ],
   "rewrites": [
     {
+      "source": "/help",
+      "destination": "/help/index.html"
+    },
+    {
+      "source": "/help/first-match",
+      "destination": "/help/first-match.html"
+    },
+    {
+      "source": "/help/tracker",
+      "destination": "/help/tracker.html"
+    },
+    {
+      "source": "/help/unforced-errors-and-attacks",
+      "destination": "/help/unforced-errors-and-attacks.html"
+    },
+    {
+      "source": "/help/fix-a-point",
+      "destination": "/help/fix-a-point.html"
+    },
+    {
+      "source": "/help/someone-else",
+      "destination": "/help/someone-else.html"
+    },
+    {
+      "source": "/help/sharing",
+      "destination": "/help/sharing.html"
+    },
+    {
+      "source": "/help/glossary",
+      "destination": "/help/glossary.html"
+    },
+    {
+      "source": "/help/keyboard-shortcuts",
+      "destination": "/help/keyboard-shortcuts.html"
+    },
+    {
+      "source": "/help/analysis-page",
+      "destination": "/help/analysis-page.html"
+    },
+    {
+      "source": "/help/player-history",
+      "destination": "/help/player-history.html"
+    },
+    {
+      "source": "/help/two-shots",
+      "destination": "/help/two-shots.html"
+    },
+    {
+      "source": "/help/coach-summary",
+      "destination": "/help/coach-summary.html"
+    },
+    {
       "source": "/((?!assets/).*)",
       "destination": "/app.html"
     }

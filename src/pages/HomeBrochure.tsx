@@ -71,6 +71,7 @@ const HomeBrochure = () => (
           <a href="#analysis">The analysis</a>
           <a href="#coach">Coach's summary</a>
           <a href="#faq">Questions</a>
+          <Link to="/help">Help</Link>
         </div>
         <Link to={SIGN_IN} className="bro-btn ghost small">Sign in</Link>
       </nav>
@@ -326,6 +327,7 @@ const HomeBrochure = () => (
     <footer className="bro-wrap bro-footer">
       <span>TT Analysis</span>
       <span>Two shots a point from your match video, and where the points went</span>
+      <Link to="/help">Help</Link>
     </footer>
   </div>
 );

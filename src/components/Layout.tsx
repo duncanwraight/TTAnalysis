@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import AppFrame from './AppFrame';
 
 type LayoutProps = {
   children: ReactNode;
@@ -10,8 +10,6 @@ type LayoutProps = {
 
 const Layout = ({ children, wide = false }: LayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
-  const { pathname } = useLocation();
-  const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
 
   const handleSignOut = async () => {
     try {
@@ -47,46 +45,9 @@ const Layout = ({ children, wide = false }: LayoutProps) => {
   };
 
   return (
-    <div className="app">
-      <header className={`app-header${isAdminArea ? ' admin' : ''}`}>
-        <div className="app-header-inner">
-          <Link to={isAdminArea ? '/admin' : '/'} className="app-brand" aria-label="TT Analysis home">
-            <span className="app-brand-mark" aria-hidden="true" />
-            <span className="app-brand-text">TT Analysis</span>
-            {isAdminArea && <span className="admin-tag">Admin</span>}
-          </Link>
-          <nav className="app-nav" aria-label="Main">
-            {isAdminArea ? (
-              <>
-                <NavLink to="/admin" end>Users</NavLink>
-                <NavLink to="/admin/shots">Shots</NavLink>
-                <NavLink to="/admin/styles">Styles</NavLink>
-                <Link to="/matches">Back to app</Link>
-              </>
-            ) : user ? (
-              <>
-                <NavLink to="/matches" end>Matches</NavLink>
-                <NavLink to="/players">Players</NavLink>
-                <NavLink to="/matches/new" className="nav-optional">New match</NavLink>
-                {isAdmin && <NavLink to="/admin">Admin</NavLink>}
-              </>
-            ) : (
-              <NavLink to="/auth">Sign in</NavLink>
-            )}
-            {user && <button type="button" onClick={handleSignOut}>Sign out</button>}
-          </nav>
-        </div>
-      </header>
-      <main className={`app-main${wide ? ' wide' : ''}`}>
-        {children}
-      </main>
-      <footer className="app-footer">
-        TT Analysis
-        {import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA && (
-          <> · build {import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
-        )}
-      </footer>
-    </div>
+    <AppFrame wide={wide} signedIn={!!user} isAdmin={isAdmin} onSignOut={handleSignOut}>
+      {children}
+    </AppFrame>
   );
 };
 

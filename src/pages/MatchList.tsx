@@ -110,6 +110,7 @@ const MatchList = () => {
             <p>Create a match, then enter it point by point from the video.</p>
             <div className="form-actions">
               <Link to="/matches/new" className="btn primary">Enter your first match</Link>
+              <Link to="/help/first-match" className="btn">How it works</Link>
             </div>
           </div>
         ) : (

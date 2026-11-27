@@ -10,11 +10,11 @@ An overview of how TTAnalysis fits together. `CLAUDE.md` in the repo root has th
 - **Backend:** Supabase. Postgres with row-level security for all data, Supabase Auth for accounts, and one Edge Function (`match-summary`) for the coach's summary.
 - There is no server of our own. The browser talks to Supabase directly through `supabase-js`, and RLS decides what each request can read and write.
 
-The build prerenders the signed-out homepage into `dist/index.html`, served only for `/`. Every other route is rewritten to `dist/app.html`.
+The build prerenders the signed-out homepage into `dist/index.html`, served only for `/`, and each help page into `dist/help/`, served only for its own route. Every other route is rewritten to `dist/app.html`.
 
 ## Routes and pages
 
-Every page except Home and Auth is lazy-loaded in `App.tsx` inside `PageErrorBoundary`. Owner pages sit behind `ProtectedRoute`.
+Every page except Home, Auth and Help is lazy-loaded in `App.tsx` inside `PageErrorBoundary`. Owner pages sit behind `ProtectedRoute`.
 
 | Route | Page | What it does |
 | --- | --- | --- |
@@ -28,6 +28,7 @@ Every page except Home and Auth is lazy-loaded in `App.tsx` inside `PageErrorBou
 | `/players/:id/history` (`/shots`, `/opponents`) | `PlayerHistory` | Every match for one player |
 | `/admin`, `/admin/shots`, `/admin/styles` | Admin pages | Users, budget, shots and their guide, styles of play |
 | `/shared/:token` | `MatchAnalysis` | A shared match |
+| `/help`, `/help/:page` | `Help` | Public help pages, written in MDX (`src/help`) |
 | `/shared/history/:token` | `PlayerHistory` | A shared player history, with each match under `/matches/:id` |
 
 ## Data access

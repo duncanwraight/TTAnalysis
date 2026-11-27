@@ -7,6 +7,7 @@ import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import { EMPTY_KIT, MAX_PLAYER_NOTES, describeHandAndRubbers, type Player, type PlayStyle } from '../lib/styles';
 import { MAX_PLAYER_NAME } from '../lib/matchDetails';
+import HelpLink from '../components/HelpLink';
 
 type Editing = Omit<Player, 'id'> & { id?: string };
 
@@ -143,8 +144,8 @@ const Players = () => {
           <div>
             <h1>Players</h1>
             <p>
-              You and the people whose matches you enter. A player's style fills in each new match, and their notes shape the
-              technical advice in the coach's summary. Only you see the notes: share links never show them.
+              You and the people whose matches you enter. Only you see their notes.{' '}
+              <HelpLink page="someone-else" />
             </p>
           </div>
           <div className="page-head-actions">

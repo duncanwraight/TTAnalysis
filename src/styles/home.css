@@ -229,6 +229,7 @@
 .bro-closing-panel p { margin-top: 16px; font-size: 18px; color: var(--bro-on-dark-2); }
 .bro-closing-panel .bro-actions { margin-top: 0; }
 
+.bro-footer a { color: inherit; }
 .bro-footer {
   padding-top: 56px; padding-bottom: 48px;
   display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between;

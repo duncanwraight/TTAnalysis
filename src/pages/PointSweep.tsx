@@ -10,6 +10,7 @@ import {
   SWEEPS, SWEEP_TAGS, answerChanges, isSweepTag, isTicked, scoreBefore, sweepPoints, sweepStatus, tickCount,
   type SweepProgress, type SweepTag,
 } from '../lib/sweeps';
+import HelpLink from '../components/HelpLink';
 import '../styles/sweep.css';
 
 const formatDate = (date: string) =>
@@ -256,6 +257,7 @@ const Sweep = () => {
         <details className="sw-instruction" open={!isPhone}>
           <summary>What counts</summary>
           <p>{sweep.instruction}</p>
+          <HelpLink page="unforced-errors-and-attacks">More about sweeps</HelpLink>
         </details>
 
         <div className="sw-progress">

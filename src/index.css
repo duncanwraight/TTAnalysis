@@ -107,8 +107,22 @@ button { cursor: pointer; }
 
 .app-footer {
   border-top: 1px solid var(--line);
-  padding: 16px 24px; text-align: center; font-size: 13px; color: var(--ink-3);
+  padding: 16px 24px; font-size: 13px; color: var(--ink-3);
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px;
 }
+.app-footer a { color: var(--ink-2); }
+
+/* "How this works" links on app pages */
+.help-link {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500;
+  color: var(--ink-2); white-space: nowrap;
+}
+.help-link svg { flex: none; }
+/* Beside full-size buttons, as on the tracker, it needs the same tap height */
+.tracker-tools .help-link { min-height: var(--tap); padding: 0 4px; }
+.help-link[aria-disabled='true'] { opacity: 0.45; pointer-events: none; }
+.section-head .help-link, .section-title-row .help-link { align-self: flex-start; }
+.section-title-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
 
 /* Page building blocks */
 .page { display: flex; flex-direction: column; gap: 24px; }

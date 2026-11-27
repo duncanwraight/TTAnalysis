@@ -5,13 +5,14 @@ import { useApi } from '../lib/useApi';
 import { useAuth } from '../context/AuthContext';
 import type { AnalysisData } from '../lib/api';
 import { Analysis, Pattern, ServeStats, ShotCount, ShotRow, Tally, UNFORCED_ERROR_DEFINITION, buildAnalysis, shotWithHand } from '../lib/analysis';
-import { ATTACK_DEFINITION, SWEEPS, unconfirmedTags, type SweepTag } from '../lib/sweeps';
+import { SWEEPS, unconfirmedTags, type SweepTag } from '../lib/sweeps';
 import { cleanText, isSafeVideoUrl } from '../lib/matchDetails';
 import { createSharedClient } from '../lib/supabase';
 import { buildSummaryInput, hashInput } from '../lib/aiSummary';
 import { describeHandAndRubbers, hasKit, opponentKit, playerKit, type Kit, type PlayStyle } from '../lib/styles';
 import CoachSummary from '../components/analysis/CoachSummary';
 import ShotBalance from '../components/analysis/ShotBalance';
+import HelpLink from '../components/HelpLink';
 import '../styles/components/MatchAnalysis.css';
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((100 * n) / d) : 0);
@@ -21,6 +22,14 @@ const formatDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 
 /** Two bars from a shared centre line: losing shots to the left, winning shots to the right. */
+/** A section's heading, with a link to the same heading on the help page. */
+const SectionTitle = ({ id, title }: { id: string; title: string }) => (
+  <div className="section-title-row">
+    <h2 id={id}>{title}</h2>
+    <HelpLink page="analysis-page" heading={title} />
+  </div>
+);
+
 const Diverge = ({ left, right, max, leftClass, rightClass, title }: {
   left: number; right: number; max: number; leftClass: string; rightClass: string; title: string;
 }) => (
@@ -427,7 +436,8 @@ const MatchAnalysis = () => {
       </section>
 
       <aside className="ma-note" aria-label="How points are entered">
-        <strong>How to read this page.</strong> Each point has two shots: the winning shot, and the losing shot of the player who lost the point. The losing shot is either the one that set up the winner (they push, you loop past them) or the one that missed (you loop, they miss the block). Rally shots aren't entered, so the numbers only cover the last two shots of each point.
+        <strong>How to read this page.</strong> Each point has two shots: the winning shot, and the losing shot of the player who lost the point. Rally shots aren't entered.{' '}
+        <HelpLink page="two-shots">Why two shots</HelpLink>
       </aside>
 
       {isOwnerView && unconfirmedTags(a.rows, match.confirmed_tags ?? []).map(({ tag, ticks }) => (
@@ -474,7 +484,7 @@ const MatchAnalysis = () => {
 
           {a.cards.length > 0 && (
             <section aria-labelledby="cards" className="section">
-              <h2 id="cards">Main findings</h2>
+              <SectionTitle id="cards" title="Main findings" />
               <div className="ma-grid cards">
                 {a.cards.map(card => (
                   <article key={card.title} className="card ma-finding">
@@ -489,8 +499,8 @@ const MatchAnalysis = () => {
 
           <section aria-labelledby="ma-serve" className="section">
             <div className="section-head">
-              <h2 id="ma-serve">Serve and receive</h2>
-              <p>The serve and the receive are the only shots in a rally that can be picked out. When the serve is the winning shot, the receive missed or wasn't returned. When the serve is the losing shot, the receive won the point.</p>
+              <SectionTitle id="ma-serve" title="Serve and receive" />
+              <p>The serve and the receive are the only shots in a rally the data can pick out.</p>
             </div>
             <div className="ma-grid halves">
               <ServeCard title="Your serve" stats={a.serveReceive.player} yours />
@@ -528,8 +538,8 @@ const MatchAnalysis = () => {
 
           <section aria-labelledby="ma-you" className="section">
             <div className="section-head">
-              <h2 id="ma-you">Your winning and losing shots</h2>
-              <p>Most costly first. A service fault counts as your losing shot. Unforced counts the losing shots ticked as unforced.</p>
+              <SectionTitle id="ma-you" title="Your winning and losing shots" />
+              <p>Most costly first.</p>
             </div>
             <div className="card table-card">
               <table className="data-table" style={{ minWidth: 640 }}>
@@ -571,8 +581,8 @@ const MatchAnalysis = () => {
 
           <section aria-labelledby="ma-ue" className="section">
             <div className="section-head">
-              <h2 id="ma-ue">Unforced errors</h2>
-              <p className="ma-note ma-definition"><strong>What counts as unforced.</strong> {UNFORCED_ERROR_DEFINITION} If the other player made it hard to play your shot with spin, placement or speed, it is not an unforced error.</p>
+              <SectionTitle id="ma-ue" title="Unforced errors" />
+              <p className="ma-note ma-definition">{UNFORCED_ERROR_DEFINITION}</p>
             </div>
             {a.unforced.recorded ? (
               <>
@@ -619,8 +629,8 @@ const MatchAnalysis = () => {
 
           <section aria-labelledby="ma-patterns" className="section">
             <div className="section-head">
-              <h2 id="ma-patterns">Patterns</h2>
-              <p>A winning shot and the losing shot it was played against, when the same pair happened three times or more. Unforced errors are excluded.</p>
+              <SectionTitle id="ma-patterns" title="Patterns" />
+              <p>A winning shot and the losing shot it was played against, when the pair happened three times or more.</p>
             </div>
             <div className="ma-grid halves">
               <PatternList title="How you won points" patterns={a.patterns.player} yours />
@@ -634,9 +644,9 @@ const MatchAnalysis = () => {
             return (
               <section aria-labelledby="ma-first" className="section">
                 <div className="section-head">
-                  <h2 id="ma-first">Who attacked first</h2>
+                  <SectionTitle id="ma-first" title="Who attacked first" />
                   <p>
-                    You attacked first in {count(af.player)} of {total} points and won {af.player.won} of them. {ATTACK_DEFINITION} Points you won are blue, points you lost orange.
+                    You attacked first in {count(af.player)} of {total} points and won {af.player.won} of them. Points you won are blue, points you lost orange.
                     {!af.confirmed && ' Not every point has been checked, so some may be missing.'}
                   </p>
                 </div>
@@ -650,7 +660,6 @@ const MatchAnalysis = () => {
                     </div>
                   ))}
                 </div>
-                <p className="ma-small muted">Only the last two shots of each point are entered. In the last group, nobody attacked, or they attacked earlier in the rally and it ended with a push or a block.</p>
               </section>
             );
           })()}
@@ -658,8 +667,8 @@ const MatchAnalysis = () => {
           {(a.balance.player.total > 0 || a.balance.opponent.total > 0) && (
             <section aria-labelledby="ma-balance" className="section">
               <div className="section-head">
-                <h2 id="ma-balance">Shot balance</h2>
-                <p>Your winning and losing shots against theirs, by role: attack (loops, flicks), control at the table (pushes, blocks) and defence with backspin or from distance (chops, chop blocks, lobs).</p>
+                <SectionTitle id="ma-balance" title="Shot balance" />
+                <p>Your winning and losing shots against theirs, by role: attack, control and defence.</p>
               </div>
               <ShotBalance balance={a.balance} />
             </section>
@@ -667,7 +676,7 @@ const MatchAnalysis = () => {
 
           <section aria-labelledby="ma-story" className="section">
             <div className="ma-story-head">
-              <h2 id="ma-story">Match progression</h2>
+              <SectionTitle id="ma-story" title="Match progression" />
               <div className="ma-legend">
                 <span><span className="ma-swatch you" />Point to you</span>
                 <span><span className="ma-swatch opp" />Point to opponent</span>
@@ -704,7 +713,6 @@ const MatchAnalysis = () => {
                       <span className="ma-right">{st.won} of {st.won + st.lost}</span>
                     </div>
                   ))}
-                <p className="ma-small faint">Stages count both players' points: "points 1–6" covers 3-3, 5-1 and 6-0 alike.</p>
               </div>
               <div className="card ma-list">
                 <h3>Longest runs</h3>
@@ -725,7 +733,7 @@ const MatchAnalysis = () => {
 
           <section aria-labelledby="ma-opp" className="section">
             <div className="section-head">
-              <h2 id="ma-opp">Scouting the opponent</h2>
+              <SectionTitle id="ma-opp" title="Scouting the opponent" />
               <p>Their winning and losing shots. A losing shot here is a point to you.</p>
             </div>
             <div className="ma-grid halves">

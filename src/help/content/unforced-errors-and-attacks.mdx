@@ -1,0 +1,62 @@
+import { SWEEPS } from '../../lib/sweeps';
+
+Entering two shots a point is enough to think about. So the other things worth knowing about a point, such as whether a miss was unforced or who attacked first, get their own pass afterwards. That pass is called a **sweep**: it goes back through the match one point at a time and asks one question about each. It's quicker and more accurate than ticking while you enter, because you're only watching for one thing.
+
+## The four sweeps
+
+### {SWEEPS.unforced.name}
+
+**Covers:** {SWEEPS.unforced.scope.toLowerCase()}. {SWEEPS.unforced.instruction}
+
+### {SWEEPS.early_attack.name}
+
+**Covers:** {SWEEPS.early_attack.scope.toLowerCase()}. {SWEEPS.early_attack.instruction}
+
+### {SWEEPS.attacked_first.name}
+
+**Covers:** {SWEEPS.attacked_first.scope.toLowerCase()}, except those ticked as attacked straight away. {SWEEPS.attacked_first.instruction}
+
+### {SWEEPS.lucky.name}
+
+**Covers:** {SWEEPS.lucky.scope.toLowerCase()}. {SWEEPS.lucky.instruction}
+
+A few points are left out because the shots already answer the question. A service fault is never in a sweep. Attacked straight away skips points decided by the serve or the receive: there, the receive was the losing or winning shot, so whether it was an attack is already known.
+
+If you're doing both attack sweeps, do **attacked straight away** first. Every point ticked there counts as attacking first too, so the attacked first sweep has fewer points to go through.
+
+## Run a sweep
+
+1. Open the match and choose **Edit points and sweeps**. It's on the match list, at the bottom of the analysis page and on the match complete screen.
+2. Under **Sweeps**, choose **Start sweep** on the one you want. Open the video alongside it.
+3. Each point shows the score before it was played, which is what the video shows as the rally starts, who served, and the two shots you entered.
+4. Answer **Yes** or **No, next point**. No means no, so you only need to act on the points that count. The Yes button says what it means, such as "Unforced error", or "Third-ball attack" on your serve and "Attacked their serve" on theirs.
+5. Made a mistake? **Back a point** goes back one. You can also pick any point in the list beside the question to jump to it.
+
+The list beside the question shows the set's points with their scores. If the score there doesn't match the video, a point has been missed. That's the moment to check before carrying on.
+
+Every answer saves as you go. **Finish later** takes you back to the points editor, which shows where you stopped, and **Carry on** picks up from there.
+
+On a phone the instructions fold away under **What counts**, and the answer buttons stay at the bottom of the screen. On a laptop, <kbd>Y</kbd> means yes, <kbd>N</kbd> or <kbd>Space</kbd> means no, and <kbd>Backspace</kbd> goes back a point.
+
+## When a tag starts counting
+
+Until a sweep is finished, an unticked point could mean "no" or "not looked at yet". So a tag only reaches the analysis once it has at least one tick or has been confirmed, and the analysis page treats unconfirmed counts as "in the points you marked".
+
+A tag is confirmed when:
+
+- you finish its sweep, or
+- you choose **That's all of them**, on the points editor or on the analysis page.
+
+If you ticked a few while entering and know there are no more, **That's all of them** confirms them without a sweep. The analysis page asks you about this whenever a tag has ticks but isn't confirmed. Only you see that question: it never appears on a share link or in a PDF.
+
+Lucky shots never ask, because they don't change anything but the lucky count.
+
+Sweeps you don't use stay off the analysis page. A match with no attacked first ticks has no Who attacked first section.
+
+## Ticking by hand
+
+The points editor also has a column of ticks for every point: **Unforced**, **Attacked first**, **Straight away** and **Lucky**. Each tick saves as you make it. Ticking by hand doesn't confirm the tag, because the app can't know you've looked at every point. See [Fix a point entered wrongly](/help/fix-a-point).
+
+## Only your own attacks are ticked
+
+Attacked first is one tick, for the player. When it's not ticked, the app looks at the last two shots: if either was an attacking shot, the opponent attacked first. If neither was, the point is "unclear". Nobody attacked, or someone attacked earlier in the rally and it ended with a push or a block. Unclear points are shown on their own and never counted as the opponent's. See [Attacked first](/help/glossary#attacked-first).

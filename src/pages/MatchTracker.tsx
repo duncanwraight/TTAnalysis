@@ -12,6 +12,7 @@ import { loadShotData, NO_SHOT, SERVICE_FAULT_SHOT, ShotData } from '../lib/shot
 import { isSafeVideoUrl, playerLabel } from '../lib/matchDetails';
 import { isTypingTarget } from '../lib/keys';
 import { UNFORCED_ERROR_DEFINITION, shotLabel } from '../lib/analysis';
+import HelpLink from '../components/HelpLink';
 import '../styles/components/Tracker.css';
 import {
   DEFAULT_BEST_OF,
@@ -582,6 +583,7 @@ const MatchTracker = () => {
             >
               End set
             </button>
+            <HelpLink page="tracker" newTab disabled={pointInProgress}>Help</HelpLink>
           </div>
         </div>
 

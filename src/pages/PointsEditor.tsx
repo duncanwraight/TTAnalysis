@@ -6,13 +6,14 @@ import type { AnalysisData, MatchDetails } from '../lib/api';
 import { MAX_EVENT, MAX_VIDEO_URL, cleanText, validateDetails } from '../lib/matchDetails';
 import MatchStyles from '../components/MatchStyles';
 import { kitColumns, opponentKit, playerKit, type Kit, type Player, type PlayStyle } from '../lib/styles';
-import { UNFORCED_ERROR_DEFINITION, buildAnalysis, type PointRow } from '../lib/analysis';
-import { ATTACK_DEFINITION, SWEEPS, SWEEP_TAGS, answerChanges, isTicked, scoreBefore, sweepPoints, sweepStatus, type SweepProgress, type SweepTag } from '../lib/sweeps';
+import { buildAnalysis, type PointRow } from '../lib/analysis';
+import { SWEEPS, SWEEP_TAGS, answerChanges, isTicked, scoreBefore, sweepPoints, sweepStatus, type SweepProgress, type SweepTag } from '../lib/sweeps';
 import { checkPointEdits, editChanges, editFromPoint, normaliseEdit, type PointEdit } from '../lib/pointEdits';
 import PointEditDialog from '../components/PointEditDialog';
 import { DEFAULT_BEST_OF } from '../lib/scoring';
 import '../styles/components/MatchAnalysis.css';
 import '../styles/sweep.css';
+import HelpLink from '../components/HelpLink';
 
 type DetailsForm = {
   player_id: string; player_name: string; opponent_name: string; date: string; event: string; video_url: string;
@@ -341,7 +342,7 @@ const PointsEditor = () => {
         <section className="card sw-list" aria-labelledby="pe-sweeps-h">
           <div>
             <h2 id="pe-sweeps-h">Sweeps</h2>
-            <p className="muted">Go through the match one point at a time and answer one question. Next means no, so you only tap for the points that count. Sweeps you don't use stay off the analysis page.</p>
+            <p className="muted">Go through the match one point at a time and answer one question. <HelpLink page="unforced-errors-and-attacks" /></p>
           </div>
           <ul>
             {SWEEP_TAGS.map(tag => {
@@ -430,7 +431,8 @@ const PointsEditor = () => {
 
 
         <p className="muted" style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 860 }}>
-          You can also tick any point by hand, which doesn't mark a sweep as done. Tick <strong>Unforced</strong> when the losing shot was an unforced error. {UNFORCED_ERROR_DEFINITION} It applies to whoever lost the point, but only your own count towards the analysis. A service fault always counts as unforced. Tick <strong>Attacked first</strong> when you played the first attacking shot. {ATTACK_DEFINITION} Tick <strong>Straight away</strong> when you attacked at your first chance: the third ball on your serve, or their serve itself. It only applies to points that went past the receive, and ticks Attacked first too.
+          You can also tick any point by hand, which doesn't mark a sweep as done. Edit changes who won or the shots.{' '}
+          <HelpLink page="fix-a-point">How this works</HelpLink>
         </p>
 
         {pending.length > 0 && (

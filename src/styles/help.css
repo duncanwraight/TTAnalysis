@@ -1,0 +1,102 @@
+/* The help pages at /help (src/help). Layout and type follow the design canvas
+   the user approved on 2026-11-27. */
+
+.help { display: flex; flex-direction: column; gap: 40px; }
+
+/* Contents page */
+.help-intro { display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
+.help h1 { font-size: 34px; line-height: 1.15; font-weight: 700; }
+.help-intro p, .help-lead { font-size: 17px; color: var(--ink-2); }
+
+.help-start {
+  display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between;
+  background: var(--ink); color: #ffffff; border-radius: var(--radius); padding: 28px 32px; text-decoration: none;
+}
+.help-start-text { display: flex; flex-direction: column; gap: 6px; flex: 1 1 420px; font-size: 15px; color: #e2e8f0; }
+.help-start-eyebrow { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--line-strong); }
+.help-start-title { font-size: 24px; font-weight: 700; color: #ffffff; }
+.help-start-button {
+  display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 20px;
+  border-radius: var(--radius-sm); background: #ffffff; color: var(--ink); font-weight: 600; font-size: 15px;
+}
+.help-start:hover .help-start-button { background: var(--surface-2); }
+
+.help-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.help-section { display: flex; flex-direction: column; gap: 16px; }
+.help-section h2 { font-size: 19px; font-weight: 700; }
+.help-section p { font-size: 14px; color: var(--ink-3); }
+.help-section ul { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.help-section li a { display: block; padding: 8px 0; font-size: 15px; font-weight: 500; }
+
+.help-questions { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.help-questions > h2 { font-size: 22px; font-weight: 700; }
+
+/* A page: menu on the left, the article on the right */
+.help-page { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 48px; }
+.help-nav {
+  flex: 1 1 220px; max-width: 260px; position: sticky; top: 80px;
+  display: flex; flex-direction: column; gap: 20px; font-size: 14px;
+}
+.help-nav a, .help-nav-phone a {
+  display: block; padding: 6px 10px; border-radius: var(--radius-sm); text-decoration: none; color: var(--ink-2);
+}
+.help-nav a:hover, .help-nav-phone a:hover { background: var(--surface-2); color: var(--ink); }
+.help-nav a[aria-current='page'], .help-nav-phone a[aria-current='page'] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.help-nav-all { font-weight: 600; }
+.help-nav-group { display: flex; flex-direction: column; gap: 2px; }
+.help-nav-label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); padding: 0 10px 4px; }
+.help-nav-phone { display: none; }
+
+.help-article { flex: 999 1 560px; min-width: 0; max-width: 720px; display: flex; flex-direction: column; gap: 28px; }
+.help-article-head { display: flex; flex-direction: column; gap: 8px; }
+.help-eyebrow { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+
+/* The words, from MDX */
+.help-prose { display: flex; flex-direction: column; gap: 14px; font-size: 16px; line-height: 1.6; }
+.help-prose h2 { font-size: 22px; font-weight: 700; margin-top: 18px; scroll-margin-top: 80px; }
+.help-prose h3 { font-size: 17px; font-weight: 700; margin-top: 8px; scroll-margin-top: 80px; }
+.help-prose > :first-child { margin-top: 0; }
+.help-prose ul, .help-prose ol { padding-left: 24px; display: flex; flex-direction: column; gap: 8px; }
+.help-prose strong { font-weight: 600; }
+.help-prose code { font-size: 14px; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
+.help-prose kbd, .help-table kbd {
+  font-family: inherit; font-size: 13px; font-weight: 600; padding: 1px 7px; white-space: nowrap;
+  border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 6px; background: var(--bg);
+}
+.help-note { background: var(--surface-2); border-radius: var(--radius); padding: 16px 20px; font-size: 15px; color: #334155; }
+.help-note > * + * { margin-top: 8px; }
+.help-table { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
+.help-table table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.help-table th, .help-table td { padding: 10px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.help-table th { font-size: 13px; font-weight: 600; color: var(--ink-3); background: var(--bg); }
+.help-table tr:last-child td { border-bottom: none; }
+.help-table td:first-child { white-space: nowrap; }
+
+.help-pager {
+  border-top: 1px solid var(--line); padding-top: 20px;
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; font-size: 15px; font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .help-page { flex-direction: column; align-items: stretch; gap: 20px; }
+  .help-nav { display: none; }
+  .help-nav-phone { display: block; width: 100%; padding: 0; }
+  .help-nav-phone summary {
+    min-height: var(--tap); padding: 0 16px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .help-nav-phone summary span { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+  .help-nav-phone nav { display: flex; flex-direction: column; gap: 16px; padding: 4px 8px 16px; font-size: 15px; }
+  .help-article { flex: none; max-width: none; }
+}
+
+@media (max-width: 640px) {
+  .help { gap: 28px; }
+  .help h1 { font-size: 28px; }
+  .help-intro p, .help-lead { font-size: 16px; }
+  .help-start { padding: 22px 20px; }
+  .help-start-title { font-size: 20px; }
+  .help-sections { grid-template-columns: 1fr; }
+  .help-prose { font-size: 15px; }
+  .help-pager { flex-direction: column; }
+}

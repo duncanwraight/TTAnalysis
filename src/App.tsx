@@ -2,7 +2,8 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import Home from './pages/Home';
 import Auth from './pages/Auth';
-// Home and Auth stay in the main bundle so the prerendered brochure and the
+import Help from './pages/Help';
+// Home, Auth and Help stay in the main bundle so the prerendered pages and the
 // sign-in form appear without a wait. Every other page loads on first visit.
 const MatchList = lazy(() => import('./pages/MatchList'));
 const NewMatch = lazy(() => import('./pages/NewMatch'));
@@ -31,6 +32,9 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              {/* Public help pages, prerendered by the build (src/help) */}
+              <Route path="/help" element={<Help />} />
+              <Route path="/help/:page" element={<Help />} />
               
               {/* Protected routes requiring authentication */}
               <Route 
