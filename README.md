@@ -26,7 +26,7 @@ npm run dev
 
 npm test          # Vitest
 npm run lint      # ESLint, no warnings allowed
-npm run build     # type check, build and prerender the homepage and help pages
+npm run build     # type check, build, prerender the homepage and help pages, write the sitemap
 ```
 
 The app needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Apply new migrations with `supabase db push`, and never run `supabase db reset` against the linked project.
@@ -40,7 +40,7 @@ The app needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Apply new migrat
 - `supabase/migrations`: the schema and row-level security policies
 - `supabase/functions/match-summary`: the Edge Function behind the coach's summary
 - `src/help`: the help pages at `/help`, one MDX file each in `src/help/content`
-- `scripts`: the homepage and help prerender, admin promotion and the summary eval
-- `docs`: architecture notes and the handover notes in `NEXT_STEPS.md`
+- `scripts`: the homepage and help prerender (also the sitemap and robots.txt), admin promotion and the summary eval
+- `docs`: architecture notes, the handover notes in `NEXT_STEPS.md`, and the analysis and SEO reviews
 
 `CLAUDE.md` has the full detail on the schema, the analysis rules and the wording used on the site.
