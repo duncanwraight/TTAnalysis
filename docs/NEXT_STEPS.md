@@ -57,10 +57,50 @@ Shipped on 2026-11-26 (see *Player history* below):
 Shipped on 2026-11-27 (see *Help pages* below):
 
 1. **Help pages** at `/help`, public and prerendered, with "How this works" links from the app and shorter help text on its pages, in `7feaf7a`. No migration or function change. The user is reviewing the words on production.
+2. **SEO review and fixes** (see *SEO* below): sitemap, robots.txt, noindex on app pages, structured data, self-hosted fonts, asset caching, an invitation on shared pages and Vercel Web Analytics. No migration or function change. Search Console, Bing and switching on Web Analytics are for the user.
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
 The user has checked the admin panel, the `/debug` removal and the AI summaries on production, and used the tracker for a real match with no bugs found. On 2026-11-26 they also confirmed on production the "This is me" box on the Players page, the tracker's keyboard shortcuts, the Edit button in the points editor and the password reset email (the link lands on ttanalysis.app/reset-password). The player history is the only shipped work waiting on a check by a person. The help pages shipped on 2026-11-27 and the user is reviewing the words (see *Help pages*).
+
+## SEO
+
+Reviewed on 2026-11-27: the findings and reasoning are in `docs/SEO_REVIEW.md`. The site wasn't in search at all: no sitemap, no Search Console, no links from other sites, and a two-day-old domain.
+
+Built and shipped on 2026-11-27 (all ten below). Checked on a local build served through `vercel.json`'s rewrites, at 1440px and 390px: the fonts load from `/assets/` (latin files only), the hero has `fetchpriority="high"`, the FAQ links open, the shared match shows its invitation with no sideways scrolling, and `app.html` alone carries noindex. Decided while building:
+
+- `@vercel/analytics` is in `main.tsx`, production only. Its `beforeSend` replaces share tokens with `[token]` (`redactSharePath` in `src/lib/analyticsPath.ts`, 3 tests) and drops the query and hash, because a share token is all it takes to read a match, and auth links carry codes. Nothing is counted until Web Analytics is switched on in the Vercel dashboard (the API has no switch for it); until then the script request 404s quietly.
+- Help pages take an optional `metaTitle` in `src/help/pages.ts` for the browser tab and search result, so a title can name the sport without changing the page's heading. Set on the contents page, first match, unforced errors and attacks, and the glossary.
+- The invitation on shared pages lives in `AppFrame`, shown to signed-out visitors on any `/shared/` path, and is left out of PDF exports. The sharing help page says so, and that shared pages ask search engines not to list them.
+- The shared match page's requests for the owner's notes come back 401 for visitors. That was already so before this work, and it's RLS doing its job; nothing leaks.
+
+The list:
+
+1. **robots.txt and sitemap.xml**, written by `scripts/prerender.mjs` from `HELP_ROUTES` plus `/`.
+2. **noindex on `app.html`**, so `/auth`, `/matches`, `/shared/...` and made-up URLs stay out of search. The homepage and help pages stay indexable.
+3. **Canonical on the homepage**, and `trailingSlash: false` so `/help/` redirects to `/help`.
+4. **Long cache on `/assets/`** (hashed file names): `max-age=31536000, immutable`.
+5. **JSON-LD on the homepage:** `WebSite` (site name) and `WebApplication` (free, runs in a browser).
+6. **Icons:** a 180px `apple-touch-icon.png` and a `favicon.ico`.
+7. **Performance:** self-host Inter instead of the render-blocking Google Fonts stylesheet, and `fetchpriority="high"` on the hero screenshot.
+8. **Shared pages invite the visitor:** a line at the foot of a shared match or history ("Made with TT Analysis") linking to the homepage.
+9. **Homepage FAQ links** to `/help/first-match` and `/help/two-shots`.
+10. **"Table tennis" in the words people read:** the homepage eyebrow and help page titles, kept small.
+
+For the user (need their accounts):
+
+- **Lighthouse:** not run, because the permission classifier blocked launching headless Chromium for it. Run it on mobile against production when allowed.
+- **Google Search Console:** add ttanalysis.app as a domain property, then add its TXT record in Cloudflare (or hand it over to be added with the token), submit `https://ttanalysis.app/sitemap.xml` and request indexing for `/` and `/help`.
+- **Bing Webmaster Tools:** import from Search Console.
+- **Vercel Web Analytics:** switch it on for `tt-analysis` in the Vercel dashboard if the code change alone doesn't.
+- **Off-site posts:** TableTennisDaily forum, r/tabletennis, the user's own league and club sites, AlternativeTo. Best done once Search Console is verified.
+
+Later, each designed with the user first:
+
+- **Guides on playing against styles and rubbers** (long pips, choppers, pushers first) at `/guides/<slug>`, written up from the notes on `/admin/styles`.
+- **How to analyse a table tennis match from video**, for people who haven't signed up.
+- **A public sample match** at a stable URL, from the Sam Carter sample.
+- **A fuller copy pass** for "table tennis" on the homepage, with options for the user.
 
 ## Help pages (shipped)
 

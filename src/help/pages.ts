@@ -15,6 +15,9 @@ export type HelpPageInfo = {
   description: string;
   // A shorter title for the side menu, when the full one is long
   short?: string;
+  // The browser tab's and search result's title, when the page's own title
+  // doesn't say it's about table tennis
+  metaTitle?: string;
 };
 
 export const HELP_SECTIONS: { section: HelpSection; note: string }[] = [
@@ -28,6 +31,7 @@ export const HELP_PAGES: HelpPageInfo[] = [
     slug: 'first-match',
     section: 'Getting started',
     title: 'Your first match, from video to analysis',
+    metaTitle: 'Your first table tennis match, from video to analysis',
     short: 'Your first match',
     description: 'Film it, create the match, enter two shots a point, then read the analysis.',
   },
@@ -41,6 +45,7 @@ export const HELP_PAGES: HelpPageInfo[] = [
     slug: 'unforced-errors-and-attacks',
     section: 'How to',
     title: 'Mark unforced errors and attacks',
+    metaTitle: 'Mark unforced errors and attacks in a table tennis match',
     short: 'Mark unforced errors and attacks',
     description: 'Go back through a match one point at a time with a sweep, and tick one thing on each point.',
   },
@@ -68,6 +73,7 @@ export const HELP_PAGES: HelpPageInfo[] = [
     slug: 'glossary',
     section: 'Look it up',
     title: 'Glossary',
+    metaTitle: 'Table tennis match analysis glossary',
     description: 'What the words on the tracker, the analysis page and the coach\'s summary mean.',
   },
   {
@@ -137,4 +143,4 @@ export const APP_TITLE = 'TT Analysis: table tennis match analysis from video';
 
 /** The browser tab's title for a help page, or for the contents when null. */
 export const helpTitle = (page: HelpPageInfo | null | undefined) =>
-  page ? `${page.title} | TT Analysis help` : 'Help | TT Analysis';
+  page ? `${page.metaTitle ?? page.title} | TT Analysis help` : 'Table tennis match analysis help | TT Analysis';

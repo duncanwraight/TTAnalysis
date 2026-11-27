@@ -20,7 +20,7 @@ export const render = (): string =>
 
 export const helpRoutes = HELP_ROUTES;
 
-const CONTENTS_DESCRIPTION = 'Help for TT Analysis: entering a match from video, marking unforced errors and attacks, and reading the analysis.';
+const CONTENTS_DESCRIPTION = 'Help for TT Analysis: entering a table tennis match from video, marking unforced errors and attacks, and reading the analysis.';
 
 /** A help route's HTML, drawn signed out, with the title and description for its head. */
 export const renderHelp = (route: string): { html: string; title: string; description: string } => {

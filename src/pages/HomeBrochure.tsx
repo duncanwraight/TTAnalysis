@@ -26,12 +26,18 @@ const CONTACT = null as { label: string; href: string } | null; // e.g. { label:
 const SIGN_UP = '/auth?mode=signup';
 const SIGN_IN = '/auth';
 
-const FAQS: { q: string; a: string | null }[] = [
+// `more` links an answer to the help page that goes further
+const FAQS: { q: string; a: string | null; more?: { to: string; label: string } }[] = [
   {
     q: 'Do I have to enter every shot in the rally?',
     a: 'No. You enter two shots for each point: the one that won it and the one that lost it. The losing shot is either the one that set up the winner or the one that missed. You skip the rally in between.',
+    more: { to: '/help/two-shots', label: 'Why you only enter two shots a point' },
   },
-  { q: 'How long does it take to enter a match?', a: ENTRY_TIME },
+  {
+    q: 'How long does it take to enter a match?',
+    a: ENTRY_TIME,
+    more: { to: '/help/first-match', label: 'Your first match, from video to analysis' },
+  },
   {
     q: 'Do I need a proper camera?',
     a: 'No. Any phone video will do. You go through it afterwards on a phone or a laptop, and the tracker works on both.',
@@ -78,7 +84,7 @@ const HomeBrochure = () => (
 
       <div id="top" className="bro-wrap bro-hero-grid">
         <div className="bro-hero-copy">
-          <p className="bro-eyebrow">For league players and their coaches</p>
+          <p className="bro-eyebrow">For table tennis league players and their coaches</p>
           <h1>Your backhand loop won 5 and lost 12.</h1>
           <p className="bro-lede">
             That's from the sample match. Film your own, enter two shots a point and you get the same count for every shot you play.
@@ -96,7 +102,9 @@ const HomeBrochure = () => (
               <span className="dot" /><span className="dot" /><span className="dot" />
               <span className="url">ttanalysis.app/shared/…</span>
             </div>
-            <img className="bro-shot" src={analysisTop} width={1600} height={867}
+            {/* The largest thing in the first screen, so it's fetched first. React 18
+                doesn't know fetchPriority, but passes the lowercase attribute through */}
+            <img className="bro-shot" src={analysisTop} width={1600} height={867} {...{ fetchpriority: 'high' }}
               alt="Analysis page for a sample match. Sam Carter lost 2-3 to Alex Morgan, winning 39 of 85 points. Under the headline numbers are the What decided it cards." />
           </div>
           <div className="bro-phone">
@@ -305,6 +313,7 @@ const HomeBrochure = () => (
             <details key={item.q} open={i === 0}>
               <summary>{item.q}</summary>
               <p>{item.a}</p>
+              {item.more && <p className="bro-faq-more"><Link to={item.more.to}>{item.more.label}</Link></p>}
             </details>
           ))}
         </div>

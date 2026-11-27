@@ -18,6 +18,8 @@ type AppFrameProps = {
 const AppFrame = ({ children, wide = false, signedIn, isAdmin = false, onSignOut }: AppFrameProps) => {
   const { pathname } = useLocation();
   const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
+  // Someone opening a share link without an account: say where it came from
+  const showSharedInvite = !signedIn && pathname.startsWith('/shared/');
 
   return (
     <div className="app">
@@ -56,6 +58,14 @@ const AppFrame = ({ children, wide = false, signedIn, isAdmin = false, onSignOut
       </header>
       <main className={`app-main${wide ? ' wide' : ''}`}>
         {children}
+        {showSharedInvite && (
+          <aside className="shared-invite" aria-label="About TT Analysis" data-html2canvas-ignore="true">
+            <p>
+              Made with TT Analysis. Film a table tennis match, enter two shots a point and see which shots won and lost it.
+            </p>
+            <Link to="/" className="btn small">Analyse your own matches</Link>
+          </aside>
+        )}
       </main>
       <footer className="app-footer">
         <span>TT Analysis</span>

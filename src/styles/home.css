@@ -212,6 +212,8 @@
 .bro-faq-list summary::after { content: '+'; font-size: 24px; font-weight: 400; color: var(--bro-muted); }
 .bro-faq-list details[open] summary::after { content: '\2212'; }
 .bro-faq-list details p { margin: 0 0 22px; color: var(--bro-body); max-width: 620px; }
+.bro-faq-list details p:has(+ .bro-faq-more) { margin-bottom: 10px; }
+.bro-faq-more a { color: var(--bro-ink); font-weight: 600; }
 
 /* Closing panel and footer */
 .bro-closing { padding-top: 144px; }

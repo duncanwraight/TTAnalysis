@@ -112,6 +112,14 @@ button { cursor: pointer; }
 }
 .app-footer a { color: var(--ink-2); }
 
+/* Shown under a shared match or history to visitors without an account */
+.shared-invite {
+  margin-top: 32px; padding: 16px 20px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 12px 24px;
+}
+.shared-invite p { margin: 0; color: var(--ink-2); font-size: 15px; max-width: 640px; }
+
 /* "How this works" links on app pages */
 .help-link {
   display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500;

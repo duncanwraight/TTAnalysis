@@ -1,9 +1,18 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { inject } from '@vercel/analytics'
+// Self-hosted, so the first paint doesn't wait on Google Fonts
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/inter-tight/700.css'
+import '@fontsource/inter-tight/800.css'
 import './index.css'
 import App from './App.tsx'
 import { helpSlugForPath } from './help/pages'
 import { loadHelpContent } from './help/content'
+import { redactSharePath } from './lib/analyticsPath'
 
 // Welcome message for developers
 console.log(`
@@ -30,6 +39,21 @@ window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault();
   window.location.reload();
 });
+
+// Vercel Web Analytics: cookieless page views, for seeing where visitors come
+// from. Share tokens work like passwords, and auth links carry codes in the
+// query or hash, so those never leave the browser.
+if (import.meta.env.PROD) {
+  inject({
+    beforeSend: (event) => {
+      const url = new URL(event.url);
+      url.pathname = redactSharePath(url.pathname);
+      url.search = '';
+      url.hash = '';
+      return { ...event, url: url.toString() };
+    },
+  });
+}
 
 // A prerendered help page stays on screen until its words have loaded, so
 // React replaces it with the same page rather than a loading state.
