@@ -108,7 +108,7 @@ Done by the user on 2026-11-28:
 
 - **Google Search Console:** ttanalysis.app is a domain property, verified through Search Console's own Cloudflare integration (it added the TXT record itself), and the sitemap is submitted.
 - **Bing Webmaster Tools:** imported from Search Console.
-- **Vercel Web Analytics:** it was off, and is now on for `tt-analysis`. The dashboard's setup steps are for Next.js (`<Analytics />`); this app's `inject()` in `main.tsx` is the plain JavaScript equivalent, so no code change was needed. Vercel only accepts page views on deployments made after it's switched on.
+- **Vercel Web Analytics:** it was off, and is now on for `tt-analysis`. The dashboard's setup steps are for Next.js (`<Analytics />`); this app's `inject()` in `main.tsx` is the plain JavaScript equivalent, so no code change was needed. Vercel only accepts page views on deployments made after it's switched on. Checked on production after `888b2c8` deployed: a page view is sent to `/_vercel/insights/view` and accepted (200), and a shared match arrives as `/shared/[token]` with no query or hash. The script sends nothing from a browser that reports itself as automated (`navigator.webdriver`), so a headless check has to hide that flag. That check added two page views of its own on 2026-11-28.
 - **Homepage eyebrow:** "league" dropped at the user's request ("For table tennis players and their coaches"), so it fits on one line on desktop. `public/og-image.png` was regenerated with it the same day.
 
 Still for the user:
