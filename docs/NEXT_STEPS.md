@@ -361,6 +361,7 @@ Turnstile, built on 2026-11-28 on the pattern from tt-reviews (Supabase checks t
 - **The forms:** sign in, create an account and "Forgot your password?" each render the widget. Submit stays disabled until it has a token, and a failed request resets it. Setting a new password from the email link isn't checked by Supabase, so it has no widget. A common question on the help contents page explains the greyed-out button and script blockers.
 - **Local:** `supabase/config.toml` turns the check on with Cloudflare's always-pass test secret, matching production. Checked in headless Chromium against a local build: sign in, a wrong password then a retry with a fresh token, a reset email and a sign-up at 390px, each sending its token and getting a 200 (the wrong password a 400). Over REST, a sign-in without a token is refused with "captcha protection: request disallowed".
 - **Order on production:** the frontend went live first, sending tokens that Supabase ignores until it's switched on. Then the user turns on CAPTCHA protection in the Supabase dashboard (Authentication, then Attack Protection, Cloudflare Turnstile, the secret key). Switching it off there undoes it straight away.
+- **Live on 2026-11-28:** the real widget loaded on ttanalysis.app after `189c373` deployed (a headless browser gets the checkbox, which is expected). The user signed in with it, switched on CAPTCHA protection in Supabase with the secret key, and signed in again: all working.
 
 ## 7. Analysis page, unforced errors and points editor (done)
 
