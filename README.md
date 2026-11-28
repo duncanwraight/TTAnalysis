@@ -12,6 +12,8 @@ A table tennis match analysis app, live at https://ttanalysis.app. You film a ma
 - **Player history:** every match for one player added up, with trends over time, shots across matches and results against different kinds of opponent.
 - **Sharing:** a match or a player's history can be shared by link. Stopping sharing kills the link.
 - **PDF export** of the analysis page.
+- **Help pages** at `/help`, public and prerendered, with "How this works" links from the app.
+- **Accounts:** email and password through Supabase Auth, with Cloudflare Turnstile on the sign-in, sign-up and reset forms. Locally it uses Cloudflare's always-pass test keys, so there's nothing to set up.
 
 ## Quick start
 

@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-28
 
-Handover notes for picking this work up in a fresh session. Section 0 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
+Handover notes for picking this work up in a fresh session. *Where things stand* lists what shipped, day by day, and points to the section for each. *SEO* is the most recent work and lists what's left on it. The numbered sections record what's already done and what's still open.
 
 ## Where things stand
 
@@ -58,6 +58,13 @@ Shipped on 2026-11-27 (see *Help pages* below):
 
 1. **Help pages** at `/help`, public and prerendered, with "How this works" links from the app and shorter help text on its pages, in `7feaf7a`. No migration or function change. The user is reviewing the words on production.
 2. **SEO review and fixes** (see *SEO* below): sitemap, robots.txt, noindex on app pages, structured data, self-hosted fonts, asset caching, an invitation on shared pages and Vercel Web Analytics, in `2c4a424` and `9d1eb10`. Then the Lighthouse fixes (contrast, smaller screenshots for phones, font preloads on help pages) in `1d5b222` and `3a05a16`. No migration or function change. Search Console, Bing and switching on Web Analytics are for the user.
+
+Shipped on 2026-11-28 (see *SEO* below):
+
+1. **Homepage eyebrow** without "league" ("For table tennis players and their coaches") and a regenerated link preview image, in `888b2c8`.
+2. **Vercel Web Analytics** switched on by the user and checked on production, share tokens redacted.
+3. **Search Console and Bing Webmaster Tools** set up by the user, with the sitemap submitted.
+4. **Bot protection:** Cloudflare's proxy ruled out (it can't reach the database), and **Turnstile** added to the sign-in, sign-up and reset forms in `189c373`. Switched on in Supabase by the user, who signed in with it on production.
 
 The user has done real sweeps on production and checked the sweep page, the points editor, the analysis page and the shot editor, with everything working.
 
@@ -444,6 +451,8 @@ VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_ANON_KEY=<ANON_KEY from s
 For an isolated stack instead, copy `supabase/` to a scratch directory, change the ports in its `config.toml` (earlier sessions used 553xx and project id `TTAnalysisScoringTest`), and run `supabase start --workdir <scratch dir>`. Stop it with `supabase stop --workdir <scratch dir> --no-backup`. Never run `supabase db reset` against the linked project. Apply new migrations locally with `supabase migration up --local`.
 
 Screenshots of every page, for a visual check: install `playwright-core` in a scratch directory (not the repo), launch it with `executablePath: '/usr/local/bin/chromium'`, sign in through `/auth` as `summary-test@example.test` (password `sweep-test-2026`, an admin with AI summaries on and the three sample matches), and screenshot each route at 1440x900 and 390x844. Full-page shots of long pages shrink too far to read, so clip them into screen-height tiles. Compare `document.documentElement.scrollWidth` with the window width on each page to catch sideways scrolling. This is how the aesthetic sweep in section 4 was done. Chrome through the extension can't do phone widths here, because Sway won't resize the window.
+
+Since 2026-11-28 the sign-in form carries Turnstile. Off ttanalysis.app it uses Cloudflare's always-pass test key, so headless Chromium passes it: fill in the form, wait for the submit button to stop being disabled (a second or two), then click. Load pages with `waitUntil: 'load'`, not `'networkidle'`, because the widget keeps a connection open and the page never goes idle. On production the real widget shows a headless browser a checkbox, so scripted sign-in there doesn't work.
 
 To check prerendered pages (the homepage and help), build against the local stack (`VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_ANON_KEY=... npm run build`) and serve `dist` with a small Node server in a scratch directory that applies `vercel.json`: serve a file if it exists, otherwise the first matching rewrite. `vite preview` doesn't apply the rewrites, so it serves the wrong file for `/help/...`. Load each route once with JavaScript off and once on, and compare the text of `main`. This is how the help pages were checked. A build without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` still prerenders, but the app fails to start in the browser and clears the page, so always build with them for a check.
 
