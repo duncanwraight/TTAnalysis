@@ -1,6 +1,6 @@
 # Next steps
 
-Last updated: 2026-11-27
+Last updated: 2026-11-28
 
 Handover notes for picking this work up in a fresh session. Section 0 is the most recent work and lists what's left on it. The sections after it record what's already done and what's still open.
 
@@ -104,12 +104,16 @@ The list:
 9. **Homepage FAQ links** to `/help/first-match` and `/help/two-shots`.
 10. **"Table tennis" in the words people read:** the homepage eyebrow and help page titles, kept small.
 
-For the user (need their accounts):
+Done by the user on 2026-11-28:
 
-- **Google Search Console:** add ttanalysis.app as a domain property, then add its TXT record in Cloudflare (or hand it over to be added with the token), submit `https://ttanalysis.app/sitemap.xml` and request indexing for `/` and `/help`.
-- **Bing Webmaster Tools:** import from Search Console.
-- **Vercel Web Analytics:** switch it on for `tt-analysis` in the Vercel dashboard if the code change alone doesn't.
-- **Off-site posts:** TableTennisDaily forum, r/tabletennis, the user's own league and club sites, AlternativeTo. Best done once Search Console is verified.
+- **Google Search Console:** ttanalysis.app is a domain property, verified through Search Console's own Cloudflare integration (it added the TXT record itself), and the sitemap is submitted.
+- **Bing Webmaster Tools:** imported from Search Console.
+- **Vercel Web Analytics:** it was off, and is now on for `tt-analysis`. The dashboard's setup steps are for Next.js (`<Analytics />`); this app's `inject()` in `main.tsx` is the plain JavaScript equivalent, so no code change was needed. Vercel only accepts page views on deployments made after it's switched on.
+- **Homepage eyebrow:** "league" dropped at the user's request ("For table tennis players and their coaches"), so it fits on one line on desktop. `public/og-image.png` was regenerated with it the same day.
+
+Still for the user:
+
+- **Off-site posts:** TableTennisDaily forum, r/tabletennis, the user's own league and club sites, AlternativeTo. A draft to work from was written in the session on 2026-11-28; the user is writing their own.
 
 Later, each designed with the user first:
 
@@ -217,7 +221,7 @@ Built and shipped on 2026-11-25 from this design canvas: https://claude.ai/artif
 - **Copy:** the first draft read as machine-written. It was rewritten from a brief built on research into UK sports product sites, one agent per section, then edited with the user. The brief and research are not in the repo; the lessons are: name real shots, sets and scores from the sample match, say plainly that only two shots a point are entered, and don't tell people how to film beyond "any phone will do". Playback at 1.25x or 1.5x is the user's own tip. The headline is "Your backhand loop won 5 and lost 12." Both sign-up buttons say "Create an account".
 - **Facts:** constants at the top of `HomeBrochure.tsx`, answered by the user on 2026-11-25. Entry time: a match filmed uncut runs about 20 minutes, around 15 to enter at 1.5x, and a trimmed match often half that. The coach's summary is "By invitation". It's free with no payment to set up. There's no contact link (`CONTACT` stays `null`, so that line stays hidden).
 - **Sign-up:** "Create an account" links to `/auth?mode=signup`, which opens the sign-up form.
-- **Link previews:** `index.html` has a title, description and Open Graph tags. `public/og-image.png` is a 1200x630 shot of the hero, with the nav links, buttons and hero note hidden and the sample-match caption pinned bottom right. It was regenerated on 2026-11-25 for the new domain by injecting that CSS into a copy of `dist/index.html` and screenshotting it at 1200x630 with headless Chromium.
+- **Link previews:** `index.html` has a title, description and Open Graph tags. `public/og-image.png` is a 1200x630 shot of the hero, with the nav links, buttons and hero note hidden and the sample-match caption pinned bottom right. It was regenerated on 2026-11-25 for the new domain, and on 2026-11-28 for the new eyebrow, by loading the built homepage at 1200x630 in headless Chromium (Playwright), adding CSS that hides `.bro-nav-links`, `.bro-nav .bro-btn`, `.bro-actions` and `.bro-hero-note`, sets `.bro-hero` to `min-height: 630px` and pins `.bro-caption` with `position: fixed; right: 40px; bottom: 16px`, then taking a screenshot. Regenerate it whenever the hero's words change.
 - **Signed-in users** go straight from `/` to `/matches`. The old signed-in home was removed.
 - **Prerendering:** `npm run build` also builds `src/prerender.tsx` for SSR and runs `scripts/prerender.mjs`, which writes the brochure's HTML into `dist/index.html`. That file is only served for `/`. `dist/app.html` is the same page with an empty root, and `vercel.json` rewrites every other route to it, except `/assets/`, so no other page flashes the brochure. An inline script in the head hides the prerendered brochure from browsers holding a session (`html.has-session`), and `main.tsx` removes the class before React renders. `Home` keeps the brochure on screen while auth loads unless a session is stored (`src/lib/storedSession.ts`). React replaces the prerendered HTML rather than hydrating it.
 - **Checked:** at 1440px and 390px wide, with no sideways scroll and no console errors, and on production after the deploy.

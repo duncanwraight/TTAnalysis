@@ -100,7 +100,7 @@ const HomeBrochure = () => (
 
       <div id="top" className="bro-wrap bro-hero-grid">
         <div className="bro-hero-copy">
-          <p className="bro-eyebrow">For table tennis league players and their coaches</p>
+          <p className="bro-eyebrow">For table tennis players and their coaches</p>
           <h1>Your backhand loop won 5 and lost 12.</h1>
           <p className="bro-lede">
             That's from the sample match. Film your own, enter two shots a point and you get the same count for every shot you play.
