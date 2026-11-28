@@ -6,10 +6,11 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  // captchaToken comes from the Turnstile widget on the form; Supabase checks it
+  signIn: (email: string, password: string, captchaToken: string) => Promise<void>;
+  signUp: (email: string, password: string, captchaToken: string) => Promise<void>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, captchaToken: string) => Promise<void>;
   isAdmin: boolean;
   // True until the admin status for the current user has been looked up
   adminLoading: boolean;
@@ -84,13 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAdminStatus();
   }, [session?.user]);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = async (email: string, password: string, captchaToken: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+  const signUp = async (email: string, password: string, captchaToken: string) => {
+    const { error } = await supabase.auth.signUp({ email, password, options: { captchaToken } });
     if (error) throw error;
   };
 
@@ -99,9 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string, captchaToken: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
+      captchaToken,
     });
     if (error) throw error;
   };

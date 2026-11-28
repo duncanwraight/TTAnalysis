@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
+import Turnstile, { TurnstileHandle } from './Turnstile';
 import { MIN_PASSWORD_LENGTH } from '../../lib/password';
 
 interface SignupProps {
@@ -14,11 +15,15 @@ const Signup = ({ onToggleView }: SignupProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signupComplete, setSignupComplete] = useState(false);
+  // The security check's token; each one works for a single request
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   const { signUp } = useAuth();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captchaToken) return;
     setError(null);
 
     // Validate password match
@@ -36,10 +41,11 @@ const Signup = ({ onToggleView }: SignupProps) => {
     setLoading(true);
 
     try {
-      await signUp(email, password);
+      await signUp(email, password, captchaToken);
       setSignupComplete(true);
     } catch (err) {
       setError((err as Error).message);
+      turnstileRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -97,9 +103,10 @@ const Signup = ({ onToggleView }: SignupProps) => {
             required
           />
         </div>
+        <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
         {error && <div className="notice error" role="alert">{error}</div>}
         <div className="auth-actions">
-          <Button type="submit" className="block" disabled={loading}>
+          <Button type="submit" className="block" disabled={loading || !captchaToken}>
             {loading ? 'Creating your account...' : 'Create account'}
           </Button>
           <button

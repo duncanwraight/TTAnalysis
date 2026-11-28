@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
+import Turnstile, { TurnstileHandle } from './Turnstile';
 import { useNavigate } from 'react-router';
 
 interface LoginProps {
@@ -14,20 +15,25 @@ const Login = ({ onToggleView }: LoginProps) => {
   const [error, setError] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  // The security check's token; each one works for a single request
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const navigate = useNavigate();
 
   const { signIn, resetPassword } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captchaToken) return;
     setError(null);
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      await signIn(email, password, captchaToken);
       navigate('/');
     } catch (err) {
       setError((err as Error).message);
+      turnstileRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -35,17 +41,26 @@ const Login = ({ onToggleView }: LoginProps) => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captchaToken) return;
     setError(null);
     setLoading(true);
 
     try {
-      await resetPassword(email);
+      await resetPassword(email, captchaToken);
       setResetSent(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
+      turnstileRef.current?.reset();
       setLoading(false);
     }
+  };
+
+  // Each form mounts its own widget, so a token from one isn't carried to the other
+  const switchMode = (reset: boolean) => {
+    setCaptchaToken(null);
+    setError(null);
+    setResetMode(reset);
   };
 
   if (resetMode) {
@@ -58,7 +73,7 @@ const Login = ({ onToggleView }: LoginProps) => {
             <div className="notice success" role="status">
               If there's an account for {email}, a reset link is on its way. Check your inbox.
             </div>
-            <Button onClick={() => setResetMode(false)}>Back to sign in</Button>
+            <Button onClick={() => { setResetSent(false); switchMode(false); }}>Back to sign in</Button>
           </div>
         ) : (
           <form className="form" onSubmit={handleResetPassword}>
@@ -73,15 +88,16 @@ const Login = ({ onToggleView }: LoginProps) => {
                 required
               />
             </div>
+            <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
             {error && <div className="notice error" role="alert">{error}</div>}
             <div className="auth-actions">
-              <Button type="submit" className="block" disabled={loading}>
+              <Button type="submit" className="block" disabled={loading || !captchaToken}>
                 {loading ? 'Sending...' : 'Send reset link'}
               </Button>
               <button
                 type="button"
                 className="link-button"
-                onClick={() => setResetMode(false)}
+                onClick={() => switchMode(false)}
               >
                 Back to sign in
               </button>
@@ -118,15 +134,16 @@ const Login = ({ onToggleView }: LoginProps) => {
             required
           />
         </div>
+        <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
         {error && <div className="notice error" role="alert">{error}</div>}
         <div className="auth-actions">
-          <Button type="submit" className="block" disabled={loading}>
+          <Button type="submit" className="block" disabled={loading || !captchaToken}>
             {loading ? 'Signing in...' : 'Sign in'}
           </Button>
           <button
             type="button"
             className="link-button"
-            onClick={() => setResetMode(true)}
+            onClick={() => switchMode(true)}
           >
             Forgot your password?
           </button>

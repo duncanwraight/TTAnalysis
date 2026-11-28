@@ -6,6 +6,8 @@
 .auth-card > p { color: var(--ink-2); font-size: 15px; }
 .auth-actions { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .auth-actions .btn { margin-bottom: 8px; }
+/* The Turnstile widget is 65px tall; holding the space stops the form jumping when it appears */
+.turnstile { display: flex; flex-direction: column; gap: 12px; min-height: 65px; }
 
 /* Match list */
 .match-cards { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }

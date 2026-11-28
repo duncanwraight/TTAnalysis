@@ -42,6 +42,10 @@ Every page except Home, Auth and Help is lazy-loaded in `App.tsx` inside `PageEr
 | `/help`, `/help/:page` | `Help` | Public help pages, written in MDX (`src/help`) |
 | `/shared/history/:token` | `PlayerHistory` | A shared player history, with each match under `/matches/:id` |
 
+## Sign-in
+
+Supabase Auth with email and password. The sign-in, sign-up and password reset forms carry Cloudflare Turnstile, to keep automated sign-ups out: the widget's token goes to Supabase as `captchaToken`, and Supabase checks it against the secret key in its Attack Protection settings. Off ttanalysis.app the app uses Cloudflare's always-pass test key, and the local stack's `config.toml` turns the check on with the matching test secret. Without an account, a request can only read the reference tables (shots, styles and their notes) and whatever a share token opens, so sign-up is the one door worth guarding.
+
 ## Data access
 
 - `src/lib/supabase.ts` creates the signed-in client, and `createSharedClient(token)` creates one that sends the `x-share-token` header.
