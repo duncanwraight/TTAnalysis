@@ -353,6 +353,8 @@ Follow-up on 2026-11-26 (nothing is left open in this section):
 - **React Router (done 2026-11-26):** upgraded to v7 (`react-router` 7.18, replacing `react-router-dom`). `npm audit` reports nothing. Every link is absolute and the only splat route is the catch-all, so v7's changes to relative paths don't apply.
 - **Logout on every deploy (removed 2026-11-26):** `src/lib/supabase.ts` used to clear the stored session whenever the deployed commit changed, which signed everyone out on each push. It wasn't needed for security and was taken out at the user's go-ahead; the leftover `app_version` key is removed on load.
 
+Bot protection, decided on 2026-11-28: none for now. Cloudflare can't help, because the browser talks to Supabase directly and never through ttanalysis.app, and its DNS records stay DNS only (the proxy would stop Vercel renewing the certificate). Checked on the local stack: without an account, a request can read the five reference tables (shots, shot categories, styles, kit notes, match-ups), read a shared match or history with its token, and call the three share-link functions. Every write and every other read needs a signed-in user. Sign-up is the one open door, rate limited per IP by Supabase. If junk accounts ever turn up, the fix is Cloudflare Turnstile through Supabase's Attack Protection (the user makes the widget and pastes its secret into Supabase; the sign-up, sign-in and reset forms pass its token). AI crawlers are left alone, because they only read the static public pages and being readable by AI search helps people find the app.
+
 ## 7. Analysis page, unforced errors and points editor (done)
 
 Designed with the user on this canvas: https://claude.ai/artifact/3J5Lt6syww186XcB9mHg6i
